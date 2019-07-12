@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Tolerance Analyzer</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body>
+
+<script src="/js/jquery.js"></script>
+<script src="/js/markdown.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/flot/jquery.flot.js"></script>
+<script src="/js/flot/jquery.flot.navigate.js"></script>
+<script src="/js/Graph.js"></script>
+<script src="/js/ToleranceAnalyzer.js"></script>
+
+<div class="container-fluid">
+    <div class="row" id="menu_container">
+    </div>
+
+    <div class="row" id="main_container">
+    </div>
+
+</div>
+
+<script>
+
+    $(document).ready(
+        function () {
+            var analyzer = new ToleranceAnalyzer('#main_container', '#menu_container');
+        }
+    )
+
+</script>
+
+</body>
+</html>
