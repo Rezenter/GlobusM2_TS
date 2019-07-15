@@ -1,4 +1,4 @@
-function ToleranceAnalyzer (container, menu) {
+function viewerMain (container, menu) {
     this.m_container = $(container);
     this.m_menu = $(menu);
     this.m_files = {};
@@ -14,7 +14,7 @@ function ToleranceAnalyzer (container, menu) {
 
     this.m_cancellationToken = false;
 
-	this.m_recVersion = 2;
+    this.m_recVersion = 2;
     this.m_cmd_list = [];
     this.m_arguments = {
         S: {
@@ -206,46 +206,46 @@ analysis['outp']['resultNames'].extend(manual_names)`
 
     };
 
-	this.LinkCode = function () {
-		let codev = '!header\n' + $('#codev_header').val() + '\n';
+    this.LinkCode = function () {
+        let codev = '!header\n' + $('#codev_header').val() + '\n';
         codev += '!body\n' + $('#codev_body').val() + '\n';
         codev += '!footer\n' + $('#codev_footer').val();
-		//codev = this.m_anCodeV.val();
-        
-		let parser = '#header\n' + $('#parser_header').val() + '\n';
+        //codev = this.m_anCodeV.val();
+
+        let parser = '#header\n' + $('#parser_header').val() + '\n';
         parser += '#body\n' + $('#parser_body').val() + '\n';
         parser += '#footer\n' + $('#parser_footer').val();
-		//parser = this.m_anPyCode.val();
-        
-		if(navigator.appVersion.indexOf("Win")!=-1){
+        //parser = this.m_anPyCode.val();
+
+        if(navigator.appVersion.indexOf("Win")!=-1){
             codev.replace(/\n/g, '\r\n');
             parser.replace(/\n/g, '\r\n');
         }
-		return {codev: codev, parser: parser};
-	};
+        return {codev: codev, parser: parser};
+    };
 
     this.SaveAnalysis = function (ev) {
         let self = ev.data;
         let req = {
-			recversion: self.m_recVersion,
+            recversion: self.m_recVersion,
             pycode: $('#parser_body').val(),
             pyheader: $('#parser_header').val(),
-			pyfooter: $('#parser_footer').val(),
-			name: self.m_anName.val(),
+            pyfooter: $('#parser_footer').val(),
+            name: self.m_anName.val(),
             codev: $('#codev_body').val(),
-			codevheader: $('#codev_header').val(),
-			codevfooter: $('#codev_footer').val(),
-			cmdlist: self.m_cmd_list,
+            codevheader: $('#codev_header').val(),
+            codevfooter: $('#codev_footer').val(),
+            cmdlist: self.m_cmd_list,
             reqtype: 'saveAnalysis'
         };
-		/*
-		let req = {
+        /*
+        let req = {
             pycode: self.m_anPyCode.val(),
             name: self.m_anName.val(),
             codev: self.m_anCodeV.val(),
             reqtype: 'saveAnalysis'
         };
-		*/
+        */
 
         if (self.m_currentId != '') {
             req['id'] = self.m_currentId;
@@ -264,14 +264,14 @@ analysis['outp']['resultNames'].extend(manual_names)`
         self.m_anName.val('Untitled');
         //self.m_anPyCode.val('import math\n\noutp={"input": inp}');
         $('#parser_header').val(self.m_parser.header);
-		$('#parser_body').val(self.m_parser.body);
-		$('#parser_footer').val(self.m_parser.footer);
-		//self.m_anCodeV.val('RSI S20 W1 F1 R1\n');
-		$('#codev_header').val(self.m_codev.header);
-		$('#codev_body').val(self.m_codev.body);
-		$('#codev_footer').val(self.m_codev.footer);
-		self.m_cmd_list = [];
-		self.updateCmdList({data: self});
+        $('#parser_body').val(self.m_parser.body);
+        $('#parser_footer').val(self.m_parser.footer);
+        //self.m_anCodeV.val('RSI S20 W1 F1 R1\n');
+        $('#codev_header').val(self.m_codev.header);
+        $('#codev_body').val(self.m_codev.body);
+        $('#codev_footer').val(self.m_codev.footer);
+        self.m_cmd_list = [];
+        self.updateCmdList({data: self});
         self.m_currentId = '';
         self.UpdateDisplay({data: self});
     };
@@ -285,27 +285,27 @@ analysis['outp']['resultNames'].extend(manual_names)`
 
         self.Request(req,
             function (resp) {
-				self.m_cmd_list = [];
+                self.m_cmd_list = [];
                 self.m_anName.val(resp.name);
                 //self.m_anPyCode.val(resp.pycode);
-				//self.m_anCodeV.val(resp.codev);
-				if('recversion' in resp && resp.recversion == 2){
-					$('#parser_header').val(resp.pyheader);
-					$('#parser_body').val(resp.pycode);
-					$('#parser_footer').val(resp.pyfooter);
-					$('#codev_header').val(resp.codevheader);
-					$('#codev_body').val(resp.codev);
-					$('#codev_footer').val(resp.codevfooter);
-					self.m_cmd_list = resp.cmdlist;
-				}else{
-					$('#parser_header').val(resp.pycode);
-					$('#parser_body').val('');
-					$('#parser_footer').val('');
-					$('#codev_header').val(resp.codev);
-					$('#codev_body').val('');
-					$('#codev_footer').val('');
-				}
-				self.updateCmdList({data: self});
+                //self.m_anCodeV.val(resp.codev);
+                if('recversion' in resp && resp.recversion == 2){
+                    $('#parser_header').val(resp.pyheader);
+                    $('#parser_body').val(resp.pycode);
+                    $('#parser_footer').val(resp.pyfooter);
+                    $('#codev_header').val(resp.codevheader);
+                    $('#codev_body').val(resp.codev);
+                    $('#codev_footer').val(resp.codevfooter);
+                    self.m_cmd_list = resp.cmdlist;
+                }else{
+                    $('#parser_header').val(resp.pycode);
+                    $('#parser_body').val('');
+                    $('#parser_footer').val('');
+                    $('#codev_header').val(resp.codev);
+                    $('#codev_body').val('');
+                    $('#codev_footer').val('');
+                }
+                self.updateCmdList({data: self});
                 self.m_currentId = resp._id;
                 self.UpdateDisplay({data: self});
             }
@@ -467,7 +467,7 @@ analysis['outp']['resultNames'].extend(manual_names)`
         this.m_requestsList = [];
         this.m_graphData = {};
         let count = 0;
-		let code = this.LinkCode();
+        let code = this.LinkCode();
         for (let fileId in this.m_files) {
             let req = {
                 reqtype: 'processFile',
@@ -523,31 +523,31 @@ analysis['outp']['resultNames'].extend(manual_names)`
 
     this.HandleFileResults = function (resp) {
         if(resp.status == 'success'){
-			let fId = resp.name;
-			let i = 0;
-			this.m_results[fId] = {};
-			for (let t in this.m_results) {
-				if (t == fId) {
-					break;
-				}
-				i++;
-			}
-			for (let res in resp.result.resultNames) {
-				resName = resp.result.resultNames[res];
-				let resVal = resp.result.result[res];
-				this.m_results[fId][resName] = resVal;
-				if (!(resName in this.m_graphData)) {
-					this.m_graphData[resName] = [];
-				}
-				this.m_graphData[resName].push([i + 1, resVal]);
-			}
+            let fId = resp.name;
+            let i = 0;
+            this.m_results[fId] = {};
+            for (let t in this.m_results) {
+                if (t == fId) {
+                    break;
+                }
+                i++;
+            }
+            for (let res in resp.result.resultNames) {
+                resName = resp.result.resultNames[res];
+                let resVal = resp.result.result[res];
+                this.m_results[fId][resName] = resVal;
+                if (!(resName in this.m_graphData)) {
+                    this.m_graphData[resName] = [];
+                }
+                this.m_graphData[resName].push([i + 1, resVal]);
+            }
 
-			this.UpdateFilesTable();
-			this.DrawChart(resName);
-		}else{
-			console.log('RESP: ', resp);
-			alert("Error! See console for information.");
-		}
+            this.UpdateFilesTable();
+            this.DrawChart(resName);
+        }else{
+            console.log('RESP: ', resp);
+            alert("Error! See console for information.");
+        }
     };
 
     this.UpdateProgressBar = function () {
@@ -715,6 +715,7 @@ analysis['outp']['resultNames'].extend(manual_names)`
         }
         return {header: headerHtml, top: topHtml, bottom: bottomHtml};
     };
+
 
     this.cmdChange = function(ev){
         let self = ev.data;
@@ -950,39 +951,40 @@ analysis['outp']['resultNames'].extend(manual_names)`
         self.updateCmdList({data: self});
     };
 
+
     this.BuildMenu = function () {
         let html =
             '<nav class="navbar navbar-inverse">' +
             '<div class="container-fluid">' +
-                '<div class="navbar-header">' +
-                    '<a class="navbar-brand" href="#">' +
-                    'Tolerance Analyzer' +
-                    '</a>' +
-                '</div>' +
+            '<div class="navbar-header">' +
+            '<a class="navbar-brand" href="#">' +
+            'Tomson Scattering Viewer' +
+            '</a>' +
+            '</div>' +
 
 
-                '<ul class="nav navbar-nav">' +
-                '<li class="dropdown">' +
-                '<a href="#" class="dropdown-toggle" data-toggle="dropdown" ' +
-                'role="button" aria-haspopup="true" aria-expanded="false">' +
-                'Select Analysis <span class="caret">' +
-                '</span></a>' +
-                '<ul class="dropdown-menu"  id="documents_list"></ul></li>' +
-                '</ul>' +
+            '<ul class="nav navbar-nav">' +
+            '<li class="dropdown">' +
+            '<a href="#" class="dropdown-toggle" data-toggle="dropdown" ' +
+            'role="button" aria-haspopup="true" aria-expanded="false">' +
+            'Select Analysis <span class="caret">' +
+            '</span></a>' +
+            '<ul class="dropdown-menu"  id="documents_list"></ul></li>' +
+            '</ul>' +
 
 
-                '<div class="navbar-left">' +
-                    '<input type="file" multiple="multiple" class="navbar-btn btn btn-default"' +
-                    ' id="upload" name="upload_files[]">' +
-                '</div>' +
+            '<div class="navbar-left">' +
+            '<input type="file" multiple="multiple" class="navbar-btn btn btn-default"' +
+            ' id="upload" name="upload_files[]">' +
+            '</div>' +
 
 
-                '<div class="btn-group pull-right " role="group">' +
-                    '<button class="btn btn-success navbar-btn" id="start_processing_files">' +
-                        'Start Processing</button>' +
-                    '<button class="btn navbar-btn" id="stop_process_btn">' +
-                        'Stop!</button>' +
-                '</div>' +
+            '<div class="btn-group pull-right " role="group">' +
+            '<button class="btn btn-success navbar-btn" id="start_processing_files">' +
+            'Start Processing</button>' +
+            '<button class="btn navbar-btn" id="stop_process_btn">' +
+            'Stop!</button>' +
+            '</div>' +
 
             '</div>' +
 
@@ -1013,31 +1015,31 @@ table, th, td {
             '<div class="panel-heading">Editor' +
             '</div>' +
             '<div class="panel-body" id="markdown_div">' +
-                '<div class="row">' +
-                '</div>' +
-                '<div class="row" id="editor_panel">' +
-                    '<div id="analysis_editor" class="">' +
+            '<div class="row">' +
+            '</div>' +
+            '<div class="row" id="editor_panel">' +
+            '<div id="analysis_editor" class="">' +
 
-                        '<input type="text" id="analysis_name" style="width: 100%">' +
-                        '<div class="btn-group pull-right" role="group">' +
-                        '<button class="btn btn-default navbar-btn glyphicon glyphicon-save-file" id="save_analysis"' +
-                        ' style="position: relative; top:0;">Save</button>' +
-                        '<button class="btn btn-default navbar-btn glyphicon glyphicon-file" id="new_analysis"' +
-                        ' style="position: relative; top:0;">New</button>' +
-                        '<button class="btn btn-danger navbar-btn glyphicon glyphicon-trash" id="delete_analysis"' +
-                        ' style="position: relative; top:0;"></button>' +
+            '<input type="text" id="analysis_name" style="width: 100%">' +
+            '<div class="btn-group pull-right" role="group">' +
+            '<button class="btn btn-default navbar-btn glyphicon glyphicon-save-file" id="save_analysis"' +
+            ' style="position: relative; top:0;">Save</button>' +
+            '<button class="btn btn-default navbar-btn glyphicon glyphicon-file" id="new_analysis"' +
+            ' style="position: relative; top:0;">New</button>' +
+            '<button class="btn btn-danger navbar-btn glyphicon glyphicon-trash" id="delete_analysis"' +
+            ' style="position: relative; top:0;"></button>' +
 
-                    '</div>' +
-                '<ul id="analyses_list"></ul>' +
-                '</div>' +
-//                '<hr>' +
-                '</div>' +
+            '</div>' +
+            '<ul id="analyses_list"></ul>' +
+            '</div>' +
+            //                '<hr>' +
             '</div>' +
             '</div>' +
-						'<a href="result.json" download>' +
-  						'<button class="btn btn-success glyphicon glyphicon-save-file" id="download_results" target ="_blank"' +
-              	'}>"Get results"</button>' +
-						'</a>' +
+            '</div>' +
+            '<a href="result.json" download>' +
+            '<button class="btn btn-success glyphicon glyphicon-save-file" id="download_results" target ="_blank"' +
+            '}>"Get results"</button>' +
+            '</a>' +
             '</div>' +
 
             '<div class="col-md-6">' +
@@ -1045,16 +1047,16 @@ table, th, td {
             '<div class="panel-heading">Preview' +
             '</div>' +
             '<div class="panel-body">' +
-                '<div id="result_graph" style="width: 100%; height: 300px;"></div>' +
-                '<div id="result_graph_controls" style="width: 100%;"></div>' +
-                '<div class="row">' +
-                    '<div id="debug_out" style="font-family: monospace;"></div>' +
-                    '<div>' +
-                    '</div>' +
-                '</div>' +
+            '<div id="result_graph" style="width: 100%; height: 300px;"></div>' +
+            '<div id="result_graph_controls" style="width: 100%;"></div>' +
+            '<div class="row">' +
+            '<div id="debug_out" style="font-family: monospace;"></div>' +
+            '<div>' +
+            '</div>' +
+            '</div>' +
             '</div>' +
             '<div class="panel-footer">' +
-                '<p id="clickdata"></p>' +
+            '<p id="clickdata"></p>' +
             '</div>' +
             '</div>' +
             '</div>' +
@@ -1149,7 +1151,7 @@ table, th, td {
 
         $('#cmd_select').on('change', this, this.cmdChange);
         $('#cmd_new').on('click', this, this.cmdNew);
-				
+
         this.GetAnalysises({data: this});
     };
 
