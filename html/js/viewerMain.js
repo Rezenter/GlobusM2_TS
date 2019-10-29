@@ -717,6 +717,11 @@ analysis['outp']['resultNames'].extend(manual_names)`
     };
 
 
+    this.displayAcq = function(ev) {
+        let self = ev.data;
+        console.log('display acquire');
+    };
+
     this.cmdChange = function(ev){
         let self = ev.data;
         let cmd = $('#cmd_select').val();
@@ -954,15 +959,36 @@ analysis['outp']['resultNames'].extend(manual_names)`
 
     this.BuildMenu = function () {
         let html =
-            '<nav class="navbar navbar-inverse">' +
-            '<div class="container-fluid">' +
-            '<div class="navbar-header">' +
-            '<a class="navbar-brand" href="#">' +
-            'Tomson Scattering Viewer' +
-            '</a>' +
-            '</div>' +
+`
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+        <a class="navbar-brand" href="#">
+            Tomson Scattering Viewer
+        </a>
+    </div>
 
+    <ul class="nav navbar-nav">
+        <button class="btn btn-success navbar-btn" id="acquire_btn">
+            acquire
+        </button>
+        <button class="btn btn-success navbar-btn" id="prof_btn">
+            profiles
+        </button>
+        <button class="btn btn-success navbar-btn" id="raw_btn">
+            raw signals
+        </button>
+        <button class="btn btn-success navbar-btn" id="export_btn">
+            export
+        </button>
+        <button class="btn btn-success navbar-btn" id="conf_btn">
+            config
+        </button>
+    </ul>
+</nav>
+`;
 
+/*
             '<ul class="nav navbar-nav">' +
             '<li class="dropdown">' +
             '<a href="#" class="dropdown-toggle" data-toggle="dropdown" ' +
@@ -990,7 +1016,7 @@ analysis['outp']['resultNames'].extend(manual_names)`
 
 
             '</nav>';
-
+*/
         this.m_menu.html(html);
 
         $('#start_processing_files').on('click', this, this.OnClickProcessFiles);
@@ -1151,6 +1177,7 @@ table, th, td {
 
         $('#cmd_select').on('change', this, this.cmdChange);
         $('#cmd_new').on('click', this, this.cmdNew);
+        $('#acquire_btn').on('click', this, this.displayAcq);
 
         this.GetAnalysises({data: this});
     };
