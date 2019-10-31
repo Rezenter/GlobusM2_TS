@@ -12,11 +12,9 @@
 <body>
 
 <script src="/js/jquery.js"></script>
-<script src="/js/markdown.js"></script>
 <script src="/js/bootstrap.min.js"></script>
 <script src="/js/flot/jquery.flot.js"></script>
 <script src="/js/flot/jquery.flot.navigate.js"></script>
-<script src="/js/Graph.js"></script>
 <script src="/js/viewerMain.js"></script>
 
 <div class="container-fluid">
@@ -29,7 +27,7 @@
 </div>
 
 <script>
-
+    import VueIp from 'VueIp';
     $(document).ready(
         function () {
             var viewer = new viewerMain('#main_container', '#menu_container');
