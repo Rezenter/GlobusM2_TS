@@ -1,8 +1,12 @@
 import http.server
 import json
 from RequestHandler import Handler
+import mimetypes
 
 handler = Handler()
+
+mimetypes.init()
+mimetypes.add_type('text/javascript', '.js', strict=True)
 
 def __init__():
     return
@@ -32,9 +36,32 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(json.dumps(resp), 'utf-8'))
 
+    def do_GET(self):
+        try:
+            if self.path in ("", "/"):
+                filepath = "index.html"
+            else:
+                filepath = self.path.lstrip("/")
+
+            f = open(filepath, "rb")
+
+        except IOError:
+            self.send_error(404,'File Not Found: %s ' % filepath)
+
+        else:
+            self.send_response(200)
+
+            #this part handles the mimetypes for you.
+            mimetype, _ = mimetypes.guess_type(filepath)
+            print(mimetype)
+            self.send_header('Content-type', mimetype)
+            self.end_headers()
+            for s in f:
+                self.wfile.write(s)
 
 if __name__ == '__main__':
     server = http.server.HTTPServer
+
     httpd = server(('', 8081), ApplicationServer)
     try:
         httpd.serve_forever()

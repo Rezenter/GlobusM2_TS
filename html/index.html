@@ -15,7 +15,7 @@
 <script src="/js/bootstrap.min.js"></script>
 <script src="/js/flot/jquery.flot.js"></script>
 <script src="/js/flot/jquery.flot.navigate.js"></script>
-<script src="/js/viewerMain.js"></script>
+<script type="module" src="/js/viewerMain.js"></script>
 
 <div class="container-fluid">
     <div class="row" id="menu_container">
@@ -27,7 +27,6 @@
 </div>
 
 <script>
-    import VueIp from 'VueIp';
     $(document).ready(
         function () {
             var viewer = new viewerMain('#main_container', '#menu_container');

@@ -1,3 +1,5 @@
+import VueIp from './node_modules/vue-ip/src/index.js';
+
 function viewerMain (container, menu) {
     this.m_container = $(container);
     this.m_menu = $(menu);
