@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Acquisition Section</title>
+</head>
+<body>
+    <div class="row" id="ADC_row" style="
+    margin-left: 0;
+    margin-right: 0;
+    ">
+        <label for="next_shot_number">Next shot №:</label>
+            <output id="next_shot_number"></output>
+        <label for="is_plasma">Is plasma?</label>
+            <input type="checkbox" id="is_plasma"><br>
+        <button class="btn btn-success" id="ADC_arm_button">Arm</button>
+        <span class="label danger" id="ADC_state">No connection</span>
+        <button class="btn btn-danger" id="ADC_disarm_button">Disarm</button><br>
+        <label for="ADC_auto_disarm">Auto disarm?</label>
+            <input type="checkbox" id="ADC_auto_disarm"><br>
+        <label for="ADC_timeout">Timeout:</label><input type="number" id="ADC_timeout" value="1000"  min="0">ms
+    </div>
+    <hr>
+    <div class="row" id="laser_row" style="
+    margin-left: 0;
+    margin-right: 0;
+    ">
+        Laser controls placeholder
+    </div>
+</body>
+<script>
+    function Main () {
+        this.Request = function (req, callback) {
+            req.subsystem = 'adc';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
+
+        this.Arm = function(ev) {
+            let self = ev.data;
+            let req = {
+                reqtype: 'arm',
+                shotn: $('#next_shot_number').val(),
+                isPlasma: $('#is_plasma')[0].checked
+            }
+            if($('#ADC_auto_disarm')[0].checked){
+                self.m_timer = setTimeout(self.Disarm, $('#ADC_timeout').val(), {data: self});
+            }
+            self.Request(
+                req, function (resp) {
+                    console.log(resp)
+                }
+            );
+        };
+
+        this.Disarm = function(ev){
+            let self = ev.data;
+            let req = {
+                reqtype: 'disarm'
+            }
+            if(self.m_timer != undefined){
+                clearTimeout(self.m_timer)
+            }
+            self.Request(
+                req, function (resp) {
+                    console.log(resp)
+                }
+            );
+        }
+
+        this.ConnectControls = function () {
+            $('#ADC_arm_button').on('click', this, this.Arm);
+            $('#ADC_disarm_button').on('click', this, this.Disarm);
+        };
+
+        this.ConnectControls();
+    }
+
+    $(document).ready(
+        function () {
+            let viewer = new Main();
+        }
+    )
+</script>
+</html>

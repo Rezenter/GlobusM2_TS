@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration section</title>
+</head>
+<body>
+<div>
+    <form>
+        <div class="form-group">
+            <label for="checkbox_wait_shot">Capture new shots</label>
+            <input id="checkbox_wait_shot" type="checkbox">
+        </div>
+        <div>
+            <label for="text_control_ip">Laser control IP address:port</label>
+            <input id="text_control_ip" type="text" placeholder="111.222.333.444:98765"
+                   required pattern="^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):[0-9]{1,5}$">
+        </div>
+    </form>
+    <div>
+        DB placeholder
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View section</title>
+</head>
+<body>
+    <div class="row" id="db_row" style="
+        margin-left: 0;
+        margin-right: 0;
+        ">
+        <label for="is_plasma">Is plasma?</label>
+            <input type="checkbox" id="is_plasma" checked>
+        <label for="shot_select">Choose a shot:</label>
+        <select id="shot_select"></select>
+        <button class="btn btn-success glyphicon glyphicon-refresh" id="shot_refresh">Refresh</button>
+    </div>
+    <hr>
+    <div class="row" id="view_tabs" style="
+        margin-left: 0;
+        margin-right: 0;
+        ">
+        <label for="board_spinbox">Board №</label><input type="number" min="0" value="0" max="3" id="board_spinbox">
+        <label for="event_spinbox">Event №</label><input type="number" min="0" max="0" value="0" id="event_spinbox">
+        <div class="row" id="events" style="
+        margin-left: 0;
+        margin-right: 0;
+        ">
+
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" id="event_prefix">
+                0ms
+            </div>
+            <div class="col-xs-10 col-sm-10 col-md-10 col-lg-10">
+                <input type="range" min="0" max="0" value="0" id="event_range">
+            </div>
+            <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" id="event_suffix">
+
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    function Main () {
+        this.m_currentShot = {};
+        this.m_currentShot = {};
+
+        this.Request = function (req, callback) {
+            req.subsystem = 'view';
+            $.post('/api', JSON.stringify(req), function(resp){
+                if(!resp['ok']){
+                    console.log(resp);
+                    alert(resp['description']);
+                }else {
+                    callback(resp);
+                }
+            }, 'json');
+        };
+
+        this.Refresh = function(ev) {
+            let self = ev.data;
+            self.Request(
+                {
+                    reqtype: 'refresh'
+                }
+                , function (resp) {
+                    self.m_plasma_shots = resp['plasma'];
+                    self.m_debug_shots = resp['debug'];
+                    self.UpdateShotSelect({data: self});
+                }
+            );
+        };
+
+        this.UpdateShotSelect = function(ev) {
+            let self = ev.data;
+            let shots = self.m_plasma_shots;
+            console.log('plasma_shots')
+            if(! $('#is_plasma')[0].checked){
+                shots = self.m_debug_shots;
+                console.log('debug_shots')
+            }
+            let options = []
+            shots.forEach(shot => options.push("<option>" + shot + "</option>"));
+            $('#shot_select').html(options);
+            if(options.length){
+                self.Select({data: self})
+            }
+        };
+
+        this.Select = function(ev){
+            let self = ev.data;
+            $('#event_range')[0].max = 0
+            $('#event_spinbox')[0].max = 0
+            self.Request(
+                {
+                    reqtype: 'get_shot',
+                    is_plasma: $('#is_plasma')[0].checked,
+                    shotn: $('#shot_select').val()
+                }
+                , function (resp) {
+                    console.log(resp);
+                    if(resp['sus_boards'].length){
+                        console.log(resp['sus_boards']);
+                        alert('Warning! Suspicious timestamps inside one board.');
+                    }
+                    if(resp['sus_events'].length){
+                        console.log(resp['sus_events']);
+                        alert('Warning! Suspicious timestamps between boards.');
+                    }
+                    Object.assign(self.m_currentShot, resp);
+                    self.ChangeBoard({data: self});
+                    self.GetEvent({data: self});
+                }
+            );
+        };
+
+        this.ChangeBoard = function(ev){
+            let self = ev.data;
+            $('#event_range')[0].max = self.m_currentShot['boards'][$('#board_spinbox').val()].length;
+            $('#event_spinbox')[0].max = self.m_currentShot['boards'][$('#board_spinbox').val()].length;
+            $('#event_suffix').text(self.m_currentShot['boards'][$('#board_spinbox').val()][self.m_currentShot['boards'][$('#board_spinbox').val()].length - 1].toFixed(2) + 'ms');
+        }
+
+        this.UpdateEventSpinbox = function(ev){
+            let self = ev.data;
+            if($('#event_range').val() != $('#event_spinbox').val()){
+                $('#event_spinbox').val($('#event_range').val());
+                self.GetEvent({data: self});
+            }
+        }
+
+        this.UpdateEventRange = function(ev){
+            let self = ev.data;
+            if($('#event_range').val() != $('#event_spinbox').val()){
+                $('#event_range').val($('#event_spinbox').val());
+                self.GetEvent({data: self});
+            }
+        }
+
+        this.GetEvent = function(ev){
+            let self = ev.data;
+            self.Request(
+                {
+                    reqtype: 'get_event',
+                    is_plasma: $('#is_plasma')[0].checked,
+                    shotn: $('#shot_select').val(),
+                    board: parseInt($('#board_spinbox').val()),
+                    event: parseInt($('#event_spinbox').val())
+                }
+                , function (resp) {
+                    console.log(resp);
+                    
+                    Object.assign(self.m_currentShot, resp);
+                    self.ChangeBoard({data: self});
+                }
+            );
+        }
+
+        this.ConnectControls = function () {
+            $('#shot_refresh').on('click', this, this.Refresh);
+            $('#shot_select').on('change', this, this.Select);
+            $('#is_plasma').on('change', this, this.UpdateShotSelect);
+            $('#board_spinbox').on('change', this, this.ChangeBoard)
+            $('#event_range').on('change', this, this.UpdateEventSpinbox);
+            $('#event_spinbox').on('change', this, this.UpdateEventRange);
+        };
+
+        this.ConnectControls();
+    }
+
+    $(document).ready(
+        function () {
+            let viewer = new Main();
+            viewer.Refresh({data: viewer});
+        }
+    )
+</script>
+</html>

@@ -6,33 +6,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Tomson Scattering viewer</title>
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
-
+    <link href="css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 
-<script src="/js/jquery.js"></script>
-<script src="/js/bootstrap.min.js"></script>
-<script src="/js/flot/jquery.flot.js"></script>
-<script src="/js/flot/jquery.flot.navigate.js"></script>
-<script type="module" src="/js/viewerMain.js"></script>
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/viewerMain.js"></script>
 
-<div class="container-fluid">
+<div>
     <div class="row" id="menu_container">
+        <nav class="navbar navbar-inverse">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="#">
+                        Tomson Scattering Viewer
+                    </a>
+                </div>
+                <ul class="nav navbar-nav">
+                    <button class="btn btn-success navbar-btn" id="conf_btn">
+                        Configuration
+                    </button>
+                    <button class="btn btn-success navbar-btn" id="acquire_btn">
+                        Acquisition
+                    </button>
+                    <button class="btn btn-success navbar-btn" id="calibr_btn">
+                        Calibration
+                    </button>
+                    <button class="btn btn-success navbar-btn" id="view_btn">
+                        View
+                    </button>
+
+                </ul>
+            </div>
+        </nav>
     </div>
 
-    <div class="row" id="main_container">
-    </div>
+    <div class="container-fluid" id="main_container"></div>
 
 </div>
+
 
 <script>
     $(document).ready(
         function () {
-            var viewer = new viewerMain('#main_container', '#menu_container');
+            let viewer = new viewerMain('#main_container');
         }
     )
-
 </script>
 
 </body>
