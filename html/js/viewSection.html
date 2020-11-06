@@ -14,6 +14,8 @@
         <label for="shot_select">Choose a shot:</label>
         <select id="shot_select"></select>
         <button class="btn btn-success glyphicon glyphicon-refresh" id="shot_refresh">Refresh</button>
+        <label for="auto_load">Load last shot automatically?</label>
+            <input type="checkbox" id="auto_load" checked>
     </div>
     <hr>
     <div class="row" id="view_tabs" style="
@@ -42,11 +44,30 @@
             </div>
         </div>
     </div>
+    <div id="chartContainer" style="width:100%; height:400px;"></div>
+    <div id="slider-range"></div>
 </body>
 <script>
     function Main () {
         this.m_currentShot = {};
-        this.m_currentShot = {};
+        this.m_currentEvent = {};
+        this.m_chartData = [];
+
+        this.m_chart = new CanvasJS.Chart("chartContainer", {
+            title: {
+                text: "Raw ADC data"
+            },
+            axisY: {
+                title: "Voltage, mV",
+                includeZero: true,
+                minimum: -150,
+                maximum: 2350
+            },
+            axisX: {
+                title: "Local time, ns",
+            },
+            data: []
+        });
 
         this.Request = function (req, callback) {
             req.subsystem = 'view';
@@ -85,7 +106,7 @@
             let options = []
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
             $('#shot_select').html(options);
-            if(options.length){
+            if(options.length && $('#auto_load')[0].checked){
                 self.Select({data: self})
             }
         };
@@ -101,7 +122,7 @@
                     shotn: $('#shot_select').val()
                 }
                 , function (resp) {
-                    console.log(resp);
+                    //console.log(resp);
                     if(resp['sus_boards'].length){
                         console.log(resp['sus_boards']);
                         alert('Warning! Suspicious timestamps inside one board.');
@@ -142,6 +163,8 @@
 
         this.GetEvent = function(ev){
             let self = ev.data;
+            self.m_chartData = [];
+            this.m_chart.render();
             self.Request(
                 {
                     reqtype: 'get_event',
@@ -151,13 +174,46 @@
                     event: parseInt($('#event_spinbox').val())
                 }
                 , function (resp) {
-                    console.log(resp);
+                    //console.log(resp);
                     
-                    Object.assign(self.m_currentShot, resp);
-                    self.ChangeBoard({data: self});
+                    Object.assign(self.m_currentEvent, resp);
+                    self.UpdateChart({data: self});
                 }
             );
-        }
+        };
+
+        this.UpdateChart = function(ev){
+            let self = ev.data;
+            self.m_chartData = []
+            //console.log(self.m_currentEvent);
+            if(Object.keys(self.m_currentEvent).length !== 0){
+                for(let group = 0; group < 8; group++){
+                    for(let gr_ch = 0; gr_ch < 2; gr_ch++){
+                        let ch = gr_ch + group * 2;
+                        let data_points = [];
+                        for(let cell = 0; cell < 1024; cell++){
+                            data_points.push({
+                                x: cell*0.3125,
+                                y: self.m_currentEvent.event.groups[group].data[gr_ch][cell]
+                            })
+                        }
+                        self.m_chartData.push(
+                            {
+                                type: "spline",
+                                showInLegend: true,
+                                name: 'ch ' + ch,
+                                toolTipContent: 'ch ' + ch + ', {x} ns: {y} mV',
+                                dataPoints: data_points
+                        });
+                    }
+                }
+                //console.log(self.m_chartData)
+            }
+
+            self.m_chart.options.data = self.m_chartData;
+            self.m_chart.render();
+            console.log('Rendered?');
+        };
 
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
@@ -169,6 +225,7 @@
         };
 
         this.ConnectControls();
+        this.UpdateChart({data: this});
     }
 
     $(document).ready(
