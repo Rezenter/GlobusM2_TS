@@ -1,0 +1,459 @@
+{
+  "adc": {
+    "sync": [
+      {
+        "ch": 0
+      },
+      {
+        "ch": 0
+      },
+      {
+        "ch": 0
+      },
+      {
+        "ch": 0
+      }
+    ],
+    "prehistorySep": 15
+  },
+  "preamp":{
+    "apdGain": 100,
+    "charge": 1.602e-19,
+    "feedbackResistance": 10000,
+    "voltageDivider": true
+  },
+  "poly": [
+    {
+      "ind": 0,
+      "fiber": "1A",
+      "channels":[
+        {
+          "adc": 0,
+          "ch": 1,
+          "fast_gain": 10,
+          "slow_gain": 8,
+          "int_from_ns": 50,
+          "int_to_ns": 85
+        },
+        {
+          "adc": 0,
+          "ch": 2,
+          "fast_gain": 10,
+          "slow_gain": 4,
+          "int_from_ns": 53,
+          "int_to_ns": 88
+        },
+        {
+          "adc": 0,
+          "ch": 3,
+          "fast_gain": 10,
+          "slow_gain": 2,
+          "int_from_ns": 56,
+          "int_to_ns": 91
+        },
+        {
+          "adc": 0,
+          "ch": 4,
+          "fast_gain": 10,
+          "slow_gain": 1,
+          "int_from_ns": 59,
+          "int_to_ns": 94
+        },
+        {
+          "adc": 0,
+          "ch": 5,
+          "fast_gain": 10,
+          "slow_gain": 1,
+          "int_from_ns": 62,
+          "int_to_ns": 97
+        },
+        {
+          "adc": 3,
+          "ch": 6,
+          "fast_gain": 10,
+          "slow_gain": 8,
+          "int_from_ns": 65,
+          "int_to_ns": 100,
+          "skip": true
+        }
+      ]
+    },
+    {
+      "ind": 1,
+      "fiber": "1B",
+      "channels":[
+        {
+          "adc": 0,
+          "ch": 6,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 0,
+          "ch": 7,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 0,
+          "ch": 8,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 0,
+          "ch": 9,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 0,
+          "ch": 10,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 7,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 2,
+      "fiber": "2",
+      "channels":[
+        {
+          "adc": 0,
+          "ch": 11,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 0,
+          "ch": 12,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 0,
+          "ch": 13,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 0,
+          "ch": 14,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 0,
+          "ch": 15,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 8,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 3,
+      "fiber": "3",
+      "channels":[
+        {
+          "adc": 1,
+          "ch": 1,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 1,
+          "ch": 2,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 1,
+          "ch": 3,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 1,
+          "ch": 4,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 1,
+          "ch": 5,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 9,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 4,
+      "fiber": "4",
+      "channels":[
+        {
+          "adc": 1,
+          "ch": 6,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 1,
+          "ch": 7,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 1,
+          "ch": 8,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 1,
+          "ch": 9,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 1,
+          "ch": 10,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 10,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 5,
+      "fiber": "5",
+      "channels":[
+        {
+          "adc": 1,
+          "ch": 11,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 1,
+          "ch": 12,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 1,
+          "ch": 13,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 1,
+          "ch": 14,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 1,
+          "ch": 15,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 11,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },{
+      "ind": 6,
+      "fiber": "6",
+      "channels":[
+        {
+          "adc": 2,
+          "ch": 1,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 2,
+          "ch": 2,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 2,
+          "ch": 3,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 2,
+          "ch": 4,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 2,
+          "ch": 5,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 12,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 7,
+      "fiber": "7",
+      "channels":[
+        {
+          "adc": 2,
+          "ch": 6,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 2,
+          "ch": 7,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 2,
+          "ch": 8,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 2,
+          "ch": 9,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 2,
+          "ch": 10,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 13,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 8,
+      "fiber": "8",
+      "channels":[
+        {
+          "adc": 2,
+          "ch": 11,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 2,
+          "ch": 12,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 2,
+          "ch": 13,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 2,
+          "ch": 14,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 2,
+          "ch": 15,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 14,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    },
+    {
+      "ind": 9,
+      "fiber": "9",
+      "channels":[
+        {
+          "adc": 3,
+          "ch": 1,
+          "fast_gain": 10,
+          "slow_gain": 8
+        },
+        {
+          "adc": 3,
+          "ch": 2,
+          "fast_gain": 10,
+          "slow_gain": 4
+        },
+        {
+          "adc": 3,
+          "ch": 3,
+          "fast_gain": 10,
+          "slow_gain": 2
+        },
+        {
+          "adc": 3,
+          "ch": 4,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 5,
+          "fast_gain": 10,
+          "slow_gain": 1
+        },
+        {
+          "adc": 3,
+          "ch": 15,
+          "fast_gain": 10,
+          "slow_gain": 8
+        }
+      ]
+    }
+  ]
+}
