@@ -18,7 +18,32 @@
             <input type="checkbox" id="auto_load" checked>
     </div>
     <hr>
-    <div class="row" id="view_tabs" style="
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                <div id="timestamp_chart" style="width:100%; height:200px;"></div>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <div id="radius_chart" style="width:100%; height:200px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">Active</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+        </li>
+    </ul>
+    <div class="row" id="view_tabs_wrong" style="
         margin-left: 0;
         margin-right: 0;
         ">
@@ -51,7 +76,6 @@
     function Main () {
         this.m_currentShot = {};
         this.m_currentEvent = {};
-        this.m_chartData = [];
 
         this.m_chart = new CanvasJS.Chart("chartContainer", {
             title: {
@@ -69,6 +93,37 @@
             data: []
         });
 
+        this.m_timestamp_chart = new CanvasJS.Chart("timestamp_chart", {
+            title: {
+                text: "Shot timeline"
+            },
+            axisY: {
+                includeZero: true
+            },
+            axisX: {
+                title: "Timestamp, ms",
+            },
+            data: []
+        });
+
+        this.m_radius_chart = new CanvasJS.Chart("radius_chart", {
+            title: {
+                text: "Spatial points"
+            },
+            axisY: {
+                title: "Z, cm",
+                includeZero: true,
+                minimum: -10,
+                maximum: 10
+            },
+            axisX: {
+                title: "R, cm",
+            },
+            data: []
+        });
+        this.m_timestamp_chart.render();
+        this.m_radius_chart.render();
+
         this.Request = function (req, callback) {
             req.subsystem = 'view';
             $.post('/api', JSON.stringify(req), function(resp){
@@ -80,6 +135,7 @@
                 }
             }, 'json');
         };
+
 
         this.Refresh = function(ev) {
             let self = ev.data;
@@ -107,7 +163,7 @@
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
             $('#shot_select').html(options);
             if(options.length && $('#auto_load')[0].checked){
-                self.Select({data: self})
+                //self.Select({data: self})
             }
         };
 
@@ -120,20 +176,11 @@
                     reqtype: 'get_shot',
                     is_plasma: $('#is_plasma')[0].checked,
                     shotn: $('#shot_select').val()
-                }
-                , function (resp) {
-                    //console.log(resp);
-                    if(resp['sus_boards'].length){
-                        console.log(resp['sus_boards']);
-                        alert('Warning! Suspicious timestamps inside one board.');
-                    }
-                    if(resp['sus_events'].length){
-                        console.log(resp['sus_events']);
-                        alert('Warning! Suspicious timestamps between boards.');
-                    }
+                }, function (resp) {
+                    console.log(resp);
                     Object.assign(self.m_currentShot, resp);
-                    self.ChangeBoard({data: self});
-                    self.GetEvent({data: self});
+                    //self.ChangeBoard({data: self});
+                    //self.GetEvent({data: self});
                 }
             );
         };

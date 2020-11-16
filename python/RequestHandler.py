@@ -1,17 +1,18 @@
 import os
-import ijson
-import math
-import itertools
+import python.process.rawToSignals as raw_proc
+
 
 def __init__():
     return
 
 
-DB_PATH = 'd:/data/fastDump/'
+DB_PATH = 'd:/data/GTS-Core-2020/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
+RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
+
 DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
 TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
@@ -22,6 +23,7 @@ class Handler:
     def __init__(self):
         self.HandlingTable = {
             'adc': {},
+            'laser': {},
             'view': {
                 'refresh': self.refresh_shots,
                 'get_shot': self.get_shot,
@@ -30,6 +32,7 @@ class Handler:
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
         self.debug_path = '%s%s' % (DB_PATH, DEBUG_SHOTS)
+        self.raw_processor = None
         return
 
     def handle_request(self, req):
@@ -44,16 +47,16 @@ class Handler:
 
     def refresh_shots(self, req):
         resp = {}
-        if not os.path.isdir(self.plasma_path):
+        if not os.path.isdir(self.plasma_path + RAW_FOLDER):
             resp['ok'] = False
-            resp['description'] = 'Directory for plasma shots "%s" does not exist.' % self.plasma_path
+            resp['description'] = 'Directory for plasma shots "%s" does not exist.' % (self.plasma_path + RAW_FOLDER)
             return resp
-        if not os.path.isdir(self.debug_path):
+        if not os.path.isdir(self.debug_path + RAW_FOLDER):
             resp['ok'] = False
-            resp['description'] = 'Directory for debug shots "%s" does not exist.' % self.debug_path
+            resp['description'] = 'Directory for debug shots "%s" does not exist.' % (self.debug_path + RAW_FOLDER)
             return resp
-        resp['plasma'] = sorted(os.listdir(self.plasma_path), reverse=True)
-        resp['debug'] = sorted(os.listdir(self.debug_path), reverse=True)
+        resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
+        resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
         resp['ok'] = True
         return resp
 
@@ -80,60 +83,16 @@ class Handler:
             resp['ok'] = False
             resp['description'] = 'Requested shot is missing header file.'
             return resp
+        if self.raw_processor is None or self.raw_processor.shotn != req['shotn']:
+            self.raw_processor = raw_proc.Integrator(DB_PATH, req['shotn'], req['is_plasma'], '2020.11.12')
         resp = {
             'header': {},
-            'boards': [[] for board in range(4)],
-            'sus_boards': [],
-            'sus_events': []
+            'timestamps': [],
+            'energies': [],
+            'polys': [],
+            'sizes': []
         }
-        with open('%s/%s.%s' % (shot_path, HEADER_FILE, FILE_EXT), 'rb') as header_file:
-            header = ijson.kvitems(header_file, '', use_float=True)
-            for key, value in header:
-                resp['header'][key] = value
-        for board_id in range(4):
-            if os.path.isfile('%s/%d.%s' % (shot_path, board_id, FILE_EXT)):
-                with open('%s/%d.%s' % (shot_path, board_id, FILE_EXT), 'rb') as board_file:
-                    print('opened %d' % board_id)
-                    events = ijson.basic_parse(board_file, use_float=True)
-                    counter = 0
-                    current = 0
-                    for event, value in events:
-                        if event == 'map_key' and value == 'timestamp':
-                            event, value = events.__next__()
-                            if not counter:
-                                resp['boards'][board_id].append(value)
-                                current = value
-                            else:
-                                if len(resp['boards'][board_id]) > 1 and \
-                                        not math.isclose(value, current, abs_tol=TOLERANCE_BETWEEN_SAMLONGS):
-                                    resp['sus_boards'].append({
-                                        'board': board_id,
-                                        'event': len(resp['boards'][board_id]) - 1,
-                                        'group': counter,
-                                        'delta': current - value
-                                    })
-                                if counter == 7:
-                                    counter = 0
-                                    continue
-                            counter += 1
-        min_events = min(len(resp['boards'][0]), len(resp['boards'][1]), len(resp['boards'][2]), len(resp['boards'][3]))
-        for ev_id in range(min_events):
-            if math.isclose(resp['boards'][0][ev_id], resp['boards'][1][ev_id],
-                                abs_tol=TOLERANCE_BETWEEN_BOARDS):
-                if math.isclose(resp['boards'][0][ev_id], resp['boards'][2][ev_id],
-                                abs_tol=TOLERANCE_BETWEEN_BOARDS):
-                    if math.isclose(resp['boards'][0][ev_id], resp['boards'][3][ev_id],
-                                    abs_tol=TOLERANCE_BETWEEN_BOARDS):
-                        continue
-            resp['sus_events'].append({
-                'event': ev_id,
-                'timestamps': [
-                    resp['boards'][0][ev_id],
-                    resp['boards'][1][ev_id],
-                    resp['boards'][2][ev_id],
-                    resp['boards'][3][ev_id]
-                ]
-            })
+
         resp['ok'] = True
         return resp
 
@@ -169,8 +128,5 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"event" field is missing from request.'
             return resp
-        with open('%s/%d.%s' % (shot_path, board_id, FILE_EXT), 'rb') as board_file:
-            objects = ijson.items(board_file, 'item', use_float=True)
-            resp['event'] = next(itertools.islice(objects, req['event'], req['event'] + 1))
         resp['ok'] = True
         return resp

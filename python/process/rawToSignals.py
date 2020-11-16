@@ -18,9 +18,14 @@ def find_front_findex(signal, threshold, rising=True):
 
 
 class Integrator:
-    extension = '.json'
-    config_path = '../configs/'
-    db_path = 'd:/data/fastDump/'
+    PLASMA_FOLDER = 'plasma/'
+    DEBUG_FOLDER = 'debug/'
+    RAW_FOLDER = 'raw/'
+    SIGNAL_FOLDER = 'signal/'
+    CONFIG_FOLDER = 'config/'
+    HEADER_FILE = 'header'
+    FILE_EXT = '.json'
+
 
     # move to config!
     group_per_board = 8
@@ -30,21 +35,22 @@ class Integrator:
     laser_prehistory_residual_pc = 20 / 100
     laser_integral_residual_pc = 1 / 100
     laser_length_residual_ind = 5
-    left_limit = 100 #  ind
-    right_limit = 20 #  ind
+    left_limit = 100  # ind
+    right_limit = 20  # ind
 
-    def __init__(self, shotn, is_plasma, config_name, missing=None):
+    def __init__(self, db_path, shotn, is_plasma, config_name):
         self.loaded = False
         self.shotn = shotn
         self.is_plasma = is_plasma
-        self.cofig_name = config_name
-        if not os.path.isdir(self.config_path):
-            self.error = 'Configuration path not found.'
-            return
-        if not os.path.isdir(self.db_path):
+        self.config_name = config_name
+        if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
             return
-        config_full_name = '%s%s%s' % (self.config_path, self.cofig_name, self.extension)
+        self.db_path = db_path
+        if not os.path.isdir('%s%s' % (self.db_path, self.CONFIG_FOLDER)):
+            self.error = 'Configuration path not found.'
+            return
+        config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.FILE_EXT)
         if not os.path.isfile(config_full_name):
             self.error = 'Configuration file not found.'
             return
@@ -53,38 +59,73 @@ class Integrator:
             obj = ijson.kvitems(config_file, '', use_float=True)
             for k, v in obj:
                 self.config[k] = v
-        if missing is None:
-            missing = [[] for board in range(len(self.config['adc']['sync']))]
+
+        missing = [[] for board in range(len(self.config['adc']['sync']))]
+        missing = [
+            [78],
+            [],
+            [],
+            []
+        ]
         self.missing = missing
+
         self.header = {}
         self.data = []
         self.laser_count = 0
-        self.loaded = self.load()
+        self.time_step = 0
+        self.loaded = False
         self.processed = []
+        if self.is_plasma:
+            self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
+        else:
+            self.prefix = '%s%s' % (self.db_path, self.DEBUG_FOLDER)
+        if not self.load():
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            fuck
 
     def load(self):
-        print('loading shot...')
-        if self.is_plasma:
-            shot_folder = '%splasma/%05d' % (self.db_path, self.shotn)
-        else:
-            shot_folder = '%sdebug/%05d' % (self.db_path, self.shotn)
+        self.processed = []
+        shot_folder = '%s%s%05d/' % (self.prefix, self.RAW_FOLDER, self.shotn)
         if not os.path.isdir(shot_folder):
             print('Requested shotn is missing.')
             return False
-        header_path = '%s/header%s' % (shot_folder, self.extension)
+        header_path = '%s%s%s' % (shot_folder, self.HEADER_FILE, self.FILE_EXT)
         if not os.path.isfile(header_path):
             print('Shot is missing header file.')
             return False
-        with open('%s/header.json' % shot_folder, 'r') as header_file:
+        with open(header_path, 'rb') as header_file:
             obj = ijson.kvitems(header_file, '', use_float=True)
             for k, v in obj:
                 self.header[k] = v
 
+        signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        if os.path.isfile(signal_path):
+            print('Loading existing processed result.')
+            with open(signal_path, 'rb') as signal_file:
+                obj = ijson.items(signal_file, 'common.config_name', use_float=True)
+                for val in obj:
+                    if val == self.config_name:
+                        signal_file.seek(0)
+                        obj = ijson.items(signal_file, 'data.item', use_float=True)
+                        for event in obj:
+                            self.processed.append(event)
+                        return True
+        self.load_raw()
+        self.process_shot()
+        return True
+
+    def load_raw(self):
+        self.loaded = False
+        print('loading raw shot...')
+        if self.is_plasma:
+            shot_folder = '%s%s%s%05d/' % (self.db_path, self.PLASMA_FOLDER, self.RAW_FOLDER, self.shotn)
+        else:
+            shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
         for board_ind in range(len(self.header['boards'])):
-            if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.extension)):
+            if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT)):
                 print('Requested shot is missing requested board file.')
                 return False
-            with open('%s/%d%s' % (shot_folder, board_ind, self.extension), 'rb') as board_file:
+            with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
                 event_ind = 0
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
@@ -115,17 +156,18 @@ class Integrator:
                 laser_count = min(self.laser_count, len(self.data[board_ind]))
 
         print('Total event count = %d.' % self.laser_count)
+        self.loaded = True
         return True
 
     def process_shot(self):
         print('Processing shot...')
         freq = float(self.header['frequency'])  # GS/s
-        time_step = 1 / freq  # nanoseconds
+        self.time_step = 1 / freq  # nanoseconds
 
         for event_ind in range(self.laser_count):
             bad_flag = False
             # print('Event %d' % event_ind)
-            laser, laser_bad = self.process_laser_event(event_ind, time_step)
+            laser, laser_bad = self.process_laser_event(event_ind)
             bad_flag = bad_flag or laser_bad
             proc_event = {
                 'laser': laser,
@@ -133,19 +175,22 @@ class Integrator:
                 'processed_bad': bad_flag
             }
             for poly in self.config['poly']:
-                proc_event['poly'][poly['ind']] = self.process_poly_event(event_ind, time_step, poly, laser)
-                break  # debug!
+                proc_event['poly'][poly['ind']] = self.process_poly_event(event_ind, poly, laser)
+                #break  # debug!
 
             self.processed.append(proc_event)
         self.save_processed()
 
     def save_processed(self):
         print('Saving processed data...')
-        filepath = 'd:/data/signals/%05d.json' % self.shotn
+        filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
         with open(filepath, 'w') as file:
             file.write('{\n "common": ')
             common = {
-                'freq': self.header['frequency']
+                'header': self.header,
+                'config_name': self.config_name,
+                'config': self.config,
+                'isPlasma': self.is_plasma
             }
             json.dump(common, file)
 
@@ -161,14 +206,14 @@ class Integrator:
     def ch_to_gr(self, ch):
         return ch // self.ch_per_group, ch % self.ch_per_group
 
-    def integrate_energy(self, signal, time_step, zero):
+    def integrate_energy(self, signal, zero):
         res = 0.0
         flag = False
         integration_stop = -1
         for i in range(len(signal) - 1):
             if signal[i] - zero >= self.header['triggerThreshold']:
                 flag = True
-            res += time_step * (signal[i] + signal[i + 1] - 2 * zero) * 0.5  # ns*mV
+            res += self.time_step * (signal[i] + signal[i + 1] - 2 * zero) * 0.5  # ns*mV
             if flag and signal[i + 1] - zero < 0:
                 integration_stop = i
                 break
@@ -177,7 +222,7 @@ class Integrator:
             exit()
         return res, integration_stop
 
-    def process_laser_event(self, event_ind, time_step):
+    def process_laser_event(self, event_ind):
         bad_flag = False
         laser = {
             'boards': [],
@@ -214,10 +259,10 @@ class Integrator:
                     maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
                 print('Warning! sync signal offscale!')
                 bad_flag = True
-            integral, stop_ind = self.integrate_energy(signal[integration_limit:], time_step, zero)
+            integral, stop_ind = self.integrate_energy(signal[integration_limit:], zero)
             laser['boards'].append({
                 'sync_ind': front_ind,
-                'sync_ns': front_ind * time_step,
+                'sync_ns': front_ind * self.time_step,
                 'zero_lvl': zero,
                 'pre_std': statistics.stdev(signal[:integration_limit], zero),
                 'min': minimum,
@@ -249,12 +294,13 @@ class Integrator:
                 bad_flag = True
         return laser, bad_flag
 
-    def process_poly_event(self, event_ind, time_step, poly, laser):
+    def process_poly_event(self, event_ind, poly, laser):
         res = {
             'ch': []
         }
-        for sp_ch in poly['channels']:
+        for ch_ind in range(len(poly['channels'])):
             bad_flag = False
+            sp_ch = poly['channels'][ch_ind]
             board_ind = sp_ch['adc']
             if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
                 res['ch'].append({
@@ -273,10 +319,9 @@ class Integrator:
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] + sp_ch['int_from_ns'] /
-                                          time_step)
-            integration_to = math.ceil(laser['boards'][board_ind]['sync_ind'] + sp_ch['int_to_ns'] /
-                                        time_step)
+            integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
+                                          (poly['delay'] + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
+            integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
             if integration_from < self.left_limit:
                 print('Warning! Integration limit is too close to the left for Poly %d channel %d  in event %d!' %
                       (poly['ind'], sp_ch['ch'], event_ind))
@@ -293,12 +338,12 @@ class Integrator:
                 minimum = min(minimum, cell)
             if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
                     maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                print('Warning! Poly %d channel %d offscale in event %d!' % (poly['ind'], sp_ch['ch'], event_ind))
+                print('Warning! Poly %d sp.channel %d offscale in event %d!' % (poly['ind'], ch_ind + 1, event_ind))
                 bad_flag = True
             integral = 0
             if not bad_flag:
                 for cell in range(integration_from, integration_to - 1):
-                    integral += time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
+                    integral += self.time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
                                                        self.config['preamp']['charge'] *
                                                        self.config['preamp']['feedbackResistance'] *
@@ -318,11 +363,11 @@ class Integrator:
             })
         return res
 
-    def plot(self, event_ind, poly):
-        import matplotlib as plt
+    def plot(self, event_ind, poly_ind):
+        import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        '''
-        for sp_ch in poly['channels']:
+        for ch_ind in range(len(self.config['poly'][poly_ind]['channels'])):
+            sp_ch = self.config['poly'][poly_ind]['channels'][ch_ind]
             board_ind = sp_ch['adc']
             if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
                 continue
@@ -332,17 +377,23 @@ class Integrator:
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            start = self.processed[event_ind]['laser']['boards'][board_ind]['sync_ns']
-            plt.plot(timeline, averaged[ch_ind], label='ADC_ch %d' % channels[ch_ind])
-
-        '''
+            start = self.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
+            tmp = plt.plot([(cell_ind - start) * self.time_step for cell_ind in range(len(signal))],
+                     [y - self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['zero_lvl'] for y in signal],
+                     label='ch %d' % (ch_ind + 1))
+            ax.axvspan((self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['from'] - start) * self.time_step,
+                       (self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['to'] - start) * self.time_step,
+                       alpha=0.3, color=tmp[-1].get_color())
         plt.ylabel('signal, mV')
         plt.xlabel('timeline, ns')
-        plt.title('title')
+        plt.title('Poly %d, event %d' % (poly_ind, event_ind))
         plt.xlim(-5, 175)
-        plt.ylim(-50, 2300)
-        #filename = '../figures/poly%d/ave_board%d_ch%s' % (poly, board_idx, channels)
+        plt.ylim(-50, 2350)
+
         ax.legend()
         plt.grid(color='k', linestyle='-', linewidth=1)
-        #plt.savefig('%s.png' % filename, dpi=600)
+        #plt.show()
+        filename = 'figs/ev%d_p%d.png' % (event_ind, poly_ind)
+        plt.savefig(filename, dpi=600)
         plt.close(fig)
+        print('plotted')
