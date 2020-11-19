@@ -1,12 +1,14 @@
 import os
 import python.process.rawToSignals as raw_proc
+import python.subsyst.fastADC as caen
+import time
 
 
 def __init__():
     return
 
 
-DB_PATH = 'd:/data/GTS-Core-2020/db/'
+DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
 RAW_FOLDER = 'raw/'
@@ -22,7 +24,9 @@ class Handler:
 
     def __init__(self):
         self.HandlingTable = {
-            'adc': {},
+            'adc': {
+                'arm': self.fast_arm
+            },
             'laser': {},
             'view': {
                 'refresh': self.refresh_shots,
@@ -101,5 +105,40 @@ class Handler:
             resp['description'] = '"event" field is missing from request.'
             return resp
         resp = self.raw_processor.processed[req['event']]
+        resp['ok'] = True
+        return resp
+
+    def fast_arm(self, req):
+        resp = {}
+        if 'isPlasma' not in req:
+            resp['ok'] = False
+            resp['description'] = '"isPlasma" field is missing from request.'
+            return resp
+
+        shot_filename = "%s/shotn.txt" % DB_PATH
+        isPlasma = req['isPlasma']
+        shotn = 0
+        with open(shot_filename, 'r') as shotn_file:
+            line = shotn_file.readline()
+            shotn = int(line)
+
+
+        caen.connect()
+
+        caen.send_cmd(caen.Commands.Alive)
+        print(caen.read())
+
+        time.sleep(0.1)
+
+        caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
+        print(caen.read())
+
+        caen.disconnect()
+
+        with open(shot_filename, 'w') as shotn_file:
+            shotn_file.seek(0)
+            shotn += 1
+            shotn_file.write('%d' % shotn)
+
         resp['ok'] = True
         return resp
