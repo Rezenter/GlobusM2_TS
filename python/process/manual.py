@@ -13,7 +13,7 @@ config = '2020.11.12'
 #    print('Config is not valid!')
 #    exit(-1)
 
-integrator = rawToSignals.Integrator(DB_PATH, 294, True, '2020.11.12')
+integrator = rawToSignals.Integrator(DB_PATH, 304, True, '2020.11.12')
 
 #integrator.process_shot()
 

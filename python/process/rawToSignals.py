@@ -61,12 +61,14 @@ class Integrator:
                 self.config[k] = v
 
         missing = [[] for board in range(len(self.config['adc']['sync']))]
+        '''
         missing = [
             [78],
             [],
             [],
             []
         ]
+        '''
         self.missing = missing
 
         self.header = {}
@@ -350,15 +352,18 @@ class Integrator:
                                                        sp_ch['fast_gain'])
             if self.config['preamp']['voltageDivider']:
                 photoelectrons *= 2
+            pre_std = statistics.stdev(signal[:integration_from], zero)
+            err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
             res['ch'].append({
                 'from': integration_from,
                 'to': integration_to,
                 'zero_lvl': zero,
-                'pre_std': statistics.stdev(signal[:integration_from], zero),
+                'pre_std': pre_std,
                 'min': minimum,
                 'max': maximum,
                 'int': integral,
                 'ph_el': photoelectrons,
+                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
                 'processed_bad': bad_flag
             })
         return res

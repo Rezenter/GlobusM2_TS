@@ -27,7 +27,7 @@ class Handler:
             'view': {
                 'refresh': self.refresh_shots,
                 'get_shot': self.get_shot,
-                'get_event': self.get_event
+                'get_event_sig': self.get_event_sig
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -74,59 +74,32 @@ class Handler:
             path = self.plasma_path
         else:
             path = self.debug_path
-        shot_path = '%s%s' % (path, req['shotn'])
+        shot_path = '%s%s%s' % (path, RAW_FOLDER, req['shotn'])
         if not os.path.isdir(shot_path):
             resp['ok'] = False
+            print(shot_path)
             resp['description'] = 'Requested shotn is missing.'
             return resp
-        if not os.path.isfile('%s/%s.%s' % (shot_path, HEADER_FILE, FILE_EXT)):
-            resp['ok'] = False
-            resp['description'] = 'Requested shot is missing header file.'
-            return resp
         if self.raw_processor is None or self.raw_processor.shotn != req['shotn']:
-            self.raw_processor = raw_proc.Integrator(DB_PATH, req['shotn'], req['is_plasma'], '2020.11.12')
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.12')
         resp = {
-            'header': {},
             'timestamps': [],
             'energies': [],
-            'polys': [],
-            'sizes': []
+            'polys': [poly for poly in self.raw_processor.config['poly']]
         }
-
+        for event_ind in range(len(self.raw_processor.processed)):
+            event = self.raw_processor.processed[event_ind]
+            resp['timestamps'].append(event_ind * 3.03030303)
+            resp['energies'].append(event['laser']['ave']['int'])
         resp['ok'] = True
         return resp
 
-    def get_event(self, req):
+    def get_event_sig(self, req):
         resp = {}
-        if 'is_plasma' not in req:
-            resp['ok'] = False
-            resp['description'] = '"is-plasma" field is missing from request.'
-            return resp
-        if 'shotn' not in req:
-            resp['ok'] = False
-            resp['description'] = '"shotn" field is missing from request.'
-            return resp
-        if req['is_plasma']:
-            path = self.plasma_path
-        else:
-            path = self.debug_path
-        shot_path = '%s%s' % (path, req['shotn'])
-        if not os.path.isdir(shot_path):
-            resp['ok'] = False
-            resp['description'] = 'Requested shotn is missing.'
-            return resp
-        if 'board' not in req:
-            resp['ok'] = False
-            resp['description'] = '"board" field is missing from request.'
-            return resp
-        board_id = req['board']
-        if not os.path.isfile('%s/%d.%s' % (shot_path, board_id, FILE_EXT)):
-            resp['ok'] = False
-            resp['description'] = 'Requested shot is missing requested board file.'
-            return resp
         if 'event' not in req:
             resp['ok'] = False
             resp['description'] = '"event" field is missing from request.'
             return resp
+        resp = self.raw_processor.processed[req['event']]
         resp['ok'] = True
         return resp
