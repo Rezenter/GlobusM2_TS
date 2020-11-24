@@ -25,7 +25,8 @@ class Handler:
     def __init__(self):
         self.HandlingTable = {
             'adc': {
-                'arm': self.fast_arm
+                'arm': self.fast_arm,
+                'disarm': self.fast_disarm
             },
             'laser': {},
             'view': {
@@ -122,13 +123,7 @@ class Handler:
             line = shotn_file.readline()
             shotn = int(line)
 
-
         caen.connect()
-
-        caen.send_cmd(caen.Commands.Alive)
-        print(caen.read())
-
-        time.sleep(0.1)
 
         caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
         print(caen.read())
@@ -139,6 +134,17 @@ class Handler:
             shotn_file.seek(0)
             shotn += 1
             shotn_file.write('%d' % shotn)
+
+        resp['ok'] = True
+        return resp
+
+    def fast_disarm(self, req):
+        resp = {}
+
+        caen.connect()
+        caen.send_cmd(caen.Commands.Disarm)
+        print(caen.read())
+        caen.disconnect()
 
         resp['ok'] = True
         return resp
