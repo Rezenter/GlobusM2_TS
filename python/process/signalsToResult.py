@@ -92,24 +92,51 @@ class Processor:
     def process_shot(self):
         self.result = []
         print('Processing shot...')
+
+        stray = [
+                [0.0 for ch in range(5)] for poly in range(10)
+            ]
+        count = [
+                [0 for ch in range(5)] for poly in range(10)
+            ]
+        current_index = 0
+        while self.signal['data'][current_index]['timestamp'] <= 100:
+            event = self.signal['data'][current_index]
+            if not event['processed_bad']:
+                for poly_ind in range(len(event['poly'])):
+                    for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
+                        if event['poly']['%d' % poly_ind]['ch'][ch_ind]['processed_bad']:
+                            continue
+                        count[poly_ind][ch_ind] += 1
+                        stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
+            current_index += 1
+        for poly_ind in range(len(stray)):
+            poly = stray[poly_ind]
+            for ch_ind in range(len(poly)):
+                poly[ch_ind] /= count[poly_ind][ch_ind]
+            print(poly)
+
         for event_ind in range(len(self.signal['data'])):
             bad_flag = False
-            proc_event = {}
+            proc_event = {
+                'timestamp': self.signal['data'][event_ind]['timestamp']
+            }
             if self.signal['data'][event_ind]['processed_bad']:
                 bad_flag = True
             else:
                 poly = []
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
-                    temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind)
+                    temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
+                                          stray[poly_ind])
                     poly.append(temp)
                 proc_event['T_e'] = poly
             proc_event['processed_bad'] = bad_flag
             self.result.append(proc_event)
         with open('out/result.json', 'w') as out_file:
             json.dump(self.result, out_file)
-        self.to_csv()
+        self.to_csv(stray)
 
-    def calc_temp(self, event, poly):
+    def calc_temp(self, event, poly, stray):
         channels = []
         for ch_ind in range(5):
             if not event['ch'][ch_ind]['processed_bad']:
@@ -122,6 +149,8 @@ class Processor:
             sigm2_i = []
             for ch in channels:
                 N_i.append(event['ch'][ch]['ph_el'])
+                if stray[ch] > 500:
+                    N_i[-1] -= stray[ch]
                 sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
             min_index = -1
             for i in range(len(self.calibr['T_arr'])):
@@ -181,12 +210,37 @@ class Processor:
                         mr['f'] = [interpolate(left['t'], mr['t'], right['t'], left['f'][ch], right['f'][ch])
                                    for ch in range(len(channels))]
                         mr['chi'] = calc_chi2(N_i, sigm2_i, mr['f'])
+                f = [(left['f'][ch] + right['f'][ch]) * 0.5 for ch in range(len(channels))]
+                df = [(left['f'][ch] - right['f'][ch]) / (left['t'] - right['t'])
+                      for ch in range(len(channels))]
+
+                f2_sum = 0
+                df_sum = 0
+                fdf_sum = 0
+                nf_sum = 0
+                for ch in range(len(channels)):
+                    f2_sum += math.pow(f[ch], 2) / sigm2_i[ch]
+                    df_sum += math.pow(df[ch], 2) / sigm2_i[ch]
+                    fdf_sum += f[ch] * df[ch] / sigm2_i[ch]
+                    nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
+                fdf_sum = math.pow(fdf_sum, 2)
+
+                A = 1.0e-14
+                E = 1.0
+
+                n_e = nf_sum / (A * E * f2_sum)
+
+                Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
+                nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
                 res = {
                     'index': min_index,
                     'min': self.calibr['T_arr'][min_index],
                     'ch': channels,
                     'chi2': (left['chi'] + right['chi']) * 0.5,
                     'T': (left['t'] + right['t']) * 0.5,
+                    'Terr': math.sqrt(Terr2),
+                    'n': n_e,
+                    'n_err': math.sqrt(nerr2),
                     'processed_bad': False
                 }
         else:
@@ -196,21 +250,105 @@ class Processor:
             }
         return res
 
-    def to_csv(self):
-        with open('out/T(t).csv', 'w') as out_file:
-            line = ''
+    def to_csv(self, stray):
+        out_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
+        if not os.path.isdir(out_folder):
+            os.mkdir(out_folder)
+
+        with open('%sT(t).csv' % out_folder, 'w') as out_file:
+            line = 't, '
             for poly in self.signal['common']['config']['poly']:
-                line += '%.1f, ' % poly['R']
+                line += '%.1f, err, ' % poly['R']
             out_file.write(line[:-2] + '\n')
-            line = ''
+            line = 'ms, '
             for poly in self.signal['common']['config']['poly']:
-                line += 'mm, '
+                line += 'eV, eV,'
             out_file.write(line[:-2] + '\n')
-            for event in self.result:
-                line = ''
-                for poly in event['T_e']:
+            for event_ind in range(len(self.result)):
+                line = '%.1f, ' % self.result[event_ind]['timestamp']
+                for poly in self.result[event_ind]['T_e']:
                     if poly['processed_bad']:
-                        line += '--, '
+                        line += '--, --, '
                     else:
-                        line += '%.1f, ' % poly['T']
+                        line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
+                out_file.write(line[:-2] + '\n')
+
+        with open('%sT(R).csv' % out_folder, 'w') as out_file:
+            names = 'R, '
+            units = 'mm, '
+            for event in self.result:
+                names += '%.1f, err, ' % event['timestamp']
+                units += 'eV, eV, '
+            out_file.write(names[:-2] + '\n')
+            out_file.write(units[:-2] + '\n')
+            for poly_ind in range(len(self.signal['common']['config']['poly'])):
+                line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
+                for event in self.result:
+                    if event['T_e'][poly_ind]['processed_bad']:
+                        line += '--, --, '
+                    else:
+                        line += '%.1f, %.1f ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+                out_file.write(line[:-2] + '\n')
+
+        with open('%sn(t).csv' % out_folder, 'w') as out_file:
+            line = 't, '
+            for poly in self.signal['common']['config']['poly']:
+                line += '%.1f, err, ' % poly['R']
+            out_file.write(line[:-2] + '\n')
+            line = 'ms, '
+            for poly in self.signal['common']['config']['poly']:
+                line += 'a.u., a.u.,'
+            out_file.write(line[:-2] + '\n')
+            for event_ind in range(len(self.result)):
+                line = '%.1f, ' % self.result[event_ind]['timestamp']
+                for poly in self.result[event_ind]['T_e']:
+                    if poly['processed_bad']:
+                        line += '--, --, '
+                    else:
+                        line += '%.1f, %.1f, ' % (poly['n'], poly['n_err'])
+                out_file.write(line[:-2] + '\n')
+
+        with open('%sn(R).csv' % out_folder, 'w') as out_file:
+            names = 'R, '
+            units = 'mm, '
+            for event in self.result:
+                names += '%.1f, err, ' % event['timestamp']
+                units += 'a.u., a.u., '
+            out_file.write(names[:-2] + '\n')
+            out_file.write(units[:-2] + '\n')
+            for poly_ind in range(len(self.signal['common']['config']['poly'])):
+                line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
+                for event in self.result:
+                    if event['T_e'][poly_ind]['processed_bad']:
+                        line += '--, --, '
+                    else:
+                        line += '%.1f, %.1f ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
+                out_file.write(line[:-2] + '\n')
+
+        with open('%sAux(t).csv' % out_folder, 'w') as out_file:
+            names = 't, E, '
+            names += 'p0c1, err, p0c2, err, p0c3, err, '
+            names += 'p1c1, err, p1c2, err, p1c3, err, '
+            names += 'p2c1, err, p2c2, err, p2c3, err, '
+            out_file.write(names[:-2] + '\n')
+
+            units = 'ms, mv*ns, '
+            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
+            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
+            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
+            out_file.write(units[:-2] + '\n')
+
+            for event in self.signal['data']:
+                line = '%.1f, %.2f, ' % (event['timestamp'], event['laser']['ave']['int'])
+                for poly_ind in range(3):
+                    poly = event['poly']['%d' % poly_ind]
+                    for ch in range(3):
+                        if poly['ch'][ch]['processed_bad']:
+                            line += '--, --, '
+                        else:
+                            if ch == 0:
+                                line += '%.1f, %.1f, ' % (poly['ch'][ch]['ph_el'] - stray[poly_ind][ch],
+                                                          poly['ch'][ch]['err'])
+                            else:
+                                line += '%.1f, %.1f, ' % (poly['ch'][ch]['ph_el'], poly['ch'][ch]['err'])
                 out_file.write(line[:-2] + '\n')

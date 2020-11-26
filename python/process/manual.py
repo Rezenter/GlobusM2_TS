@@ -22,7 +22,7 @@ config = '2020.11.12'
 #    integrator.plot(416, poly)
 
 
-calibraton = '2020.11.24'
-processor = signalsToResult.Processor(DB_PATH, 313, True, calibraton)
+calibraton = '2020.11.25'
+processor = signalsToResult.Processor(DB_PATH, 359, True, calibraton)
 print(processor.get_error())
 print('manual processing finished')

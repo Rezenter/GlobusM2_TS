@@ -94,7 +94,7 @@ class Handler:
         }
         for event_ind in range(len(self.raw_processor.processed)):
             event = self.raw_processor.processed[event_ind]
-            resp['timestamps'].append(event_ind * 3.03030303)
+            resp['timestamps'].append(event['timestamp'])
             resp['energies'].append(event['laser']['ave']['int'])
         resp['ok'] = True
         return resp

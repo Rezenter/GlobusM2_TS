@@ -136,7 +136,8 @@ class Integrator:
                             'captured_bad': True
                         })
                         event_ind += 1
-                    self.data[board_ind].append(event['groups'])
+                    if event_ind != 0:
+                        self.data[board_ind].append(event['groups'])
                     event_ind += 1
                 while event_ind in self.missing[board_ind]:
                     self.data[board_ind].append({
@@ -172,6 +173,7 @@ class Integrator:
             laser, laser_bad = self.process_laser_event(event_ind)
             bad_flag = bad_flag or laser_bad
             proc_event = {
+                'timestamp': self.config['adc']['first_shot'] + event_ind * 3.0303,
                 'laser': laser,
                 'poly': {},
                 'processed_bad': bad_flag
@@ -181,6 +183,7 @@ class Integrator:
                 #break  # debug!
 
             self.processed.append(proc_event)
+
         self.save_processed()
 
     def save_processed(self):
