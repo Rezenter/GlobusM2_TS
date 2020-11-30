@@ -1,5 +1,6 @@
 import os
 import python.process.rawToSignals as raw_proc
+import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import time
 
@@ -38,6 +39,7 @@ class Handler:
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
         self.debug_path = '%s%s' % (DB_PATH, DEBUG_SHOTS)
         self.raw_processor = None
+        self.fine_processor = None
         return
 
     def handle_request(self, req):
@@ -75,6 +77,25 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"shotn" field is missing from request.'
             return resp
+        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.25')
+            if self.fine_processor.get_error() is not None:
+                self.get_integrals_shot(req)
+                self.fine_processor.load()
+        resp = self.fine_processor.get_data()
+        resp['ok'] = True
+        return resp
+
+    def get_integrals_shot(self, req):
+        resp = {}
+        if 'is_plasma' not in req:
+            resp['ok'] = False
+            resp['description'] = '"is-plasma" field is missing from request.'
+            return resp
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
         if req['is_plasma']:
             path = self.plasma_path
         else:
@@ -86,7 +107,7 @@ class Handler:
             resp['description'] = 'Requested shotn is missing.'
             return resp
         if self.raw_processor is None or self.raw_processor.shotn != req['shotn']:
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.12')
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
         resp = {
             'timestamps': [],
             'energies': [],

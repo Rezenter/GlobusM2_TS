@@ -22,6 +22,7 @@
         <label for="auto_load">Load last shot automatically?</label>
             <input type="checkbox" id="auto_load" checked>
     </div>
+
     <hr>
     <div class="container-fluid">
         <div class="row">
@@ -30,6 +31,18 @@
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                 <div id="radius_chart" style="width:100%; height:200px;"></div>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                <div id="T_evo_chart" style="width:100%; height:500px;"></div>
+                <div id="n_evo_chart" style="width:100%; height:500px;"></div>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <div id="T_profile_chart" style="width:100%; height:200px;"></div>
             </div>
         </div>
     </div>
@@ -100,27 +113,38 @@
             data: []
         });
 
-        this.m_timestamp_chart = new CanvasJS.Chart("timestamp_chart", {
-            title: {
-                text: "Shot timeline"
-            },
-            axisY: {
-                includeZero: true,
-                title: "Energy, mV*ns"
-            },
-            axisX: {
-                title: "Timestamp, ms",
-            },
-            toolTip: {
-                contentFormatter: function(e){
-                    return ( 'time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms ' +
-                        e.entries[0].dataSeries.name + " = " +
-                        e.entries[0].dataPoint.y.toFixed(1)) + 'mV*ns' +
-                        '<input type="checkbox" checked>';
+        this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
+            theme: "light2",
+            charts: [{
+                title: {
+                    text: "Shot timeline"
                 },
+                axisY: {
+                    includeZero: true,
+                    title: "Energy, mV*ns"
+                },
+                axisX: {
+                    title: "Timestamp, ms",
+                },
+                data: []
+            }],
+            navigator: {
+                slider: {
+                    minimum: 100,
+                    maximum: 250,
+                    height: 100
+                }
             },
-            data: []
+            rangeChanged: function(e) {
+                this.m_T_evo_chart.options.axisX.minimum = e.minimum;
+                this.m_T_evo_chart.options.axisX.maximum = e.maximum;
+                this.m_T_evo_chart.render();
+                this.m_n_evo_chart.options.axisX.minimum = e.minimum;
+                this.m_n_evo_chart.options.axisX.maximum = e.maximum;
+                this.m_n_evo_chart.render();
+            }.bind(this),
         });
+
 
         this.m_radius_chart = new CanvasJS.Chart("radius_chart", {
             title: {
@@ -134,6 +158,61 @@
             },
             axisX: {
                 title: "R, mm",
+            },
+            data: []
+        });
+
+        this.m_T_evo_chart = new CanvasJS.Chart("T_evo_chart", {
+            title: {
+                text: 'Electron temperature evolution',
+                fontSize: 14
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron temperature, eV',
+                minimum: 0
+            },
+            axisX: {
+                title: "Time, ms",
+                minimum: 100,
+                maximum: 250
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    //console.log(e);
+                    return ( 'time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms ' +
+                        e.entries[0].dataPoint.y.toFixed(1)) + 'eV';
+                },
+            },
+            data: []
+        });
+
+        this.m_n_evo_chart = new CanvasJS.Chart("n_evo_chart", {
+            title: {
+                text: 'Electron density evolution',
+                fontSize: 14
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m^-3',
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0
+            },
+            axisX: {
+                title: "Time, ms",
+                minimum: 100,
+                maximum: 250
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    //console.log(e);
+                    return ( 'time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms ' +
+                        e.entries[0].dataPoint.y.toExponential(1)) + 'm^-3';
+                },
             },
             data: []
         });
@@ -153,8 +232,12 @@
             data: []
         });
 
-        this.m_timestamp_chart.render();
+        //this.m_timestamp_chart.render();
         this.m_radius_chart.render();
+
+        this.m_T_evo_chart.render();
+        this.m_n_evo_chart.render();
+
         this.m_profile_chart.render();
 
         this.Request = function (req, callback) {
@@ -212,10 +295,10 @@
                 }, function (resp) {
                     //console.log(resp);
                     Object.assign(self.m_currentShot, resp);
-                    self.m_timestamp_chart.options.data = [{
+                    self.m_timestamp_chart.options.charts[0].data = [{
                         color: "#B0D0B0",
                         type: "column",
-                        showInLegend: true,
+                        showInLegend: false,
                         name: 'Laser energy',
                         dataPoints: [],
                         click: function (e) {
@@ -234,16 +317,142 @@
                                 }
                             );
                         }
-                    }]
-                    for(let event_ind = 0; event_ind < resp.timestamps.length; event_ind++){
-                        self.m_timestamp_chart.options.data[0].dataPoints.push(
+                    }];
+
+                    self.m_T_evo_chart.options.data = []
+                    self.m_n_evo_chart.options.data = []
+                    self.m_radius_chart.options.data = []
+                    for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
+                        self.m_radius_chart.options.data.push(
                             {
-                                x: resp.timestamps[event_ind],
-                                y: resp.energies[event_ind]
+                                //color: "#B0D0B0",
+                                type: "rangeArea",
+                                showInLegend: true,
+                                name: 'R = ' + resp.polys[poly_ind].R,
+                                dataPoints: [{
+                                    x: resp.polys[poly_ind].R - 5,
+                                    y: [-5, 5]
+                                },
+                                    {
+                                        x: resp.polys[poly_ind].R + 5,
+                                        y: [-5, 5]
+                                    }]
+                            }
+                        );
+
+                        self.m_T_evo_chart.options.data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "line",
+                                showInLegend: true,
+                                name: 'R = ' + resp.polys[poly_ind].R,
+                                connectNullData: true,
+                                nullDataLineDashType:  "dot",
+                                dataPoints: [],
+                                click: function (e) {
+                                    console.log(e);
+                                }
+                            }
+                        );
+                        self.m_T_evo_chart.options.data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "error",
+                                showInLegend: false,
+                                dataPoints: []
+                            }
+                        );
+
+                        self.m_n_evo_chart.options.data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "line",
+                                showInLegend: false,
+                                name: 'R = ' + resp.polys[poly_ind].R,
+                                connectNullData: true,
+                                nullDataLineDashType:  "dot",
+                                dataPoints: [],
+                                click: function (e) {
+                                    console.log(e);
+                                }
+                            }
+                        );
+                        self.m_n_evo_chart.options.data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "error",
+                                showInLegend: false,
+                                dataPoints: []
                             }
                         );
                     }
+                    self.m_radius_chart.render();
+
+                    console.log(resp);
+                    for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
+                        if(resp.events[event_ind].processed_bad){
+                            self.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                                {
+                                    x: resp.events[event_ind].timestamp,
+                                    y: null
+                                }
+                            );
+                        }else {
+                            self.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                                {
+                                    x: resp.events[event_ind].timestamp,
+                                    y: resp.events[event_ind].energy
+                                }
+                            );
+                        }
+                        for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++) {
+                            if(resp.events[event_ind].T_e[poly_ind].processed_bad){
+                                self.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: null
+                                    }
+                                );
+                                self.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: null
+                                    }
+                                );
+                            }else {
+                                self.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: resp.events[event_ind].T_e[poly_ind].T
+                                    }
+                                );
+                                self.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
+                                            resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
+                                    }
+                                );
+                                self.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: resp.events[event_ind].T_e[poly_ind].n
+                                    }
+                                );
+                                self.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
+                                    {
+                                        x: resp.events[event_ind].timestamp,
+                                        y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
+                                            resp.events[event_ind].T_e[poly_ind].n + resp.events[event_ind].T_e[poly_ind].n_err]
+                                    }
+                                );
+                            }
+                        }
+                    }
                     self.m_timestamp_chart.render();
+                    self.m_T_evo_chart.render();
+                    self.m_n_evo_chart.render();
+
 
                     //self.ChangeBoard({data: self});
                     //self.GetEvent({data: self});

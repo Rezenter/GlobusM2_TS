@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import ijson
 import json
@@ -12,7 +13,7 @@ def calc_chi2(N_i, sigm2_i, f_i):
         top_sum += (N_i[ch] * f_i[ch]) / sigm2_i[ch]
         bot_sum += math.pow(f_i[ch], 2) / sigm2_i[ch]
     for ch in range(len(N_i)):
-        res += math.pow(N_i[ch] - (top_sum * f_i[ch]/ bot_sum), 2) / sigm2_i[ch]
+        res += math.pow(N_i[ch] - (top_sum * f_i[ch] / bot_sum), 2) / sigm2_i[ch]
     return res
 
 
@@ -46,10 +47,11 @@ class Processor:
             self.error = 'Calibration file not found.'
             return
         self.calibr = {}
-        with open(calibr_full_name, 'r') as config_file:
-            obj = ijson.kvitems(config_file, '', use_float=True)
+        with open(calibr_full_name, 'r') as calibr_file:
+            obj = ijson.kvitems(calibr_file, '', use_float=True)
             for k, v in obj:
                 self.calibr[k] = v
+        self.calibr['modification'] = os.path.getmtime(calibr_full_name)
         if self.is_plasma:
             self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
         else:
@@ -58,47 +60,73 @@ class Processor:
         self.result = {}
         self.load()
 
+    def get_data(self):
+        err = self.get_error()
+        if err is None:
+            return self.result
+        else:
+            return {
+                'processed_bad': True,
+                'error': err
+            }
+
     def get_error(self):
         tmp = self.error
         self.error = None
         return tmp
 
     def load(self):
-        self.result = []
-        result_path = '%s%s%05d%s' % (self.prefix, self.RESULT_FOLDER, self.shotn, self.FILE_EXT)
+        self.result = {}
+        result_path = '%s%s%05d/%05d%s' % (self.prefix, self.RESULT_FOLDER, self.shotn, self.shotn, self.FILE_EXT)
         if os.path.isfile(result_path):
             print('Loading existing processed result.')
             with open(result_path, 'rb') as signal_file:
-                obj = ijson.items(signal_file, 'common.config_name', use_float=True)
-                for val in obj:
-                    if val == self.config_name:
-                        signal_file.seek(0)
-                        obj = ijson.items(signal_file, 'data.item', use_float=True)
-                        for event in obj:
-                            self.processed.append(event)
-                        return True
+                obj = ijson.kvitems(signal_file, '', use_float=True)
+                for key, val in obj:
+                    if key == 'calibration_name' and val != self.calibration:
+                        print('Warning! existing result was obtained for different calibration! Recalculating...')
+                        break
+                    if key == 'calibration_mod' and \
+                            val != datetime.fromtimestamp(self.calibr['modification']).strftime('%Y.%m.%d %H:%M:%S'):
+                        print('Warning! Existing result uses outdated calibration! Recalculating...')
+                        break
+                    self.result[key] = val
+                else:
+                    return
         self.load_signal()
-        self.process_shot()
-        return True
+        if self.error is None:
+            self.process_shot()
 
     def load_signal(self):
         print('loading signal...')
         signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        if not os.path.isfile(signal_path):
+            self.error = 'No signal file.'
+            return
         with open(signal_path, 'r') as signal_file:
             obj = ijson.kvitems(signal_file, '', use_float=True)
             for k, v in obj:
                 self.signal[k] = v
 
     def process_shot(self):
-        self.result = []
+        self.result = {
+            'timestamp': datetime.now().strftime('%Y.%m.%d %H:%M:%S'),
+            'calibration_name': self.calibration,
+            'calibration_mod': datetime.fromtimestamp(self.calibr['modification']).strftime('%Y.%m.%d %H:%M:%S'),
+            'signal_mod': datetime.fromtimestamp(
+                os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
+                strftime('%Y.%m.%d %H:%M:%S'),
+            'polys': [],
+            'events': []
+        }
         print('Processing shot...')
 
         stray = [
-                [0.0 for ch in range(5)] for poly in range(10)
-            ]
+            [0.0 for ch in range(5)] for poly in range(10)
+        ]
         count = [
-                [0 for ch in range(5)] for poly in range(10)
-            ]
+            [0 for ch in range(5)] for poly in range(10)
+        ]
         current_index = 0
         while self.signal['data'][current_index]['timestamp'] <= 100:
             event = self.signal['data'][current_index]
@@ -111,15 +139,21 @@ class Processor:
                         stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
             current_index += 1
         for poly_ind in range(len(stray)):
+            self.result['polys'].append({
+                'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
+                'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
+                'R': self.signal['common']['config']['poly'][poly_ind]['R']
+            })
             poly = stray[poly_ind]
             for ch_ind in range(len(poly)):
                 poly[ch_ind] /= count[poly_ind][ch_ind]
-            print(poly)
+            # print(poly)
 
         for event_ind in range(len(self.signal['data'])):
             bad_flag = False
             proc_event = {
-                'timestamp': self.signal['data'][event_ind]['timestamp']
+                'timestamp': self.signal['data'][event_ind]['timestamp'],
+                'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.calibr['J_from_int']
             }
             if self.signal['data'][event_ind]['processed_bad']:
                 bad_flag = True
@@ -131,8 +165,11 @@ class Processor:
                     poly.append(temp)
                 proc_event['T_e'] = poly
             proc_event['processed_bad'] = bad_flag
-            self.result.append(proc_event)
-        with open('out/result.json', 'w') as out_file:
+            self.result['events'].append(proc_event)
+        result_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
+        if not os.path.isdir(result_folder):
+            os.mkdir(result_folder)
+        with open('%s%05d%s' % (result_folder, self.shotn, self.FILE_EXT), 'w') as out_file:
             json.dump(self.result, out_file)
         self.to_csv(stray)
 
@@ -178,7 +215,7 @@ class Processor:
 
                 sec = 1.618
 
-                ml  = {
+                ml = {
                     't': right['t'] - (right['t'] - left['t']) / sec,
                 }
                 ml['f'] = [interpolate(left['t'], ml['t'], right['t'], left['f'][ch], right['f'][ch])
@@ -191,7 +228,7 @@ class Processor:
                 mr['f'] = [interpolate(left['t'], mr['t'], right['t'], left['f'][ch], right['f'][ch])
                            for ch in range(len(channels))]
                 mr['chi'] = calc_chi2(N_i, sigm2_i, mr['f'])
-                while right['t'] - left['t'] > 1:
+                while right['t'] - left['t'] > 0.05 * left['t']:
                     if ml['chi'] <= mr['chi']:
                         right = mr
                         mr = ml
@@ -225,7 +262,7 @@ class Processor:
                     nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
                 fdf_sum = math.pow(fdf_sum, 2)
 
-                A = 1.0e-14
+                A = 3.7e-15
                 E = 1.0
 
                 n_e = nf_sum / (A * E * f2_sum)
@@ -252,9 +289,6 @@ class Processor:
 
     def to_csv(self, stray):
         out_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
-        if not os.path.isdir(out_folder):
-            os.mkdir(out_folder)
-
         with open('%sT(t).csv' % out_folder, 'w') as out_file:
             line = 't, '
             for poly in self.signal['common']['config']['poly']:
@@ -264,9 +298,9 @@ class Processor:
             for poly in self.signal['common']['config']['poly']:
                 line += 'eV, eV,'
             out_file.write(line[:-2] + '\n')
-            for event_ind in range(len(self.result)):
-                line = '%.1f, ' % self.result[event_ind]['timestamp']
-                for poly in self.result[event_ind]['T_e']:
+            for event_ind in range(len(self.result['events'])):
+                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
+                for poly in self.result['events'][event_ind]['T_e']:
                     if poly['processed_bad']:
                         line += '--, --, '
                     else:
@@ -276,14 +310,14 @@ class Processor:
         with open('%sT(R).csv' % out_folder, 'w') as out_file:
             names = 'R, '
             units = 'mm, '
-            for event in self.result:
+            for event in self.result['events']:
                 names += '%.1f, err, ' % event['timestamp']
                 units += 'eV, eV, '
             out_file.write(names[:-2] + '\n')
             out_file.write(units[:-2] + '\n')
             for poly_ind in range(len(self.signal['common']['config']['poly'])):
                 line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
-                for event in self.result:
+                for event in self.result['events']:
                     if event['T_e'][poly_ind]['processed_bad']:
                         line += '--, --, '
                     else:
@@ -299,9 +333,9 @@ class Processor:
             for poly in self.signal['common']['config']['poly']:
                 line += 'a.u., a.u.,'
             out_file.write(line[:-2] + '\n')
-            for event_ind in range(len(self.result)):
-                line = '%.1f, ' % self.result[event_ind]['timestamp']
-                for poly in self.result[event_ind]['T_e']:
+            for event_ind in range(len(self.result['events'])):
+                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
+                for poly in self.result['events'][event_ind]['T_e']:
                     if poly['processed_bad']:
                         line += '--, --, '
                     else:
@@ -311,20 +345,21 @@ class Processor:
         with open('%sn(R).csv' % out_folder, 'w') as out_file:
             names = 'R, '
             units = 'mm, '
-            for event in self.result:
+            for event in self.result['events']:
                 names += '%.1f, err, ' % event['timestamp']
                 units += 'a.u., a.u., '
             out_file.write(names[:-2] + '\n')
             out_file.write(units[:-2] + '\n')
             for poly_ind in range(len(self.signal['common']['config']['poly'])):
                 line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
-                for event in self.result:
+                for event in self.result['events']:
                     if event['T_e'][poly_ind]['processed_bad']:
                         line += '--, --, '
                     else:
                         line += '%.1f, %.1f ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
                 out_file.write(line[:-2] + '\n')
 
+        '''
         with open('%sAux(t).csv' % out_folder, 'w') as out_file:
             names = 't, E, '
             names += 'p0c1, err, p0c2, err, p0c3, err, '
@@ -352,3 +387,4 @@ class Processor:
                             else:
                                 line += '%.1f, %.1f, ' % (poly['ch'][ch]['ph_el'], poly['ch'][ch]['err'])
                 out_file.write(line[:-2] + '\n')
+        '''
