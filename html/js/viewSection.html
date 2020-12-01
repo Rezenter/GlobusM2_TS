@@ -38,80 +38,22 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                <div id="T_evo_chart" style="width:100%; height:500px;"></div>
-                <div id="n_evo_chart" style="width:100%; height:500px;"></div>
+                <div id="T_evo_chart" style="width:100%; height:400px;"></div>
+                <div id="n_evo_chart" style="width:100%; height:400px;"></div>
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                <div id="T_profile_chart" style="width:100%; height:200px;"></div>
+                <div id="T_profile_chart" style="width:100%; height:400px;"></div>
+                <div id="n_profile_chart" style="width:100%; height:400px;"></div>
             </div>
         </div>
     </div>
 
     <div id="profile_chart" style="width:100%; height:600px;"></div>
-
-    <ul class="nav nav-tabs">
-        <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#">Active</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Link</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">Link</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
-        </li>
-    </ul>
-    <div class="row" id="view_tabs_wrong" style="
-        margin-left: 0;
-        margin-right: 0;
-        ">
-        <label for="board_spinbox">Board №</label><input type="number" min="0" value="0" max="3" id="board_spinbox">
-        <label for="event_spinbox">Event №</label><input type="number" min="0" max="0" value="0" id="event_spinbox">
-        <div class="row" id="events" style="
-        margin-left: 0;
-        margin-right: 0;
-        ">
-
-        </div>
-    </div>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" id="event_prefix">
-                0ms
-            </div>
-            <div class="col-xs-10 col-sm-10 col-md-10 col-lg-10">
-                <input type="range" min="0" max="0" value="0" id="event_range">
-            </div>
-            <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1" id="event_suffix">
-
-            </div>
-        </div>
-    </div>
-    <div id="chartContainer" style="width:100%; height:400px;"></div>
-    <div id="slider-range"></div>
 </body>
 <script>
     function Main () {
         this.m_currentShot = {};
         this.m_currentEvent = {};
-
-        this.m_chart = new CanvasJS.Chart("chartContainer", {
-            title: {
-                text: "Raw ADC data"
-            },
-            axisY: {
-                title: "Voltage, mV",
-                includeZero: true,
-                minimum: -150,
-                maximum: 2350
-            },
-            axisX: {
-                title: "Local time, ns",
-            },
-            data: []
-        });
 
         this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
             theme: "light2",
@@ -129,6 +71,11 @@
                 data: []
             }],
             navigator: {
+                data: [{
+                    type: 'column',
+                    color: "#B0D0B0",
+                    dataPoints: []
+                }],
                 slider: {
                     minimum: 100,
                     maximum: 250,
@@ -142,22 +89,26 @@
                 this.m_n_evo_chart.options.axisX.minimum = e.minimum;
                 this.m_n_evo_chart.options.axisX.maximum = e.maximum;
                 this.m_n_evo_chart.render();
+                this.UpdateProfiles({'data': this});
             }.bind(this),
         });
 
-
         this.m_radius_chart = new CanvasJS.Chart("radius_chart", {
             title: {
-                text: "Spatial points"
+                text: "Spatial points",
+                fontSize: 14
             },
             axisY: {
                 title: "Z, cm",
+                titleFontSize: 12,
                 includeZero: true,
                 minimum: -10,
                 maximum: 10
             },
             axisX: {
                 title: "R, mm",
+                titleFontSize: 12,
+                interval: 20
             },
             data: []
         });
@@ -170,10 +121,12 @@
             axisY: {
                 includeZero: true,
                 title: 'Electron temperature, eV',
+                titleFontSize: 12,
                 minimum: 0
             },
             axisX: {
                 title: "Time, ms",
+                titleFontSize: 12,
                 minimum: 100,
                 maximum: 250
             },
@@ -196,6 +149,7 @@
             axisY: {
                 includeZero: true,
                 title: 'Electron density, m^-3',
+                titleFontSize: 12,
                 labelFormatter: function ( e ) {
                     return e.value.toExponential(1);
                 },
@@ -203,6 +157,7 @@
             },
             axisX: {
                 title: "Time, ms",
+                titleFontSize: 12,
                 minimum: 100,
                 maximum: 250
             },
@@ -215,6 +170,65 @@
                 },
             },
             data: []
+        });
+
+        this.m_T_profile_data = [];
+        this.m_T_profile_chart = new CanvasJS.Chart("T_profile_chart", {
+            title: {
+                text: 'Electron temperature profile',
+                fontSize: 14
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron temperature, eV',
+                titleFontSize: 12,
+                minimum: 0
+            },
+            axisX: {
+                title: "R, mm",
+                titleFontSize: 12,
+                minimum: 350,
+                maximum: 570,
+                interval: 20
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ('R = ' + e.entries[0].dataPoint.x.toFixed(1) + 'mm ');
+                },
+            },
+            data: this.m_T_profile_data
+        });
+
+        this.m_n_profile_data = [];
+        this.m_n_profile_chart = new CanvasJS.Chart("n_profile_chart", {
+            title: {
+                text: 'Electron density profile',
+                fontSize: 14
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m^-3',
+                titleFontSize: 12,
+                minimum: 0,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+            },
+            axisX: {
+                title: "R, mm",
+                titleFontSize: 12,
+                minimum: 350,
+                maximum: 570,
+                interval: 20
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ('R = ' + e.entries[0].dataPoint.x.toFixed(1) + 'mm');
+                },
+            },
+            data: this.m_n_profile_data
         });
 
         this.m_profile_chart = new CanvasJS.Chart("profile_chart", {
@@ -232,11 +246,14 @@
             data: []
         });
 
-        //this.m_timestamp_chart.render();
+
         this.m_radius_chart.render();
 
         this.m_T_evo_chart.render();
         this.m_n_evo_chart.render();
+
+        this.m_T_profile_chart.render();
+        this.m_n_profile_chart.render();
 
         this.m_profile_chart.render();
 
@@ -244,7 +261,7 @@
             req.subsystem = 'view';
             $.post('/api', JSON.stringify(req), function(resp){
                 if(!resp['ok']){
-                    console.log(resp);
+                    //console.log(resp);
                     alert(resp['description']);
                 }else {
                     callback(resp);
@@ -270,10 +287,8 @@
         this.UpdateShotSelect = function(ev) {
             let self = ev.data;
             let shots = self.m_plasma_shots;
-            console.log('plasma_shots')
             if(! $('#is_plasma')[0].checked){
                 shots = self.m_debug_shots;
-                console.log('debug_shots')
             }
             let options = []
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
@@ -285,8 +300,6 @@
 
         this.Select = function(ev){
             let self = ev.data;
-            $('#event_range')[0].max = 0
-            $('#event_spinbox')[0].max = 0
             self.Request(
                 {
                     reqtype: 'get_shot',
@@ -319,9 +332,11 @@
                         }
                     }];
 
-                    self.m_T_evo_chart.options.data = []
-                    self.m_n_evo_chart.options.data = []
-                    self.m_radius_chart.options.data = []
+                    self.m_T_evo_chart.options.data = [];
+                    self.m_n_evo_chart.options.data = [];
+                    self.m_radius_chart.options.data = [];
+                    self.m_T_profile_data = [];
+                    self.m_n_profile_data = [];
                     for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
                         self.m_radius_chart.options.data.push(
                             {
@@ -388,7 +403,7 @@
                     }
                     self.m_radius_chart.render();
 
-                    console.log(resp);
+                    //console.log(resp);
                     for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
                         if(resp.events[event_ind].processed_bad){
                             self.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
@@ -405,6 +420,49 @@
                                 }
                             );
                         }
+
+                        self.m_T_profile_data.push({
+                            //color: "#B0D0B0",
+                            type: "line",
+                            showInLegend: false,
+                            name: 'time = ' + resp.events[event_ind].timestamp,
+                            connectNullData: true,
+                            nullDataLineDashType:  "dot",
+                            dataPoints: [],
+                            click: function (e) {
+                                console.log(e);
+                            }
+                        });
+                        self.m_T_profile_data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "error",
+                                showInLegend: false,
+                                dataPoints: []
+                            }
+                        );
+
+                        self.m_n_profile_data.push({
+                            //color: "#B0D0B0",
+                            type: "line",
+                            showInLegend: false,
+                            name: 'time = ' + resp.events[event_ind].timestamp,
+                            connectNullData: true,
+                            nullDataLineDashType:  "dot",
+                            dataPoints: [],
+                            click: function (e) {
+                                console.log(e);
+                            }
+                        });
+                        self.m_n_profile_data.push(
+                            {
+                                //color: "#B0D0B0",
+                                type: "error",
+                                showInLegend: false,
+                                dataPoints: []
+                            }
+                        );
+
                         for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++) {
                             if(resp.events[event_ind].T_e[poly_ind].processed_bad){
                                 self.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
@@ -433,6 +491,8 @@
                                             resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
                                     }
                                 );
+
+
                                 self.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
@@ -446,24 +506,72 @@
                                             resp.events[event_ind].T_e[poly_ind].n + resp.events[event_ind].T_e[poly_ind].n_err]
                                     }
                                 );
+
+                                self.m_T_profile_data[self.m_T_profile_data.length - 2].dataPoints.push(
+                                    {
+                                        x: resp.polys[poly_ind].R,
+                                        y: resp.events[event_ind].T_e[poly_ind].T
+                                    }
+                                );
+                                self.m_T_profile_data[self.m_T_profile_data.length - 1].dataPoints.push(
+                                    {
+                                        x: resp.polys[poly_ind].R,
+                                        y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
+                                            resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
+                                    }
+                                );
+                                self.m_n_profile_data[self.m_n_profile_data.length - 2].dataPoints.push(
+                                    {
+                                        x: resp.polys[poly_ind].R,
+                                        y: resp.events[event_ind].T_e[poly_ind].n
+                                    }
+                                );
+                                self.m_n_profile_data[self.m_n_profile_data.length - 1].dataPoints.push(
+                                    {
+                                        x: resp.polys[poly_ind].R,
+                                        y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
+                                            resp.events[event_ind].T_e[poly_ind].n + resp.events[event_ind].T_e[poly_ind].n_err]
+                                    }
+                                );
                             }
                         }
                     }
+                    self.m_timestamp_chart.options.navigator.data[0].dataPoints =
+                        self.m_timestamp_chart.options.charts[0].data[0].dataPoints;
                     self.m_timestamp_chart.render();
                     self.m_T_evo_chart.render();
                     self.m_n_evo_chart.render();
 
-
-                    //self.ChangeBoard({data: self});
-                    //self.GetEvent({data: self});
+                    self.UpdateProfiles({'data': self});
                 }
             );
         };
 
+        this.SyncTooltips = function (ev){
+
+        };
+
+        this.UpdateProfiles = function(ev){
+            let self = ev.data;
+
+            self.m_T_profile_chart.options.data = [];
+            self.m_n_profile_chart.options.data = [];
+            for(let event_ind = 0; event_ind < self.m_currentShot.events.length; event_ind++) {
+                if(self.m_currentShot.events[event_ind].timestamp >= self.m_timestamp_chart.navigator.slider.minimum &&
+                    self.m_currentShot.events[event_ind].timestamp <= self.m_timestamp_chart.navigator.slider.maximum){
+                    self.m_T_profile_chart.options.data.push(self.m_T_profile_data[event_ind * 2]);
+                    self.m_T_profile_chart.options.data.push(self.m_T_profile_data[event_ind * 2 + 1]);
+
+                    self.m_n_profile_chart.options.data.push(self.m_n_profile_data[event_ind * 2]);
+                    self.m_n_profile_chart.options.data.push(self.m_n_profile_data[event_ind * 2 + 1]);
+                }
+            }
+            self.m_T_profile_chart.render();
+            self.m_n_profile_chart.render();
+        };
+
         this.UpdateProfile = function(ev){
             let self = ev.data;
-            //console.log(self.m_currentEvent);
-            //console.log(self.m_currentShot);
             self.m_profile_chart.options.data = [];
             self.m_profile_chart.title = {
                 text: self.m_currentEvent.timestamp.toFixed(1) + ' ms, event № ' + self.m_currentEvent.event_ind
@@ -502,31 +610,7 @@
             }
 
             self.m_profile_chart.render();
-            console.log('Rendered?');
         };
-
-        this.ChangeBoard = function(ev){
-            let self = ev.data;
-            $('#event_range')[0].max = self.m_currentShot['boards'][$('#board_spinbox').val()].length;
-            $('#event_spinbox')[0].max = self.m_currentShot['boards'][$('#board_spinbox').val()].length;
-            $('#event_suffix').text(self.m_currentShot['boards'][$('#board_spinbox').val()][self.m_currentShot['boards'][$('#board_spinbox').val()].length - 1].toFixed(2) + 'ms');
-        }
-
-        this.UpdateEventSpinbox = function(ev){
-            let self = ev.data;
-            if($('#event_range').val() != $('#event_spinbox').val()){
-                $('#event_spinbox').val($('#event_range').val());
-                self.GetEvent({data: self});
-            }
-        }
-
-        this.UpdateEventRange = function(ev){
-            let self = ev.data;
-            if($('#event_range').val() != $('#event_spinbox').val()){
-                $('#event_range').val($('#event_spinbox').val());
-                self.GetEvent({data: self});
-            }
-        }
 
         this.GetEvent = function(ev){
             let self = ev.data;
@@ -549,50 +633,13 @@
             );
         };
 
-        this.UpdateChart = function(ev){
-            let self = ev.data;
-            self.m_chartData = []
-            //console.log(self.m_currentEvent);
-            if(Object.keys(self.m_currentEvent).length !== 0){
-                for(let group = 0; group < 8; group++){
-                    for(let gr_ch = 0; gr_ch < 2; gr_ch++){
-                        let ch = gr_ch + group * 2;
-                        let data_points = [];
-                        for(let cell = 0; cell < 1024; cell++){
-                            data_points.push({
-                                x: cell*0.3125,
-                                y: self.m_currentEvent.event.groups[group].data[gr_ch][cell]
-                            })
-                        }
-                        self.m_chartData.push(
-                            {
-                                type: "spline",
-                                showInLegend: true,
-                                name: 'ch ' + ch,
-                                toolTipContent: 'ch ' + ch + ', {x} ns: {y} mV',
-                                dataPoints: data_points
-                        });
-                    }
-                }
-                //console.log(self.m_chartData)
-            }
-
-            self.m_chart.options.data = self.m_chartData;
-            self.m_chart.render();
-            console.log('Rendered?');
-        };
-
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
-            $('#board_spinbox').on('change', this, this.ChangeBoard)
-            $('#event_range').on('change', this, this.UpdateEventSpinbox);
-            $('#event_spinbox').on('change', this, this.UpdateEventRange);
         };
 
         this.ConnectControls();
-        this.UpdateChart({data: this});
     }
 
     $(document).ready(
