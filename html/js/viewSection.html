@@ -757,6 +757,7 @@
             $('#shot_select').on('change', this, this.Select);
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
+                let resized = false;
                 if(event.key === 'ArrowLeft'){
                     event.preventDefault();
                     if(event.altKey){
@@ -770,6 +771,7 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }else if(event.ctrlKey){
                         this.m_timestamp_chart.navigator.slider.set("minimum",
                             this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
@@ -777,6 +779,7 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }else{
                         this.m_timestamp_chart.navigator.slider.set("maximum",
                             this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
@@ -786,6 +789,7 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }
 
                 }else if(event.key === 'ArrowRight'){
@@ -801,6 +805,7 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }else if(event.ctrlKey){
                         this.m_timestamp_chart.navigator.slider.set("minimum",
                             this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
@@ -808,6 +813,7 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }else{
                         this.m_timestamp_chart.navigator.slider.set("maximum",
                             this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
@@ -817,7 +823,17 @@
                             minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                             maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                         });
+                        resized = true;
                     }
+                }
+                if(resized){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+
+                    this.m_T_evo_chart.axisX[0].crosshair.hide();
+                    this.m_n_evo_chart.axisX[0].crosshair.hide();
+                    this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                 }
             }.bind(self));
         };
