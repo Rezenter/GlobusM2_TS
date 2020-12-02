@@ -59,7 +59,10 @@
             time_max: 250,
             timestamp_title: ' laser energy',
             radius_title: ' spatial points',
-            T_evo_title: ' electron temperature evolution'
+            T_evo_title: ' electron temperature evolution',
+            T_prof_title: ' electron temperature profile',
+            n_evo_title: ' electron density evolution',
+            n_prof_title: ' electron density profile'
         };
         this.m_currentShot = {};
         this.m_currentEvent = {};
@@ -432,9 +435,21 @@
                     self.m_T_profile_data = [];
                     self.m_n_profile_data = [];
 
-                    //self.m_T_evo_chart.options.title = ''
-
+                    self.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.timestamp_title;
+                    self.m_radius_chart.options.title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.radius_title;
+                    self.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.T_evo_title;
+                    self.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.T_prof_title;
+                    self.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.n_evo_title;
+                    self.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
+                        $('#shot_select').val() + self.m_defaults.n_prof_title;
+                    //console.log(resp);
                     for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
+                        let h05 = resp.polys[poly_ind].h * 0.5;
                         self.m_radius_chart.options.data.push(
                             {
                                 //color: "#B0D0B0",
@@ -442,12 +457,12 @@
                                 showInLegend: true,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: [{
-                                    x: resp.polys[poly_ind].R - 5,
-                                    y: [-5, 5]
+                                    x: resp.polys[poly_ind].R - resp.polys[poly_ind].l05,
+                                    y: [-h05, h05]
                                 },
                                     {
-                                        x: resp.polys[poly_ind].R + 5,
-                                        y: [-5, 5]
+                                        x: resp.polys[poly_ind].R + resp.polys[poly_ind].l05,
+                                        y: [-h05, h05]
                                     }]
                             }
                         );

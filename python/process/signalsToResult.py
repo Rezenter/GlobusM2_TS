@@ -142,7 +142,9 @@ class Processor:
             self.result['polys'].append({
                 'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
                 'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
-                'R': self.signal['common']['config']['poly'][poly_ind]['R']
+                'R': self.signal['common']['config']['poly'][poly_ind]['R'],
+                'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
+                'h': self.signal['common']['config']['poly'][poly_ind]['h']
             })
             poly = stray[poly_ind]
             for ch_ind in range(len(poly)):
