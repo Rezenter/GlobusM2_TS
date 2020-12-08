@@ -85,6 +85,25 @@ class Integrator:
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             fuck
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+
+    def __del__(self):
+        self.cleanup()
+
+    def cleanup(self):
+        self.data = []
+        del self.data
+        self.processed = []
+        del self.processed
+        self.config = {}
+        del self.config
+        self.header = {}
+        del self.header
+
     def load(self):
         self.processed = []
         shot_folder = '%s%s%05d/' % (self.prefix, self.RAW_FOLDER, self.shotn)
@@ -112,12 +131,17 @@ class Integrator:
                         for event in obj:
                             self.processed.append(event)
                         return True
+                    else:
+                        print('existing file has different config')
+
         self.load_raw()
         self.process_shot()
         return True
 
     def load_raw(self):
         self.loaded = False
+        freq = float(self.header['frequency'])  # GS/s
+        self.time_step = 1 / freq  # nanoseconds
         print('loading raw shot...')
         if self.is_plasma:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.PLASMA_FOLDER, self.RAW_FOLDER, self.shotn)
@@ -164,9 +188,6 @@ class Integrator:
 
     def process_shot(self):
         print('Processing shot...')
-        freq = float(self.header['frequency'])  # GS/s
-        self.time_step = 1 / freq  # nanoseconds
-
         for event_ind in range(self.laser_count):
             bad_flag = False
             # print('Event %d' % event_ind)
@@ -179,7 +200,8 @@ class Integrator:
                 'processed_bad': bad_flag
             }
             for poly in self.config['poly']:
-                proc_event['poly'][poly['ind']] = self.process_poly_event(event_ind, poly, laser)
+                proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
+
                 #break  # debug!
 
             self.processed.append(proc_event)
@@ -372,8 +394,11 @@ class Integrator:
         return res
 
     def plot(self, event_ind, poly_ind):
+        if not self.loaded:
+            self.load_raw()
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
+        tmp = None
         for ch_ind in range(len(self.config['poly'][poly_ind]['channels'])):
             sp_ch = self.config['poly'][poly_ind]['channels'][ch_ind]
             board_ind = sp_ch['adc']
@@ -387,11 +412,12 @@ class Integrator:
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             start = self.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
             tmp = plt.plot([(cell_ind - start) * self.time_step for cell_ind in range(len(signal))],
-                     [y - self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['zero_lvl'] for y in signal],
+                     [y - self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['zero_lvl'] for y in signal],
                      label='ch %d' % (ch_ind + 1))
-            ax.axvspan((self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['from'] - start) * self.time_step,
-                       (self.processed[event_ind]['poly'][poly_ind]['ch'][ch_ind]['to'] - start) * self.time_step,
+            ax.axvspan((self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['from'] - start) * self.time_step,
+                       (self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['to'] - start) * self.time_step,
                        alpha=0.3, color=tmp[-1].get_color())
+            del signal
         plt.ylabel('signal, mV')
         plt.xlabel('timeline, ns')
         plt.title('Poly %d, event %d' % (poly_ind, event_ind))
@@ -404,4 +430,7 @@ class Integrator:
         filename = 'figs/ev%d_p%d.png' % (event_ind, poly_ind)
         plt.savefig(filename, dpi=600)
         plt.close(fig)
-        print('plotted')
+        del tmp
+        del fig
+        del ax
+        print('plotted %s' % filename)

@@ -78,7 +78,8 @@ class Handler:
             resp['description'] = '"shotn" field is missing from request.'
             return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.25')
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.25',
+                                                      '2020.11.06')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()

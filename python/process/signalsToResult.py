@@ -26,32 +26,49 @@ class Processor:
     DEBUG_FOLDER = 'debug/'
     SIGNAL_FOLDER = 'signal/'
     RESULT_FOLDER = 'result/'
-    CALIBR_FOLDER = 'calibration/expected/'
+    EXPECTED_FOLDER = 'calibration/expected/'
+    ABSOLUTE_FOLDER = 'calibration/abs/processed/'
     HEADER_FILE = 'header'
     FILE_EXT = '.json'
 
-    def __init__(self, db_path, shotn, is_plasma, calibration):
+    def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id):
         self.shotn = shotn
         self.is_plasma = is_plasma
-        self.calibration = calibration
+        self.expected_id = expected_id
+        self.absolute_id = absolute_id
         self.error = None
         if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
             return
         self.db_path = db_path
-        if not os.path.isdir('%s%s' % (self.db_path, self.CALIBR_FOLDER)):
-            self.error = 'Calibration path not found.'
+        if not os.path.isdir('%s%s' % (self.db_path, self.EXPECTED_FOLDER)):
+            self.error = 'Spectral calibration path not found.'
             return
-        calibr_full_name = '%s%s%s%s' % (self.db_path, self.CALIBR_FOLDER, self.calibration, self.FILE_EXT)
-        if not os.path.isfile(calibr_full_name):
+        expected_full_name = '%s%s%s%s' % (self.db_path, self.EXPECTED_FOLDER, self.expected_id, self.FILE_EXT)
+        if not os.path.isfile(expected_full_name):
             self.error = 'Calibration file not found.'
             return
-        self.calibr = {}
-        with open(calibr_full_name, 'r') as calibr_file:
-            obj = ijson.kvitems(calibr_file, '', use_float=True)
+        self.expected = {}
+        with open(expected_full_name, 'r') as expected_file:
+            obj = ijson.kvitems(expected_file, '', use_float=True)
             for k, v in obj:
-                self.calibr[k] = v
-        self.calibr['modification'] = os.path.getmtime(calibr_full_name)
+                self.expected[k] = v
+        self.expected['modification'] = os.path.getmtime(expected_full_name)
+
+        if not os.path.isdir('%s%s' % (self.db_path, self.ABSOLUTE_FOLDER)):
+            self.error = 'Spectral calibration path not found.'
+            return
+        absolute_full_name = '%s%s%s%s' % (self.db_path, self.ABSOLUTE_FOLDER, self.absolute_id, self.FILE_EXT)
+        if not os.path.isfile(absolute_full_name):
+            self.error = 'Calibration file not found.'
+            return
+        self.absolute = {}
+        with open(absolute_full_name, 'r') as absolute_file:
+            obj = ijson.kvitems(absolute_file, '', use_float=True)
+            for k, v in obj:
+                self.absolute[k] = v
+        self.absolute['modification'] = os.path.getmtime(absolute_full_name)
+
         if self.is_plasma:
             self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
         else:
@@ -83,12 +100,20 @@ class Processor:
             with open(result_path, 'rb') as signal_file:
                 obj = ijson.kvitems(signal_file, '', use_float=True)
                 for key, val in obj:
-                    if key == 'calibration_name' and val != self.calibration:
-                        print('Warning! existing result was obtained for different calibration! Recalculating...')
+                    if key == 'spectral_name' and val != self.expected_id:
+                        print('Warning! existing result was obtained for different spectral calibration! Recalculating...')
                         break
-                    if key == 'calibration_mod' and \
-                            val != datetime.fromtimestamp(self.calibr['modification']).strftime('%Y.%m.%d %H:%M:%S'):
-                        print('Warning! Existing result uses outdated calibration! Recalculating...')
+                    if key == 'spectral_mod' and \
+                            val != datetime.fromtimestamp(self.expected['modification']).strftime('%Y.%m.%d %H:%M:%S'):
+                        print('Warning! Existing result uses outdated spectral calibration! Recalculating...')
+                        break
+
+                    if key == 'absolute_name' and val != self.absolute_id:
+                        print('Warning! existing result was obtained for different absolute calibration! Recalculating...')
+                        break
+                    if key == 'absolute_mod' and \
+                            val != datetime.fromtimestamp(self.absolute['modification']).strftime('%Y.%m.%d %H:%M:%S'):
+                        print('Warning! Existing result uses outdated absolute calibration! Recalculating...')
                         break
                     self.result[key] = val
                 else:
@@ -111,8 +136,10 @@ class Processor:
     def process_shot(self):
         self.result = {
             'timestamp': datetime.now().strftime('%Y.%m.%d %H:%M:%S'),
-            'calibration_name': self.calibration,
-            'calibration_mod': datetime.fromtimestamp(self.calibr['modification']).strftime('%Y.%m.%d %H:%M:%S'),
+            'spectral_name': self.expected_id,
+            'spectral_mod': datetime.fromtimestamp(self.expected['modification']).strftime('%Y.%m.%d %H:%M:%S'),
+            'absolute_name': self.absolute_id,
+            'absolute_mod': datetime.fromtimestamp(self.absolute['modification']).strftime('%Y.%m.%d %H:%M:%S'),
             'signal_mod': datetime.fromtimestamp(
                 os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
@@ -155,7 +182,7 @@ class Processor:
             bad_flag = False
             proc_event = {
                 'timestamp': self.signal['data'][event_ind]['timestamp'],
-                'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.calibr['J_from_int']
+                'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected['J_from_int']
             }
             if self.signal['data'][event_ind]['processed_bad']:
                 bad_flag = True
@@ -192,26 +219,26 @@ class Processor:
                     N_i[-1] -= stray[ch]
                 sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
             min_index = -1
-            for i in range(len(self.calibr['T_arr'])):
-                f_i = [self.calibr['poly'][poly]['expected'][ch][i] for ch in channels]
+            for i in range(len(self.expected['T_arr'])):
+                f_i = [self.expected['poly'][poly]['expected'][ch][i] for ch in channels]
                 current_chi = calc_chi2(N_i, sigm2_i, f_i)
                 if current_chi < chi2:
                     min_index = i
                     chi2 = current_chi
-            if min_index >= len(self.calibr['T_arr']) - 2 or min_index == 0:
+            if min_index >= len(self.expected['T_arr']) - 2 or min_index == 0:
                 res = {
                     'processed_bad': True
                 }
             else:
                 left = {
-                    't': self.calibr['T_arr'][min_index - 1],
-                    'f': [self.calibr['poly'][poly]['expected'][ch][min_index - 1] for ch in channels]
+                    't': self.expected['T_arr'][min_index - 1],
+                    'f': [self.expected['poly'][poly]['expected'][ch][min_index - 1] for ch in channels]
                 }
                 left['chi'] = calc_chi2(N_i, sigm2_i, left['f'])
 
                 right = {
-                    't': self.calibr['T_arr'][min_index + 1],
-                    'f': [self.calibr['poly'][poly]['expected'][ch][min_index + 1] for ch in channels]
+                    't': self.expected['T_arr'][min_index + 1],
+                    'f': [self.expected['poly'][poly]['expected'][ch][min_index + 1] for ch in channels]
                 }
                 right['chi'] = calc_chi2(N_i, sigm2_i, right['f'])
 
@@ -264,16 +291,15 @@ class Processor:
                     nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
                 fdf_sum = math.pow(fdf_sum, 2)
 
-                A = 3.7e-15
                 E = 1.0
 
-                n_e = nf_sum / (A * E * f2_sum)
+                n_e = nf_sum / (self.absolute['%d' % poly] * E * f2_sum)
 
-                Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
-                nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
+                Terr2 = math.pow(self.absolute['%d' % poly] * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
+                nerr2 = math.pow(self.absolute['%d' % poly] * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
                 res = {
                     'index': min_index,
-                    'min': self.calibr['T_arr'][min_index],
+                    'min': self.expected['T_arr'][min_index],
                     'ch': channels,
                     'chi2': (left['chi'] + right['chi']) * 0.5,
                     'T': (left['t'] + right['t']) * 0.5,
