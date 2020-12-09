@@ -87,6 +87,7 @@ class Processor:
                 'error': err
             }
 
+
     def get_error(self):
         tmp = self.error
         self.error = None
@@ -295,6 +296,8 @@ class Processor:
 
                 n_e = nf_sum / (self.absolute['%d' % poly] * E * f2_sum)
 
+                mult = nf_sum / f2_sum
+
                 Terr2 = math.pow(self.absolute['%d' % poly] * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
                 nerr2 = math.pow(self.absolute['%d' % poly] * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
                 res = {
@@ -306,6 +309,7 @@ class Processor:
                     'Terr': math.sqrt(Terr2),
                     'n': n_e,
                     'n_err': math.sqrt(nerr2),
+                    'mult': mult,
                     'processed_bad': False
                 }
         else:

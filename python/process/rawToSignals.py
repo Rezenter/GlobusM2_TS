@@ -39,7 +39,6 @@ class Integrator:
     right_limit = 20  # ind
 
     def __init__(self, db_path, shotn, is_plasma, config_name):
-        self.loaded = False
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.config_name = config_name

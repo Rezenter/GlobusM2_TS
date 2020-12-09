@@ -2,7 +2,7 @@ import os
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
-import time
+import ijson
 
 
 def __init__():
@@ -12,6 +12,7 @@ def __init__():
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
+EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
@@ -33,7 +34,9 @@ class Handler:
             'view': {
                 'refresh': self.refresh_shots,
                 'get_shot': self.get_shot,
-                'get_event_sig': self.get_event_sig
+                'get_event_sig': self.get_event_sig,
+                'get_event_raw': self.get_event_raw,
+                'get_expected': self.get_expected
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -67,6 +70,12 @@ class Handler:
         resp['ok'] = True
         return resp
 
+    def get_expected(self, req):
+        expected = self.fine_processor.expected
+        expected['ok'] = True
+        resp = expected
+        return resp
+
     def get_shot(self, req):
         resp = {}
         if 'is_plasma' not in req:
@@ -84,6 +93,10 @@ class Handler:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()
         resp = self.fine_processor.get_data()
+        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
+                self.raw_processor.shotn != int(req['shotn']):
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+        resp['header'] = self.raw_processor.header
         resp['ok'] = True
         return resp
 
@@ -107,7 +120,8 @@ class Handler:
             print(shot_path)
             resp['description'] = 'Requested shotn is missing.'
             return resp
-        if self.raw_processor is None or self.raw_processor.shotn != req['shotn']:
+        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
+                self.raw_processor.shotn != int(req['shotn']):
             self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
         resp = {
             'timestamps': [],
@@ -127,8 +141,72 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"event" field is missing from request.'
             return resp
+        if 'is_plasma' not in req:
+            resp['ok'] = False
+            resp['description'] = '"is-plasma" field is missing from request.'
+            return resp
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        if req['is_plasma']:
+            path = self.plasma_path
+        else:
+            path = self.debug_path
+        shot_path = '%s%s%s' % (path, RAW_FOLDER, req['shotn'])
+        if not os.path.isdir(shot_path):
+            resp['ok'] = False
+            resp['description'] = 'Requested shotn is missing.'
+            return resp
+        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
+                self.raw_processor.shotn != int(req['shotn']):
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
         resp = self.raw_processor.processed[req['event']]
         resp['ok'] = True
+        return resp
+
+    def get_event_raw(self, req):
+        resp = {}
+        if 'event' not in req:
+            resp['ok'] = False
+            resp['description'] = '"event" field is missing from request.'
+            return resp
+        if 'is_plasma' not in req:
+            resp['ok'] = False
+            resp['description'] = '"is-plasma" field is missing from request.'
+            return resp
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        if req['is_plasma']:
+            path = self.plasma_path
+        else:
+            path = self.debug_path
+        shot_path = '%s%s%s' % (path, RAW_FOLDER, req['shotn'])
+        if not os.path.isdir(shot_path):
+            resp['ok'] = False
+            resp['description'] = 'Requested shotn is missing.'
+            return resp
+        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
+                self.raw_processor.shotn != int(req['shotn']):
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+        if 'poly' not in req:
+            resp['ok'] = False
+            resp['description'] = '"poly" field is missing from request.'
+            return resp
+        if not self.raw_processor.loaded:
+            self.raw_processor.load_raw()
+        event = []
+        for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
+            adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
+            event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
+        adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][ch['adc']]['ch'])
+        resp = {
+            'data': event,
+            'laser': self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch],
+            'ok': True
+        }
         return resp
 
     def fast_arm(self, req):

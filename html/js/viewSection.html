@@ -8,9 +8,24 @@
     .canvasjs-chart-tooltip{
         pointer-events: auto !important;
     }
+    #draggable {
+        position: absolute;
+        z-index: 9;
+        background-color: #f1f1f1;
+        border: 1px solid #d3d3d3;
+        text-align: center;
+    }
+
+    #draggableheader {
+        padding: 10px;
+        cursor: move;
+        z-index: 10;
+        background-color: #2196F3;
+        color: #fff;
+    }
 </style>
 <body>
-    <div id="focus-all">
+    <div id="focus-all" tabindex="0">
         <div class="row" id="db_row" style="
             margin-left: 0;
             margin-right: 0;
@@ -48,7 +63,35 @@
                 </div>
             </div>
         </div>
-        <div id="profile_chart" style="width:100%; height:600px;"></div>
+    </div>
+    <div id="draggable" hidden tabindex="1" style="width: 400px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="draggableheader" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger" id="hide_draggable">Hide</button>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <label for="poly_input">Poly</label><input id="poly_input" type="number" value="0" min="0" maxlength="1">
+                </div>
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <p id="poly_radius"></p>
+                </div>
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <p id="event_timestamp"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="fitting_chart" style="width:100%; height:400px;"></div>
+        <div id="raw_chart" style="width:100%; height:400px;"></div>
+
     </div>
 </body>
 <script>
@@ -65,7 +108,27 @@
             n_prof_title: ' electron density profile'
         };
         this.m_currentShot = {};
-        this.m_currentEvent = {};
+        this.m_current_event_raw = {};
+        this.m_current_event_sig = {};
+        this.m_expected = {};
+        this.m_selected_event_ind = 0;
+        this.palette = [
+            '#00FFFF',
+            '#0000FF',
+            '#8A2BE2',
+            '#ADFF2F',
+            '#FF0000',
+            '#DC143C',
+            '#008b8b',
+            '#00FF00',
+            '#4B0082',
+            '#006400',
+            '#FF8C00',
+            '#FF00FF',
+            '#808000',
+            '#FF4500',
+            '#FFFF00',
+        ];
 
         this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
             theme: "light2",
@@ -329,20 +392,89 @@
             data: this.m_n_profile_data
         });
 
-        this.m_profile_chart = new CanvasJS.Chart("profile_chart", {
+        this.m_fitting_chart = new CanvasJS.Chart("fitting_chart", {
             title: {
-                text: "Signal profile",
+                text: 'Spectrum fitting',
+                fontSize: 14,
                 fontFamily: 'arial'
             },
             axisY: {
-                title: "Signal, ph.el.",
                 includeZero: true,
+                title: 'Signal, a.u.',
+                titleFontSize: 12,
                 minimum: 0,
                 fontFamily: 'arial'
             },
             axisX: {
-                title: "R, mm",
+                title: "Electron temperature, eV",
+                titleFontSize: 12,
+                minimum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
                 fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ( 'T_e = ' + e.entries[0].dataPoint.x.toFixed(1) + 'eV ' +
+                        ' fix this!');//e.entries[0].dataPoint.y.toFixed(1) + 'a.u.');
+                }
+            },
+            data: []
+        });
+
+        this.m_raw_chart = new CanvasJS.Chart("raw_chart", {
+            title: {
+                text: 'Raw signals',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Signal, mv',
+                titleFontSize: 12,
+                //minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "time, ns",
+                titleFontSize: 12,
+                minimum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ( 'time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns ' +
+                        ' fix this!');//e.entries[0].dataPoint.y.toFixed(1) + 'a.u.');
+                }
+            },
+            legend: {
+                cursor: "pointer",
+                itemmouseover: function(e) {
+                    e.dataSeries.lineThickness = e.chart.data[e.dataSeriesIndex].lineThickness * 2;
+                    e.chart.render();
+                },
+                itemmouseout: function(e) {
+                    e.dataSeries.lineThickness = e.chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                    e.chart.render();
+                },
+                itemclick: function (e) {
+                    e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+                    e.chart.render();
+                }
             },
             data: []
         });
@@ -356,8 +488,7 @@
         this.m_T_profile_chart.render();
         this.m_n_profile_chart.render();
 
-        this.m_profile_chart.render();
-
+        this.m_fitting_chart.render();
 
         this.RangeChanged = function(e){
             this.m_T_evo_chart.options.axisX.minimum = e.minimum;
@@ -420,13 +551,15 @@
                 }, function (resp) {
                     //console.log(resp);
                     Object.assign(self.m_currentShot, resp);
+                    $('#poly_input').attr('max', self.m_currentShot.polys.length - 1);
+                    $('#time_input').attr('max', self.m_currentShot.polys.length - 1);
                     self.m_timestamp_chart.options.charts[0].data = [{
                         color: "#B0D0B0",
                         type: "column",
                         showInLegend: false,
                         name: 'Laser energy',
                         dataPoints: [],
-                        click: self.ShowEvent
+                        click: self.ShowEvent.bind(self)
                     }];
 
                     self.m_T_evo_chart.options.data = [];
@@ -452,8 +585,9 @@
                         let h05 = resp.polys[poly_ind].h * 0.5;
                         self.m_radius_chart.options.data.push(
                             {
-                                //color: "#B0D0B0",
                                 type: "rangeArea",
+                                markerType: "none",
+                                color: self.palette[poly_ind],
                                 showInLegend: true,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: [{
@@ -469,45 +603,47 @@
 
                         self.m_T_evo_chart.options.data.push(
                             {
-                                //color: "#B0D0B0",
                                 type: "line",
+                                color: self.palette[poly_ind],
+                                markerType: "none",
                                 showInLegend: true,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: self.ShowEvent
+                                click: self.ShowEvent.bind(self)
                             }
                         );
                         self.m_T_evo_chart.options.data.push(
                             {
-                                //color: "#B0D0B0",
                                 type: "error",
+                                color: self.palette[poly_ind],
                                 showInLegend: false,
                                 dataPoints: [],
-                                click: self.ShowEvent
+                                //click: self.ShowEvent.bind(self)
                             }
                         );
 
                         self.m_n_evo_chart.options.data.push(
                             {
-                                //color: "#B0D0B0",
                                 type: "line",
+                                color: self.palette[poly_ind],
+                                markerType: "none",
                                 showInLegend: false,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: self.ShowEvent
+                                click: self.ShowEvent.bind(self)
                             }
                         );
                         self.m_n_evo_chart.options.data.push(
                             {
-                                //color: "#B0D0B0",
                                 type: "error",
+                                color: self.palette[poly_ind],
                                 showInLegend: false,
                                 dataPoints: [],
-                                click: self.ShowEvent
+                                //click: self.ShowEvent.bind(self)
                             }
                         );
                     }
@@ -663,26 +799,159 @@
         };
 
         this.ShowEvent = function (ev){
-            let self = ev.data;
-            console.log('showing');
-            /*
-            self.m_profile_chart.render();
-                            self.Request(
-                                {
-                                    reqtype: 'get_event_sig',
-                                    event: e.dataPointIndex
-                                }
-                                , function (resp) {
-                                    //console.log(resp);
-                                    resp['event_ind'] = e.dataPointIndex;
-                                    resp['timestamp'] = e.dataPoint.x;
-                                    Object.assign(self.m_currentEvent, resp);
-                                    self.UpdateProfile({data: self});
-                                }
-                            );
-             */
-
+            //console.log('showing', ev);
+            this.update_fit({data: this})
+            this.m_selected_event_ind = ev.dataPointIndex;
+            $('#draggable')[0].removeAttribute('hidden');
         };
+
+        this.update_fit = function (ev){
+            let self = ev.data;
+            if(jQuery.isEmptyObject(self.m_expected) || self.m_expected.name === self.m_currentShot.spectral_name){
+                self.Request(
+                    {
+                        reqtype: 'get_expected'
+                    }
+                    , function (resp) {
+                        Object.assign(self.m_expected, resp);
+                        self.m_expected['name'] = self.m_currentShot.spectral_name;
+                        self.draw_popup(ev);
+                    }
+                );
+            }else{
+                self.draw_popup({data: self});
+            }
+        };
+
+        this.draw_popup = function(ev){
+            let self = ev.data;
+            let poly_ind = $('#poly_input').val();
+
+            $('#event_timestamp').html(self.m_currentShot.events[self.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
+            $('#poly_radius').html(self.m_currentShot.polys[poly_ind].R + ' mm');
+            self.m_fitting_chart.options.data = [];
+            self.m_current_event_sig = {};
+            self.Request(
+                {
+                    reqtype: 'get_event_sig',
+                    event: self.m_selected_event_ind,
+                    is_plasma: $('#is_plasma')[0].checked,
+                    shotn: $('#shot_select').val()
+                }
+                , function (resp) {
+                    Object.assign(self.m_current_event_sig, resp);
+                    for(let ch = 0; ch < self.m_expected.poly[poly_ind].expected.length; ch++){
+                        let data = [];
+                        for(let temp_ind = 0; temp_ind < self.m_expected.T_arr.length; temp_ind++){
+                            data.push(
+                                {
+                                    x: self.m_expected.T_arr[temp_ind],
+                                    y: self.m_expected.poly[poly_ind].expected[ch][temp_ind]
+                                });
+                        }
+                        self.m_fitting_chart.options.data.push({
+                            type: "line",
+                            //markerType: "none",
+                            color: self.palette[ch],
+                            showInLegend: true,
+                            name: 'ch ' + (ch + 1),
+                            dataPoints: data,
+                            click: function (e) {
+                                console.log(e);
+                            }
+                        });
+                        self.m_fitting_chart.options.data.push({
+                            type: "error",
+                            color: self.palette[ch],
+                            showInLegend: false,
+                            name: 'measured ' + (ch + 1),
+                            dataPoints: [{
+                                x: self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T,
+                                y: [
+                                    (resp.poly[poly_ind].ch[ch].ph_el - resp.poly[poly_ind].ch[ch].err) /
+                                    self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult,
+                                    (resp.poly[poly_ind].ch[ch].ph_el + resp.poly[poly_ind].ch[ch].err) /
+                                    self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult
+                                ]
+                            }],
+                            click: function (e) {
+                                console.log(e);
+                            }
+                        })
+                    }
+                    self.m_fitting_chart.options.axisX.minimum =
+                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T * 0;
+                    self.m_fitting_chart.options.axisX.maximum =
+                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T * 2;
+                    self.m_fitting_chart.render();
+
+                }
+            );
+            self.m_raw_chart.options.data = [];
+            self.m_current_event_raw = {};
+            self.Request(
+                {
+                    reqtype: 'get_event_raw',
+                    event: self.m_selected_event_ind,
+                    is_plasma: $('#is_plasma')[0].checked,
+                    shotn: $('#shot_select').val(),
+                    poly: $('#poly_input').val()
+                }
+                , function (resp) {
+                    Object.assign(self.m_current_event_raw, resp);
+                    //console.log(self.m_current_event_sig);
+                    //console.log(self.m_currentShot);
+                    let dt = 1 / parseFloat(self.m_currentShot.header.frequency)
+                    self.m_raw_chart.options.axisX.minimum = 0;
+                    self.m_raw_chart.options.axisX.maximum = self.m_currentShot.header.eventLength * dt;
+                    for(let ch = 0; ch < self.m_current_event_raw.data.length; ch++){
+                        let data = [];
+                        for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
+                            if(ch != 5) {
+                                data.push(
+                                    {
+                                        x: time_ind * dt,
+                                        y: self.m_current_event_raw.data[ch][time_ind] -
+                                            self.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
+                                    });
+                            }else{
+                                data.push(
+                                    {
+                                        x: time_ind * dt,
+                                        y: self.m_current_event_raw.data[ch][time_ind]
+                                    });
+                            }
+                        }
+                        self.m_raw_chart.options.data.push({
+                            type: "line",
+                            color: self.palette[ch],
+                            markerType: "none",
+                            showInLegend: true,
+                            name: 'ch ' + (ch + 1),
+                            dataPoints: data,
+                            ch_ind: ch
+                        });
+                    }
+                    let data = [];
+                    for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
+                        data.push(
+                            {
+                                x: time_ind * dt,
+                                y: self.m_current_event_raw.laser[time_ind]
+                            });
+                    }
+                    self.m_raw_chart.options.data.push({
+                        color: "#B0D0B0",
+                        type: "line",
+                        markerType: "none",
+                        showInLegend: true,
+                        name: 'laser',
+                        dataPoints: data
+                    });
+                    self.m_raw_chart.render();
+                }
+            );
+        }
 
         this.UpdateProfiles = function(ev){
             let self = ev.data;
@@ -703,157 +972,167 @@
             self.m_n_profile_chart.render();
         };
 
-        this.UpdateProfile = function(ev){
-            let self = ev.data;
-            self.m_profile_chart.options.data = [];
-            self.m_profile_chart.title = {
-                text: self.m_currentEvent.timestamp.toFixed(1) + ' ms, event № ' + self.m_currentEvent.event_ind
-            };
-            for(let ch_ind = 0; ch_ind < 5; ch_ind++){
-                let profile = []
-                let errors = []
-                for(let poly_ind = 0; poly_ind < 10; poly_ind++){
-                    profile.push({
-                        x: self.m_currentShot.polys[poly_ind].R,
-                        y: self.m_currentEvent.poly[poly_ind].ch[ch_ind].ph_el
-                    });
-                    errors.push({
-                        x: self.m_currentShot.polys[poly_ind].R,
-                        y: [
-                            self.m_currentEvent.poly[poly_ind].ch[ch_ind].ph_el -
-                            self.m_currentEvent.poly[poly_ind].ch[ch_ind].err,
-                            self.m_currentEvent.poly[poly_ind].ch[ch_ind].ph_el +
-                            self.m_currentEvent.poly[poly_ind].ch[ch_ind].err
-                        ]
-                    });
-                }
-                self.m_profile_chart.options.data.push({
-                    type: "spline",
-                    showInLegend: true,
-                    name: 'ch ' + (ch_ind + 1),
-                    toolTipContent: 'spectral channel ' + (ch_ind + 1) + ', {x} mm: {y} ph.el',
-                    dataPoints: profile
-                });
-                self.m_profile_chart.options.data.push({
-                    type: "error",
-                    showInLegend: false,
-                    name: 'Error',
-                    dataPoints: errors
-                });
-            }
-
-            self.m_profile_chart.render();
-        };
-
-        this.GetEvent = function(ev){
-            let self = ev.data;
-            self.m_chartData = [];
-            self.m_chart.render();
-            self.Request(
-                {
-                    reqtype: 'get_event',
-                    is_plasma: $('#is_plasma')[0].checked,
-                    shotn: $('#shot_select').val(),
-                    board: parseInt($('#board_spinbox').val()),
-                    event: parseInt($('#event_spinbox').val())
-                }
-                , function (resp) {
-                    //console.log(resp);
-                    
-                    Object.assign(self.m_currentEvent, resp);
-                    self.UpdateChart({data: self});
-                }
-            );
-        };
-
         this.ConnectControls = function (ev) {
             let self = ev.data;
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
-                let resized = false;
-                if(event.key === 'ArrowLeft'){
-                    event.preventDefault();
-                    if(event.altKey){
-                        if(event.ctrlKey){
-                            console.log('fuck off');
-                            return;
+                if(!$('#draggable')[0].contains(document.activeElement)) {
+                    let resized = false;
+                    if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        if (event.altKey) {
+                            if (event.ctrlKey) {
+                                console.log('fuck off');
+                                return;
+                            }
+                            this.m_timestamp_chart.navigator.slider.set("maximum",
+                                this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
+                        } else if (event.ctrlKey) {
+                            this.m_timestamp_chart.navigator.slider.set("minimum",
+                                this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
+                        } else {
+                            this.m_timestamp_chart.navigator.slider.set("maximum",
+                                this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                            this.m_timestamp_chart.navigator.slider.set("minimum",
+                                this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
                         }
-                        this.m_timestamp_chart.navigator.slider.set("maximum",
-                            this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
-                    }else if(event.ctrlKey){
-                        this.m_timestamp_chart.navigator.slider.set("minimum",
-                            this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
-                    }else{
-                        this.m_timestamp_chart.navigator.slider.set("maximum",
-                            this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
-                        this.m_timestamp_chart.navigator.slider.set("minimum",
-                            this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
-                    }
 
-                }else if(event.key === 'ArrowRight'){
-                    event.preventDefault();
-                    if(event.altKey){
-                        if(event.ctrlKey){
-                            console.log('fuck off');
-                            return;
+                    } else if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        if (event.altKey) {
+                            if (event.ctrlKey) {
+                                console.log('fuck off');
+                                return;
+                            }
+                            this.m_timestamp_chart.navigator.slider.set("maximum",
+                                this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
+                        } else if (event.ctrlKey) {
+                            this.m_timestamp_chart.navigator.slider.set("minimum",
+                                this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
+                        } else {
+                            this.m_timestamp_chart.navigator.slider.set("maximum",
+                                this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                            this.m_timestamp_chart.navigator.slider.set("minimum",
+                                this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                            resized = true;
                         }
-                        this.m_timestamp_chart.navigator.slider.set("maximum",
-                            this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
-                    }else if(event.ctrlKey){
-                        this.m_timestamp_chart.navigator.slider.set("minimum",
-                            this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
-                    }else{
-                        this.m_timestamp_chart.navigator.slider.set("maximum",
-                            this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
-                        this.m_timestamp_chart.navigator.slider.set("minimum",
-                            this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
-                        this.RangeChanged({
-                            minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                            maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                        });
-                        resized = true;
                     }
-                }
-                if(resized){
-                    this.m_T_evo_chart.toolTip.hide();
-                    this.m_n_evo_chart.toolTip.hide();
-                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                    if (resized) {
+                        this.m_T_evo_chart.toolTip.hide();
+                        this.m_n_evo_chart.toolTip.hide();
+                        this.m_timestamp_chart.charts[0].toolTip.hide();
 
-                    this.m_T_evo_chart.axisX[0].crosshair.hide();
-                    this.m_n_evo_chart.axisX[0].crosshair.hide();
-                    this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }
+                }else{
+                    if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
+                        this.m_currentShot.events.length - 1);
+                        this.draw_popup({data: this});
+                    }else if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
+                        this.draw_popup({data: this});
+                    }else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        if($('#poly_input').val() < $('#poly_input').attr('max')){
+                            $('#poly_input')[0].stepUp();
+                            this.draw_popup({data: this});
+                        }
+                    }else if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        if($('#poly_input').val() > $('#poly_input').attr('min')){
+                            $('#poly_input')[0].stepDown();
+                            this.draw_popup({data: this});
+                        }
+                    }
                 }
             }.bind(self));
+
+            dragElement($('#draggable')[0]);
+            $('#hide_draggable').on('click', this, function (ev) {
+                $('#draggable').attr('hidden', true);
+            });
         };
 
         this.ConnectControls({data: this});
+    }
+
+    function dragElement(elmnt) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        if ($('#' + elmnt.id + "header")[0]) {
+            // if present, the header is where you move the DIV from:
+            $('#' + elmnt.id + "header")[0].onmousedown = dragMouseDown;
+        } else {
+            // otherwise, move the DIV from anywhere inside the DIV:
+            elmnt.onmousedown = dragMouseDown;
+        }
+        elmnt.style.top = 10 + '%';
+        elmnt.style.left = 70 + '%'
+
+        function dragMouseDown(e) {
+            //console.log(e);
+            //e.preventDefault();
+            // get the mouse cursor position at startup:
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            //e.preventDefault();
+            // calculate the new cursor position:
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // set the element's new position:
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            // stop moving when mouse button is released:
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
     }
 
     $(document).ready(
