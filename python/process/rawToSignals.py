@@ -138,6 +138,7 @@ class Integrator:
         return True
 
     def load_raw(self):
+
         self.loaded = False
         freq = float(self.header['frequency'])  # GS/s
         self.time_step = 1 / freq  # nanoseconds

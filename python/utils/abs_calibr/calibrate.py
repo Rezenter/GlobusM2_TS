@@ -50,15 +50,14 @@ def process_point(point):
         for poly_ind in range(10):
             if stray is None:
                 result['measured']['%d' % poly_ind] = signals['%d' % poly_ind]['val'] / signals['%d' % poly_ind]['weight']
-                result['A']['%d' % poly_ind] = n_N2 * abs_calibration['laser_energy'] * spectrum.get_sum(1) / \
-                                               result['measured']['%d' % poly_ind]
             else:
                 result['measured']['%d' % poly_ind] = signals['%d' % poly_ind]['val'] / signals['%d' % poly_ind][
                     'weight']
                 result['measured_w/o_stray']['%d' % poly_ind] = result['measured']['%d' % poly_ind] - \
                                                                 stray['measured']['%d' % poly_ind]
-                result['A']['%d' % poly_ind] = n_N2 * abs_calibration['laser_energy'] * spectrum.get_sum(1) / \
-                                               result['measured_w/o_stray']['%d' % poly_ind]
+                result['A']['%d' % poly_ind] = result['measured_w/o_stray']['%d' % poly_ind] / \
+                                               (n_N2 * abs_calibration['laser_energy'] * spectrum.get_sum(1))
+
         with open('%05d.json' % point['shotn'], 'w') as out_file:
             json.dump(result, out_file)
     return result

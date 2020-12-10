@@ -3,6 +3,7 @@ import os
 import ijson
 import json
 import math
+import phys_const as const
 
 
 def calc_chi2(N_i, sigm2_i, f_i):
@@ -30,6 +31,9 @@ class Processor:
     ABSOLUTE_FOLDER = 'calibration/abs/processed/'
     HEADER_FILE = 'header'
     FILE_EXT = '.json'
+
+    cross_section = (8.0 * math.pi / 3.0) * \
+                    math.pow((math.pow(const.q_e, 2) / (4 * math.pi * const.eps_0 * const.m_e * math.pow(const.c, 2))), 2)
 
     def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id):
         self.shotn = shotn
@@ -189,9 +193,13 @@ class Processor:
                 bad_flag = True
             else:
                 poly = []
+                energy = self.expected['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
+
+                energy = 1  ## DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
                     temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
-                                          stray[poly_ind])
+                                          stray[poly_ind], energy)
                     poly.append(temp)
                 proc_event['T_e'] = poly
             proc_event['processed_bad'] = bad_flag
@@ -203,7 +211,7 @@ class Processor:
             json.dump(self.result, out_file)
         self.to_csv(stray)
 
-    def calc_temp(self, event, poly, stray):
+    def calc_temp(self, event, poly, stray, E):
         channels = []
         for ch_ind in range(5):
             if not event['ch'][ch_ind]['processed_bad']:
@@ -292,14 +300,14 @@ class Processor:
                     nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
                 fdf_sum = math.pow(fdf_sum, 2)
 
-                E = 1.0
+                A = self.absolute['%d' % poly] * self.cross_section
 
-                n_e = nf_sum / (self.absolute['%d' % poly] * E * f2_sum)
+                n_e = nf_sum / (A * E * f2_sum)
 
                 mult = nf_sum / f2_sum
 
-                Terr2 = math.pow(self.absolute['%d' % poly] * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
-                nerr2 = math.pow(self.absolute['%d' % poly] * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
+                Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
+                nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
                 res = {
                     'index': min_index,
                     'min': self.expected['T_arr'][min_index],

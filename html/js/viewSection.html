@@ -115,20 +115,30 @@
         this.palette = [
             '#00FFFF',
             '#0000FF',
-            '#8A2BE2',
-            '#ADFF2F',
             '#FF0000',
+            '#00FF00',
+            '#8A2BE2',
+            '#006400',
             '#DC143C',
             '#008b8b',
-            '#00FF00',
             '#4B0082',
-            '#006400',
             '#FF8C00',
+            '#ADFF2F',
             '#FF00FF',
             '#808000',
             '#FF4500',
             '#FFFF00',
         ];
+        this.m_current_channels = [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+        ];
+        this.m_config_name = '2020.12.10';
 
         this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
             theme: "light2",
@@ -393,6 +403,7 @@
         });
 
         this.m_fitting_chart = new CanvasJS.Chart("fitting_chart", {
+            zoomEnabled: true,
             title: {
                 text: 'Spectrum fitting',
                 fontSize: 14,
@@ -421,14 +432,66 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
-                    return ( 'T_e = ' + e.entries[0].dataPoint.x.toFixed(1) + 'eV ' +
-                        ' fix this!');//e.entries[0].dataPoint.y.toFixed(1) + 'a.u.');
+                    let text = 'T_e = ' + e.entries[0].dataPoint.x.toFixed(1) + 'eV \n';
+                    /*
+                    for(ch of e.entries){
+                        text += 'ch' + (ch + 1) + ' = ' + e.entries[ch].dataPoint.y.toFixed(1)
+                    }
+                    */
+                    return text;
                 }
+            },
+            legend: {
+                cursor: "pointer",
+                itemmouseover: function(e) {
+                    if(e.dataSeries.visible) {
+                        let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex].lineThickness * 2;
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex + 1].lineThickness * 2;
+                        this.m_fitting_chart.render();
+                        let ch = e.dataSeriesIndex / 2
+                        this.m_raw_chart.options.data[ch].lineThickness = this.m_raw_chart.data[ch].lineThickness * 2;
+                        if (!this.m_current_event_sig.poly[$('#poly_input').val()].ch[ch].processed_bad) {
+                            this.m_raw_chart.options.axisX.stripLines = [{
+                                startValue: (this.m_current_event_sig.poly[$('#poly_input').val()].ch[ch].from - this.m_current_event_raw.start) * dt,
+                                endValue: (this.m_current_event_sig.poly[$('#poly_input').val()].ch[ch].to - this.m_current_event_raw.start) * dt,
+                                color: this.palette[ch],
+                                opacity: .2
+                            }];
+                        }
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
+                itemmouseout: function(e) {
+                    if(e.dataSeries.visible) {
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex + 1].lineThickness * 0.5;
+                        this.m_fitting_chart.render();
+
+                        this.m_raw_chart.options.data[e.dataSeriesIndex / 2].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex / 2].lineThickness * 0.5;
+                        this.m_raw_chart.options.axisX.stripLines = [];
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
+                itemclick: function (e) {
+                    e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+                    this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
+                    this.m_current_channels[e.dataSeriesIndex] = e.dataSeries.visible;
+
+                    //this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                    //this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex + 1].lineThickness * 0.5;
+                    this.m_fitting_chart.render();
+                    this.m_raw_chart.options.data[e.dataSeriesIndex / 2].visible = e.dataSeries.visible;
+                    //this.m_raw_chart.options.data[e.dataSeriesIndex / 2].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex / 2].lineThickness * 0.5;
+                    this.m_raw_chart.options.axisX.stripLines = [];
+                    this.m_raw_chart.render();
+                }.bind(this)
             },
             data: []
         });
 
         this.m_raw_chart = new CanvasJS.Chart("raw_chart", {
+            zoomEnabled: true,
             title: {
                 text: 'Raw signals',
                 fontSize: 14,
@@ -452,7 +515,7 @@
                         return e.value.toFixed(1);
                     }
                 },
-                fontFamily: 'arial'
+                fontFamily: 'arial',
             },
             toolTip: {
                 shared: true,
@@ -464,21 +527,38 @@
             legend: {
                 cursor: "pointer",
                 itemmouseover: function(e) {
-                    e.dataSeries.lineThickness = e.chart.data[e.dataSeriesIndex].lineThickness * 2;
-                    e.chart.render();
-                },
+                    if(e.dataSeries.visible) {
+                        let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex].lineThickness * 2;
+                        if(e.dataSeriesIndex !== 5) {
+                            this.m_raw_chart.options.axisX.stripLines = [{
+                                startValue: 0,
+                                endValue: (this.m_current_event_sig.laser.ave.int_len) * dt,
+                                color: "#B0D0B0",
+                                opacity: .2
+                            }];
+                        }
+
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
                 itemmouseout: function(e) {
-                    e.dataSeries.lineThickness = e.chart.data[e.dataSeriesIndex].lineThickness * 0.5;
-                    e.chart.render();
-                },
+                    if(e.dataSeries.visible) {
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                        this.m_raw_chart.options.axisX.stripLines = [];
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
                 itemclick: function (e) {
-                    e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
-                    e.chart.render();
-                }
+                    this.m_current_channels[e.dataSeriesIndex] = (!(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible));
+                    this.m_raw_chart.options.data[e.dataSeriesIndex].visible = this.m_current_channels[e.dataSeriesIndex];
+                    //this.m_raw_chart.options.data[e.dataSeriesIndex / 2].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex / 2].lineThickness * 0.5;
+                    this.m_raw_chart.options.axisX.stripLines = [];
+                    this.m_raw_chart.render();
+                }.bind(this)
             },
             data: []
         });
-
 
         this.m_radius_chart.render();
 
@@ -547,7 +627,8 @@
                 {
                     reqtype: 'get_shot',
                     is_plasma: $('#is_plasma')[0].checked,
-                    shotn: $('#shot_select').val()
+                    shotn: $('#shot_select').val(),
+                    config: self.m_config_name
                 }, function (resp) {
                     //console.log(resp);
                     Object.assign(self.m_currentShot, resp);
@@ -800,8 +881,8 @@
 
         this.ShowEvent = function (ev){
             //console.log('showing', ev);
-            this.update_fit({data: this})
             this.m_selected_event_ind = ev.dataPointIndex;
+            this.update_fit({data: this})
             $('#draggable')[0].removeAttribute('hidden');
         };
 
@@ -840,6 +921,7 @@
                 }
                 , function (resp) {
                     Object.assign(self.m_current_event_sig, resp);
+                    //console.log(self.m_current_event_sig);
                     for(let ch = 0; ch < self.m_expected.poly[poly_ind].expected.length; ch++){
                         let data = [];
                         for(let temp_ind = 0; temp_ind < self.m_expected.T_arr.length; temp_ind++){
@@ -851,17 +933,16 @@
                         }
                         self.m_fitting_chart.options.data.push({
                             type: "line",
-                            //markerType: "none",
+                            visible: self.m_current_channels[ch],
+                            markerType: "none",
                             color: self.palette[ch],
                             showInLegend: true,
                             name: 'ch ' + (ch + 1),
-                            dataPoints: data,
-                            click: function (e) {
-                                console.log(e);
-                            }
+                            dataPoints: data
                         });
                         self.m_fitting_chart.options.data.push({
                             type: "error",
+                            visible: self.m_current_channels[ch],
                             color: self.palette[ch],
                             showInLegend: false,
                             name: 'measured ' + (ch + 1),
@@ -873,10 +954,7 @@
                                     (resp.poly[poly_ind].ch[ch].ph_el + resp.poly[poly_ind].ch[ch].err) /
                                     self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult
                                 ]
-                            }],
-                            click: function (e) {
-                                console.log(e);
-                            }
+                            }]
                         })
                     }
                     self.m_fitting_chart.options.axisX.minimum =
@@ -895,29 +973,31 @@
                     event: self.m_selected_event_ind,
                     is_plasma: $('#is_plasma')[0].checked,
                     shotn: $('#shot_select').val(),
-                    poly: $('#poly_input').val()
+                    poly: $('#poly_input').val(),
+                    config: self.m_config_name
                 }
                 , function (resp) {
                     Object.assign(self.m_current_event_raw, resp);
                     //console.log(self.m_current_event_sig);
                     //console.log(self.m_currentShot);
                     let dt = 1 / parseFloat(self.m_currentShot.header.frequency)
-                    self.m_raw_chart.options.axisX.minimum = 0;
-                    self.m_raw_chart.options.axisX.maximum = self.m_currentShot.header.eventLength * dt;
+                    self.m_raw_chart.options.axisX.minimum = - self.m_current_event_raw.start * dt;
+                    self.m_raw_chart.options.axisX.maximum = (self.m_currentShot.header.eventLength -
+                        self.m_current_event_raw.start) * dt;
                     for(let ch = 0; ch < self.m_current_event_raw.data.length; ch++){
                         let data = [];
                         for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
-                            if(ch != 5) {
+                            if(ch !== 5) {
                                 data.push(
                                     {
-                                        x: time_ind * dt,
+                                        x: (time_ind - self.m_current_event_raw.start) * dt,
                                         y: self.m_current_event_raw.data[ch][time_ind] -
                                             self.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
                                     });
                             }else{
                                 data.push(
                                     {
-                                        x: time_ind * dt,
+                                        x: (time_ind - self.m_current_event_raw.start) * dt,
                                         y: self.m_current_event_raw.data[ch][time_ind]
                                     });
                             }
@@ -926,17 +1006,18 @@
                             type: "line",
                             color: self.palette[ch],
                             markerType: "none",
-                            showInLegend: true,
+                            showInLegend: ch === 5,
                             name: 'ch ' + (ch + 1),
                             dataPoints: data,
-                            ch_ind: ch
+                            ch_ind: ch,
+                            visible: self.m_current_channels[ch]
                         });
                     }
                     let data = [];
                     for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
                         data.push(
                             {
-                                x: time_ind * dt,
+                                x: (time_ind - self.m_current_event_raw.start) * dt,
                                 y: self.m_current_event_raw.laser[time_ind]
                             });
                     }
@@ -946,7 +1027,8 @@
                         markerType: "none",
                         showInLegend: true,
                         name: 'laser',
-                        dataPoints: data
+                        dataPoints: data,
+                        visible: self.m_current_channels[6]
                     });
                     self.m_raw_chart.render();
                 }
@@ -1087,6 +1169,8 @@
             $('#hide_draggable').on('click', this, function (ev) {
                 $('#draggable').attr('hidden', true);
             });
+
+            $('#poly_input').on('change', this, this.draw_popup);
         };
 
         this.ConnectControls({data: this});

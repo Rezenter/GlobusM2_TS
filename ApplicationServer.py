@@ -19,7 +19,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
         if uri != '/api':
             print('Wrong API uri: {0}'.format(uri))
 
-        print('Handling POST request: ')
+
         bodyLength = int(self.headers.get('content-length', 0))
         body = self.rfile.read(bodyLength).decode('utf-8')
         parsedBody = []
@@ -53,7 +53,6 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
 
         else:
             self.send_response(200)
-
             #this part handles the mimetypes for you.
             mimetype, _ = mimetypes.guess_type(filepath)
             print(mimetype)
@@ -61,7 +60,6 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             for s in f:
                 self.wfile.write(s)
-
 
 if __name__ == '__main__':
     server = http.server.HTTPServer

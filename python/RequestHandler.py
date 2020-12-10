@@ -86,6 +86,10 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"shotn" field is missing from request.'
             return resp
+        if 'config' not in req:
+            resp['ok'] = False
+            resp['description'] = '"config" field is missing from request.'
+            return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.25',
                                                       '2020.11.06')
@@ -95,7 +99,7 @@ class Handler:
         resp = self.fine_processor.get_data()
         if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
                 self.raw_processor.shotn != int(req['shotn']):
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], req['config'])
         resp['header'] = self.raw_processor.header
         resp['ok'] = True
         return resp
@@ -120,9 +124,13 @@ class Handler:
             print(shot_path)
             resp['description'] = 'Requested shotn is missing.'
             return resp
+        if 'config' not in req:
+            resp['ok'] = False
+            resp['description'] = '"config" field is missing from request.'
+            return resp
         if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
                 self.raw_processor.shotn != int(req['shotn']):
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], req['config'])
         resp = {
             'timestamps': [],
             'energies': [],
@@ -188,9 +196,13 @@ class Handler:
             resp['ok'] = False
             resp['description'] = 'Requested shotn is missing.'
             return resp
+        if 'config' not in req:
+            resp['ok'] = False
+            resp['description'] = '"config" field is missing from request.'
+            return resp
         if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
                 self.raw_processor.shotn != int(req['shotn']):
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], req['config'])
         if 'poly' not in req:
             resp['ok'] = False
             resp['description'] = '"poly" field is missing from request.'
@@ -205,6 +217,7 @@ class Handler:
         resp = {
             'data': event,
             'laser': self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch],
+            'start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'],
             'ok': True
         }
         return resp
