@@ -5,75 +5,104 @@
     <title>Acquisition Section</title>
 </head>
 <body>
-    <div class="row" id="ADC_row" style="
-    margin-left: 0;
-    margin-right: 0;
-    ">
-        <label for="next_shot_number">Next shot №:</label>
-            <output id="next_shot_number"></output>
-        <label for="is_plasma">Is plasma?</label>
-            <input type="checkbox" id="is_plasma"><br>
-        <button class="btn btn-success" id="ADC_arm_button">Arm</button>
-        <span class="label danger" id="ADC_state">No connection</span>
-        <button class="btn btn-danger" id="ADC_disarm_button">Disarm</button><br>
-        <label for="ADC_auto_disarm">Auto disarm?</label>
-            <input type="checkbox" id="ADC_auto_disarm"><br>
-        <label for="ADC_timeout">Timeout:</label><input type="number" id="ADC_timeout" value="1000"  min="0">ms
+    <p>ADC control</p>
+    <div class="row">
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="ADC_state">No connection</p>
+            <button class="btn btn-info" id="ADC_refresh_button">Refresh</button>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <label for="next_shot_number">Next shot №:</label><output id="next_shot_number"></output>
+            <label for="is_plasma">Is plasma?</label><input type="checkbox" id="is_plasma" checked>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <button class="btn btn-success" id="ADC_arm_button">Arm</button>
+            <button class="btn btn-danger" id="ADC_disarm_button">Disarm</button>
+        </div>
     </div>
     <hr>
-    <div class="row" id="laser_row" style="
-    margin-left: 0;
-    margin-right: 0;
-    ">
+    <div class="row" id="laser_row">
         Laser controls placeholder
     </div>
 </body>
 <script>
     function Main () {
-        this.Request = function (req, callback) {
+        this.RequestADC = function (req, callback) {
             req.subsystem = 'adc';
             $.post('/api', JSON.stringify(req), callback, 'json');
         };
 
-        this.Arm = function(ev) {
-            let self = ev.data;
-            let req = {
-                reqtype: 'arm',
-                shotn: $('#next_shot_number').val(),
-                isPlasma: $('#is_plasma')[0].checked
-            }
-            if($('#ADC_auto_disarm')[0].checked){
-                self.m_timer = setTimeout(self.Disarm, $('#ADC_timeout').val(), {data: self});
-            }
-            self.Request(
-                req, function (resp) {
-                    alert('ADC armed.')
-                    //console.log(resp)
+        this.ADCRefresh = function(ev){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.RequestADC(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    console.log(resp);
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Connected');
+                        $('#next_shot_number').val(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                    }
                 }
             );
-        };
+        }.bind(this);
+
+        this.Arm = function(ev) {
+            let req = {
+                reqtype: 'arm',
+                isPlasma: $('#is_plasma')[0].checked
+            }
+            this.RequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','yellow');
+                        state.html('Armed');
+                        alert(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
 
         this.Disarm = function(ev){
-            let self = ev.data;
             let req = {
                 reqtype: 'disarm'
             }
-            if(self.m_timer != undefined){
-                clearTimeout(self.m_timer)
-            }
-            self.Request(
+            this.RequestADC(
                 req, function (resp) {
-                    console.log(resp)
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Disarmed');
+                        alert(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
                 }
             );
-        }
+        }.bind(this);
 
         this.ConnectControls = function () {
+            $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.Arm);
             $('#ADC_disarm_button').on('click', this, this.Disarm);
         };
 
         this.ConnectControls();
+        this.ADCRefresh(null);
     }
 
     $(document).ready(

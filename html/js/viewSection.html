@@ -495,7 +495,8 @@
                 shared: true,
                 contentFormatter: function(e){
                     let poly_ind = $('#poly_input').val();
-                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) + 'eV</p>';
+                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) + 'eV</p>' +
+                        '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
                     for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
                         text += '<p style="color:' + this.palette[ch] + ';">' +
                             'ch ' + (ch + 1) + ', S = ' +
@@ -1207,107 +1208,9 @@
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
                 if(!$('#draggable')[0].contains(document.activeElement)) {
-                    let resized = false;
-                    if (event.key === 'ArrowLeft') {
-                        event.preventDefault();
-                        if (event.altKey) {
-                            if (event.ctrlKey) {
-                                console.log('fuck off');
-                                return;
-                            }
-                            this.m_timestamp_chart.navigator.slider.set("maximum",
-                                this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        } else if (event.ctrlKey) {
-                            this.m_timestamp_chart.navigator.slider.set("minimum",
-                                this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        } else {
-                            this.m_timestamp_chart.navigator.slider.set("maximum",
-                                this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
-                            this.m_timestamp_chart.navigator.slider.set("minimum",
-                                this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        }
-
-                    } else if (event.key === 'ArrowRight') {
-                        event.preventDefault();
-                        if (event.altKey) {
-                            if (event.ctrlKey) {
-                                console.log('fuck off');
-                                return;
-                            }
-                            this.m_timestamp_chart.navigator.slider.set("maximum",
-                                this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        } else if (event.ctrlKey) {
-                            this.m_timestamp_chart.navigator.slider.set("minimum",
-                                this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        } else {
-                            this.m_timestamp_chart.navigator.slider.set("maximum",
-                                this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
-                            this.m_timestamp_chart.navigator.slider.set("minimum",
-                                this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
-                            this.RangeChanged({
-                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
-                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
-                            });
-                            resized = true;
-                        }
-                    }
-                    if (resized) {
-                        this.m_T_evo_chart.toolTip.hide();
-                        this.m_n_evo_chart.toolTip.hide();
-                        this.m_timestamp_chart.charts[0].toolTip.hide();
-
-                        this.m_T_evo_chart.axisX[0].crosshair.hide();
-                        this.m_n_evo_chart.axisX[0].crosshair.hide();
-                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
-                    }
+                    self.KeydownMain(event);
                 }else{
-                    if (event.key === 'ArrowLeft') {
-                        event.preventDefault();
-                        this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
-                        this.m_currentShot.events.length - 1);
-                        this.draw_popup({data: this});
-                    }else if (event.key === 'ArrowRight') {
-                        event.preventDefault();
-                        this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
-                        this.draw_popup({data: this});
-                    }else if (event.key === 'ArrowUp') {
-                        event.preventDefault();
-                        if($('#poly_input').val() < $('#poly_input').attr('max')){
-                            $('#poly_input')[0].stepUp();
-                            this.draw_popup({data: this});
-                        }
-                    }else if (event.key === 'ArrowDown') {
-                        event.preventDefault();
-                        if($('#poly_input').val() > $('#poly_input').attr('min')){
-                            $('#poly_input')[0].stepDown();
-                            this.draw_popup({data: this});
-                        }
-                    }
+                    self.KeydownDraggable(event);
                 }
             }.bind(self));
 
@@ -1318,6 +1221,185 @@
 
             $('#poly_input').on('change', this, this.draw_popup);
         };
+
+        //can be optimised by disabling auto-render
+        this.KeydownMain = function(event){
+            let resized = false;
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                if (event.altKey) {
+                    if (event.ctrlKey) {
+                        console.log('fuck off');
+                        return;
+                    }
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else if (event.ctrlKey) {
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else {
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                }
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                if (event.altKey) {
+                    if (event.ctrlKey) {
+                        console.log('fuck off');
+                        return;
+                    }
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else if (event.ctrlKey) {
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else {
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                }
+            } else if (event.key === 'f') {
+                event.preventDefault();
+                if('labelBackgroundColor' in this.m_timestamp_chart.options.charts[0].axisY){
+                    //console.log('release');
+                    delete this.m_timestamp_chart.options.charts[0].axisY.maximum;
+                    delete this.m_timestamp_chart.options.charts[0].axisY.labelBackgroundColor;
+                    delete this.m_timestamp_chart.options.charts[0].axisY.labelFontColor;
+
+                    delete this.m_T_evo_chart.options.axisY.maximum;
+                    delete this.m_T_evo_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_T_evo_chart.options.axisY.labelFontColor;
+
+                    delete this.m_n_evo_chart.options.axisY.maximum;
+                    delete this.m_n_evo_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_n_evo_chart.options.axisY.labelFontColor;
+
+                    delete this.m_T_profile_chart.options.axisY.maximum;
+                    delete this.m_T_profile_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_T_profile_chart.options.axisY.labelFontColor;
+
+                    delete this.m_n_profile_chart.options.axisY.maximum;
+                    delete this.m_n_profile_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_n_profile_chart.options.axisY.labelFontColor;
+                }else{
+                    //console.log('fix');
+                    this.m_timestamp_chart.options.charts[0].axisY.maximum = this.m_timestamp_chart.charts[0].axisY[0].viewportMaximum;
+                    this.m_timestamp_chart.options.charts[0].axisY.labelBackgroundColor = "gray";
+                    this.m_timestamp_chart.options.charts[0].axisY.labelFontColor = "white";
+
+                    this.m_T_evo_chart.options.axisY.maximum = this.m_T_evo_chart.axisY[0].viewportMaximum;
+                    this.m_T_evo_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_T_evo_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_n_evo_chart.options.axisY.maximum = this.m_n_evo_chart.axisY[0].viewportMaximum;
+                    this.m_n_evo_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_n_evo_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_T_profile_chart.options.axisY.maximum = this.m_T_profile_chart.axisY[0].viewportMaximum;
+                    this.m_T_profile_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_T_profile_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_n_profile_chart.options.axisY.maximum = this.m_n_profile_chart.axisY[0].viewportMaximum;
+                    this.m_n_profile_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_n_profile_chart.options.axisY.labelFontColor = "white";
+                }
+                this.m_timestamp_chart.render();
+                this.m_T_evo_chart.render();
+                this.m_n_evo_chart.render();
+                this.m_T_profile_chart.render();
+                this.m_n_profile_chart.render();
+            }
+            if (resized) {
+                this.m_T_evo_chart.toolTip.hide();
+                this.m_n_evo_chart.toolTip.hide();
+                this.m_timestamp_chart.charts[0].toolTip.hide();
+
+                this.m_T_evo_chart.axisX[0].crosshair.hide();
+                this.m_n_evo_chart.axisX[0].crosshair.hide();
+                this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+            }
+        }.bind(this);
+
+        this.KeydownDraggable = function(event){
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
+                    this.m_currentShot.events.length - 1);
+                this.draw_popup({data: this});
+            }else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
+                this.draw_popup({data: this});
+            }else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if($('#poly_input').val() < $('#poly_input').attr('max')){
+                    $('#poly_input')[0].stepUp();
+                    this.draw_popup({data: this});
+                }
+            }else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if($('#poly_input').val() > $('#poly_input').attr('min')){
+                    $('#poly_input')[0].stepDown();
+                    this.draw_popup({data: this});
+                }
+            }else if (event.key === 'f') {
+                event.preventDefault();
+                if('labelBackgroundColor' in this.m_fitting_chart.options.charts[0].axisY){
+                    //console.log('release');
+                    delete this.m_fitting_chart.options.charts[0].axisY.maximum;
+                    delete this.m_fitting_chart.options.charts[0].axisY.labelBackgroundColor;
+                    delete this.m_fitting_chart.options.charts[0].axisY.labelFontColor;
+
+                    delete this.m_raw_chart.options.axisY.maximum;
+                    delete this.m_raw_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_raw_chart.options.axisY.labelFontColor;
+                }else{
+                    //console.log('fix');
+                    this.m_fitting_chart.options.axisY.maximum = this.m_fitting_chart.axisY[0].viewportMaximum;
+                    this.m_fitting_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_fitting_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_raw_chart.options.axisY.maximum = this.m_raw_chart.axisY[0].viewportMaximum;
+                    this.m_raw_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_raw_chart.options.axisY.labelFontColor = "white";
+                }
+                this.m_fitting_chart.render();
+                this.m_raw_chart.render();
+            }
+        }.bind(this);
 
         this.ConnectControls({data: this});
     }

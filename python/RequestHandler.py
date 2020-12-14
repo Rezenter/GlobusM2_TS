@@ -1,8 +1,8 @@
 import os
+import time
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
-import ijson
 
 
 def __init__():
@@ -17,6 +17,8 @@ RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 
+SHOTN_FILE = 'Z:/SHOTN.TXT'
+
 DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
 TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
@@ -27,6 +29,7 @@ class Handler:
     def __init__(self):
         self.HandlingTable = {
             'adc': {
+                'status': self.fast_status,
                 'arm': self.fast_arm,
                 'disarm': self.fast_disarm
             },
@@ -222,42 +225,91 @@ class Handler:
         }
         return resp
 
+    def fast_status(self, req):
+        print('status...')
+        if not os.path.isfile(SHOTN_FILE):
+            return {
+                'ok': False,
+                'description': 'Shotn file not found.'
+            }
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            return {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
+        resp = caen.read()
+        shotn = 0
+        with open(SHOTN_FILE, 'r') as shotn_file:
+            line = shotn_file.readline()
+            shotn = int(line)
+        return {
+            'ok': True,
+            'resp': resp,
+            'shotn': shotn
+        }
+
     def fast_arm(self, req):
-        resp = {}
         if 'isPlasma' not in req:
-            resp['ok'] = False
-            resp['description'] = '"isPlasma" field is missing from request.'
-            return resp
+            return {
+                'ok': False,
+                'description': '"isPlasma" field is missing from request.'
+            }
 
         shot_filename = "%s/shotn.txt" % DB_PATH
         isPlasma = req['isPlasma']
+        if isPlasma:
+            shot_filename = SHOTN_FILE
         shotn = 0
         with open(shot_filename, 'r') as shotn_file:
             line = shotn_file.readline()
             shotn = int(line)
 
-        caen.connect()
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            return {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
 
         caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
         print(caen.read())
 
         caen.disconnect()
 
-        with open(shot_filename, 'w') as shotn_file:
-            shotn_file.seek(0)
-            shotn += 1
-            shotn_file.write('%d' % shotn)
+        if not isPlasma:
+            with open(shot_filename, 'w') as shotn_file:
+                #shotn_file.seek(0)
+                shotn_file.write('%d' % (shotn + 1))
 
-        resp['ok'] = True
-        return resp
+        return {
+            'ok': True,
+            'shotn': shotn
+        }
 
     def fast_disarm(self, req):
-        resp = {}
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            return {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
 
-        caen.connect()
         caen.send_cmd(caen.Commands.Disarm)
         print(caen.read())
+
+        # time.sleep(2)
+
+        caen.send_cmd(caen.Commands.Close)
+        time.sleep(0.5)
         caen.disconnect()
 
-        resp['ok'] = True
-        return resp
+        return {
+            'ok': True
+        }
