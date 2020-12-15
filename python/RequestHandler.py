@@ -240,16 +240,23 @@ class Handler:
                 'ok': False,
                 'description': ('Connection error: "%s"' % err)
             }
+        caen.send_cmd(caen.Commands.Alive)
+        time.sleep(1)
         resp = caen.read()
-        shotn = 0
-        with open(SHOTN_FILE, 'r') as shotn_file:
-            line = shotn_file.readline()
-            shotn = int(line)
-        return {
-            'ok': True,
-            'resp': resp,
-            'shotn': shotn
-        }
+        print(resp)
+        caen.disconnect()
+        if resp['status']:
+            shotn = 0
+            with open(SHOTN_FILE, 'r') as shotn_file:
+                line = shotn_file.readline()
+                shotn = int(line)
+            return {
+                'ok': True,
+                'resp': resp,
+                'shotn': shotn
+            }
+        else:
+            return resp
 
     def fast_arm(self, req):
         if 'isPlasma' not in req:

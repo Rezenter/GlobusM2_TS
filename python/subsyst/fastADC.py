@@ -2,9 +2,7 @@ import socket
 import json
 import time
 
-_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-
+_s = None
 _timeout = 2  # second before next isAlive request
 _start_time = time.time()
 
@@ -70,6 +68,12 @@ def spam():
 
 
 def connect():
+    global _s
+    global _start_time
+    _s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    _start_time = time.time()
+
     _s.connect(("localhost", 27015))
     _s.settimeout(0.1)
     print("connected")
@@ -80,11 +84,14 @@ def disconnect():
 
 
 def read():
-    while True:
+    for count in range(5):
         try:
             data = _s.recv(1024)
             if len(data) > 0:
                 return json.loads(data)
         except socket.timeout:
             continue
-    return None
+    return {
+        'ok': False,
+        'description': 'No data available for read'
+    }
