@@ -159,6 +159,9 @@ class Processor:
         count = [
             [0 for ch in range(5)] for poly in range(10)
         ]
+        if len(self.signal['data']) == 0:
+            print('No events!')
+            return
         current_index = 0
         while self.signal['data'][current_index]['timestamp'] <= 100:
             event = self.signal['data'][current_index]

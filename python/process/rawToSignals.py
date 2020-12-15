@@ -226,7 +226,8 @@ class Integrator:
                 json.dump(event, file)
                 file.write(',')
 
-            json.dump(self.processed[-1], file)
+            if len(self.processed) > 0:
+                json.dump(self.processed[-1], file)
             file.write(']\n}')
         print('completed.')
 
