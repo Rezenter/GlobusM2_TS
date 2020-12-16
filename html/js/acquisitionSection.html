@@ -5,8 +5,8 @@
     <title>Acquisition Section</title>
 </head>
 <body>
-    <p>ADC control</p>
     <div class="row">
+        <p>ADC control</p>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <p id="ADC_state">No connection</p>
             <button class="btn btn-info" id="ADC_refresh_button">Refresh</button>
@@ -21,8 +21,23 @@
         </div>
     </div>
     <hr>
-    <div class="row" id="laser_row">
-        Laser controls placeholder
+    <div id="laser_row">
+        <p>ADC control</p>
+        <div class="row">
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_state">No connection</p>
+                <button class="btn btn-info" id="laser_refresh_button">Refresh</button>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                Laser controls placeholder
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <button class="btn btn-success" id="laser_arm_button">Arm</button>
+                <button class="btn btn-danger" id="laser_disarm_button">Disarm</button>
+            </div>
+        </div>
+        <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
+             src="http://192.168.10.46/action/stream?subject=mjpeg" width="500px" height="500px">
     </div>
 </body>
 <script>
