@@ -3,6 +3,7 @@ import time
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
+import python.subsyst.laser1064 as laser1064
 
 
 def __init__():
@@ -33,7 +34,10 @@ class Handler:
                 'arm': self.fast_arm,
                 'disarm': self.fast_disarm
             },
-            'laser': {},
+            'laser': {
+                'connect': self.las_connect,
+                'status': self.las_status
+            },
             'view': {
                 'refresh': self.refresh_shots,
                 'get_shot': self.get_shot,
@@ -46,6 +50,7 @@ class Handler:
         self.debug_path = '%s%s' % (DB_PATH, DEBUG_SHOTS)
         self.raw_processor = None
         self.fine_processor = None
+        self.las = laser1064.Chatter()
         return
 
     def handle_request(self, req):
@@ -317,6 +322,10 @@ class Handler:
         time.sleep(0.5)
         caen.disconnect()
 
+    def las_connect(self, req):
+        return self.las.connect()
+
+    def las_status(self, req):
         return {
             'ok': True
         }
