@@ -12,12 +12,12 @@ SEPARATOR = ' '
 
 
 class Cmd:
-    local_control = '0200'
-    remote_control = '0400'
-    power_off = '0004'
-    idle = '0012'
-    desync = '100A'
-    generation = '200A'
+    local_control = 'S0200'
+    remote_control = 'S0400'
+    power_off = 'S0004'
+    idle = 'S0012'
+    desync = 'S100A'
+    generation = 'S200A'
     pump_delay = 'J0500'
     gen_delay = 'J0600'
     state = 'J0700'
@@ -44,7 +44,7 @@ class Chatter:
         self.err = None
 
     def connect(self):
-        resp = self.send(Cmd.state)
+        resp = self.status()
         if resp and resp['ok']:
             return resp
         try:
@@ -55,7 +55,7 @@ class Chatter:
                 'ok': False,
                 'description': self.err
             }
-        return self.send(Cmd.state)
+        return self.status()
 
     def set_err(self, message):
         self.err = message
@@ -222,30 +222,27 @@ class Chatter:
 
     def set_state_0(self):
         self.disp('Request "Power off" state.')
-        if self.send('S' + Cmd.power_off):
-            self.receive()
+        return self.send(Cmd.power_off)
 
     def set_state_1(self):
         self.disp('Request "Idle" state.')
-        if self.send('S' + Cmd.idle):
-            self.receive()
+        return self.send(Cmd.idle)
 
     def set_state_2(self):
         self.disp('Request "Desync pumping" state.')
-        if self.send('S' + Cmd.desync):
-            self.receive()
+        return self.send(Cmd.desync)
 
     def set_state_3(self):
         self.disp('Request "Generation" state.')
-        if self.send('S' + Cmd.generation):
-            self.receive()
+        return self.send(Cmd.generation)
 
     def set_remote(self):
         self.disp('Request remote control.')
-        if self.send('S' + Cmd.remote_control):
-            self.receive()
+        return self.send(Cmd.remote_control)
 
     def set_local(self):
         self.disp('Request local control.')
-        if self.send('S' + Cmd.local_control):
-            self.receive()
+        return self.send(Cmd.local_control)
+
+    def status(self):
+        return self.send(Cmd.state)

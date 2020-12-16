@@ -36,7 +36,9 @@ class Handler:
             },
             'laser': {
                 'connect': self.las_connect,
-                'status': self.las_status
+                'status': self.las_status,
+                'fire': self.las_fire,
+                'idle': self.las_idle
             },
             'view': {
                 'refresh': self.refresh_shots,
@@ -326,6 +328,10 @@ class Handler:
         return self.las.connect()
 
     def las_status(self, req):
-        return {
-            'ok': True
-        }
+        return self.las.status()
+
+    def las_fire(self, req):
+        return self.las.set_state_3()
+
+    def las_idle(self, req):
+        return self.las.set_state_1()
