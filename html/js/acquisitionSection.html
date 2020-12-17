@@ -46,6 +46,9 @@
 </body>
 <script>
     function Main () {
+        this.m_laser_warm = null;
+        this.m_laser_warming = null;
+
         this.RequestADC = function (req, callback) {
             req.subsystem = 'adc';
             $.post('/api', JSON.stringify(req), callback, 'json');
@@ -151,15 +154,28 @@
                         }else if(!resp.state[0]){
                             state.css('background-color','blue');
                             state.html('Power off.');
+                            this.m_laser_warm = null;
+                            this.m_laser_warming = null;
                         }else if(!resp.state[1]){
                             state.css('background-color','white');
                             state.html('Idle.');
+                            this.m_laser_warm = null;
+                            this.m_laser_warming = null;
                         }else if(!resp.state[6]){
-                            state.css('background-color','yellow');
-                            state.html('Warming up...');
+                            if(this.m_laser_warm){
+                                state.css('background-color', 'green');
+                                state.html('Ready. ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
+                            }else {
+                                let time_left = 15 - (Date.now() - this.m_laser_warming)/1000;
+                                if(time_left <= 0){
+                                    this.m_laser_warm = Date.now();
+                                }
+                                state.css('background-color', 'yellow');
+                                state.html('Warming up... ' + time_left.toFixed(0) + 's left.');
+                            }
                         }else{
                             state.css('background-color','red');
-                            state.html('Firing!');
+                            state.html('Firing! ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
                         }
                         let sync = $('#laser_sync')
                         if(resp.state[2]){
@@ -169,7 +185,7 @@
                             sync.css('background-color','yellow');
                             sync.html('Internal.');
                         }
-                        let remote = $('#laser_sync')
+                        let remote = $('#laser_remote')
                         if(resp.state[14]){
                             remote.css('background-color','white');
                             remote.html('External.');
@@ -206,7 +222,7 @@
                         state.css('background-color','red');
                         state.html(resp.description);
                     }
-                }
+                }.bind(this)
             );
         }.bind(this);
 
@@ -220,13 +236,13 @@
                 }
                 , function (resp) {
                     if(resp.ok){
-
+                        this.m_laser_warming = Date.now();
                     }else{
                         console.log(resp);
                         state.css('background-color','red');
                         state.html(resp.description);
                     }
-                }
+                }.bind(this)
             );
         }.bind(this);
 
@@ -239,14 +255,16 @@
                     reqtype: 'idle'
                 }
                 , function (resp) {
-                    if(resp.ok){
-
-                    }else{
+                    if(!resp.ok){
                         console.log(resp);
                         state.css('background-color','red');
                         state.html(resp.description);
+                        alert('Failed to turn off laser!');
+                    }else{
+                        this.m_laser_warming = null;
+                        this.m_laser_warm = null;
                     }
-                }
+                }.bind(this)
             );
         }.bind(this);
 
