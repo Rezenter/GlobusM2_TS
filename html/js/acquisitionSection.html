@@ -130,9 +130,9 @@
                     }else{
                         alert(resp);
                     }
-                }
+                }.bind(this)
             );
-        }.bind(this)
+        }.bind(this);
 
         this.LasStatus = function(ev){
             let state = $('#laser_state');
