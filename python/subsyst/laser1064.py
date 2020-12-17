@@ -44,6 +44,9 @@ class Chatter:
         self.err = None
 
     def connect(self):
+        resp = self.send(Cmd.state)
+        if resp and resp['ok']:
+            return resp
         try:
             self.sock.connect((IP, PORT))
         except socket.timeout:
@@ -64,14 +67,22 @@ class Chatter:
 
     def send(self, packet):
         bin_packet = pack(packet)
-        if self.sock.send(bin_packet) == len(bin_packet):
+        try:
+            send = self.sock.send(bin_packet)
+        except socket.timeout:
+            self.set_err('Laser responce timeout.')
+            return {
+                'ok': False,
+                'description': self.err
+            }
+        if send == len(bin_packet):
             recv = self.receive()
             if recv is None:
                 return {
                     'ok': False,
                     'description': self.err
                 }
-            return self.receive()
+            return recv
 
         self.set_err('Warning! Failed to transmit packet %s as %s!' % (packet, bin_packet))
         return {
@@ -111,9 +122,9 @@ class Chatter:
                     'description': 'not implemented yet'
                 }
             elif cmd == 'K':
-                if data[:4] == bytes(Cmd.state, ENCODING):
+                if data[:4] == bytes(Cmd.state[1:], ENCODING):
                     return self.parse_status(int(data[4:], base=16))
-                elif data[:4] == bytes(Cmd.error, ENCODING):
+                elif data[:4] == bytes(Cmd.error[1:], ENCODING):
                     return self.parse_error(int(data[4:], base=16))
                 else:
                     self.set_err('Unknown cmd code %s.' % data[4:])
@@ -139,7 +150,10 @@ class Chatter:
         else:
             self.disp('Генерация. (Накачка и ЗГ согласованы)')
             '''
-        return state
+        return {
+            'ok': True,
+            'state': state
+        }
 
     def parse_error(self, error):
         flag = False
