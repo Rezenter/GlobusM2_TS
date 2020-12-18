@@ -38,8 +38,7 @@ def crc(packet):
 
 class Chatter:
     def __init__(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(SOCK_TIMEOUT)
+        self.sock = None
         self.connect()
         self.err = None
 
@@ -47,6 +46,10 @@ class Chatter:
         resp = self.status()
         if resp and resp['ok']:
             return resp
+        if self.sock:
+            self.sock.close()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(SOCK_TIMEOUT)
         try:
             self.sock.connect((IP, PORT))
         except socket.timeout:
@@ -67,6 +70,12 @@ class Chatter:
 
     def send(self, packet):
         bin_packet = pack(packet)
+        if not self.sock:
+            self.set_err('Socket is closed.')
+            return {
+                'ok': False,
+                'description': self.err
+            }
         try:
             send = self.sock.send(bin_packet)
         except socket.timeout:
@@ -105,23 +114,26 @@ class Chatter:
                 self.set_err('Wrong packet end: %s.' % data)
                 return None
             data = data[:-1]
-            if data[-2:] != bytes(crc(data[:-2]), ENCODING):
-                self.set_err('Wrong CRC: %s, expected: %s.' % (data, crc(data[:-2])))
-                return None
-            data = data[:-2]
-            if chr(data[-1]) != SEPARATOR:
-                self.set_err('Wrong packet separator: %s.' % data)
-                return None
-            data = data[:-1]
             cmd = chr(data[0])
-            data = data[1:]
+
             if cmd == 'A':
-                self.disp('Processing resp A: %s.' % data)
+                if chr(data[-1]) != SEPARATOR:
+                    self.set_err('Wrong packet separator: %s.' % data)
+                    return None
                 return {
                     'ok': True,
-                    'description': 'not implemented yet'
+                    'code': int(data[1:-1])
                 }
             elif cmd == 'K':
+                if data[-2:] != bytes(crc(data[:-2]), ENCODING):
+                    self.set_err('Wrong CRC: %s, expected: %s.' % (data, crc(data[:-2])))
+                    return None
+                data = data[1:-2]
+                if chr(data[-1]) != SEPARATOR:
+                    self.set_err('Wrong packet separator: %s.' % data)
+                    return None
+                data = data[:-1]
+
                 if data[:4] == bytes(Cmd.state[1:], ENCODING):
                     return self.parse_status(int(data[4:], base=16))
                 elif data[:4] == bytes(Cmd.error[1:], ENCODING):
@@ -196,8 +208,7 @@ class Chatter:
         }
 
     def parse_short_responce(self, resp):
-        '''
-        self.disp('Response A with code %d.' % resp)
+        self.disp('Short response: %d' % resp)
         if resp == 0:
             self.disp('CMD ok.')
         elif resp == 1:
@@ -218,7 +229,8 @@ class Chatter:
             self.disp('Undocumented error.')
         else:
             self.disp('Error in this code.')
-        '''
+
+
 
     def set_state_0(self):
         self.disp('Request "Power off" state.')

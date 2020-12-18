@@ -29,15 +29,13 @@
                 <button class="btn btn-info" id="laser_reconnect_button">Reconnect</button>
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_enable">Disabled</p>
                 <p id="laser_sync">internal</p>
                 <p id="laser_remote">Local control</p>
-                <p id="laser_enable">Disabled</p>
-                <p id="laser_wait5v">Wait 5V</p>
-                <p id="laser_5v">5V</p>
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                <button class="btn btn-success" id="laser_fire_button">Fire</button>
-                <button class="btn btn-danger" id="laser_idle_button">Idle</button>
+                <button class="btn btn-danger" id="laser_fire_button">Fire</button>
+                <button class="btn btn-success" id="laser_idle_button">Idle</button>
             </div>
         </div>
         <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
@@ -161,8 +159,9 @@
                             state.html('Idle.');
                             this.m_laser_warm = null;
                             this.m_laser_warming = null;
-                        }else if(!resp.state[6]){
+                        }else if(resp.state[6]){
                             if(this.m_laser_warm){
+                                //console.log('ready', resp.state);
                                 state.css('background-color', 'green');
                                 state.html('Ready. ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
                             }else {
@@ -170,52 +169,38 @@
                                 if(time_left <= 0){
                                     this.m_laser_warm = Date.now();
                                 }
+                                //console.log('warming', resp.state, time_left);
                                 state.css('background-color', 'yellow');
                                 state.html('Warming up... ' + time_left.toFixed(0) + 's left.');
                             }
                         }else{
+                            //console.log('fire', resp.state);
                             state.css('background-color','red');
                             state.html('Firing! ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
                         }
                         let sync = $('#laser_sync')
                         if(resp.state[2]){
-                            sync.css('background-color','white');
-                            sync.html('External.');
-                        }else{
                             sync.css('background-color','yellow');
-                            sync.html('Internal.');
+                            sync.html('Internal sync.');
+                        }else{
+                            sync.css('background-color','white');
+                            sync.html('External sync.');
                         }
                         let remote = $('#laser_remote')
                         if(resp.state[14]){
                             remote.css('background-color','white');
-                            remote.html('External.');
+                            remote.html('Remote control.');
                         }else{
                             remote.css('background-color','yellow');
-                            remote.html('Internal.');
+                            remote.html('Local control.');
                         }
                         let enable = $('#laser_enable')
                         if(resp.state[15]){
                             enable.css('background-color','white');
-                            enable.html('Enabled.');
+                            enable.html('Output enabled.');
                         }else{
                             enable.css('background-color','yellow');
-                            enable.html('Disabled.');
-                        }
-                        let wait5v = $('#laser_wait5v')
-                        if(resp.state[13]){
-                            wait5v.css('background-color','yellow');
-                            wait5v.html('Ignore 5V.');
-                        }else{
-                            wait5v.css('background-color','white');
-                            wait5v.html('Wait 5V.');
-                        }
-                        let signal5v = $('#laser_5v')
-                        if(resp.state[12]){
-                            signal5v.css('background-color','green');
-                            signal5v.html('5V.');
-                        }else{
-                            signal5v.css('background-color','white');
-                            signal5v.html('No signal');
+                            enable.html('Output disabled.');
                         }
                     }else{
                         console.log(resp);
@@ -236,12 +221,14 @@
                 }
                 , function (resp) {
                     if(resp.ok){
-                        this.m_laser_warming = Date.now();
-                    }else{
-                        console.log(resp);
-                        state.css('background-color','red');
-                        state.html(resp.description);
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = Date.now();
+                            return;
+                        }
                     }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
                 }.bind(this)
             );
         }.bind(this);
@@ -255,15 +242,17 @@
                     reqtype: 'idle'
                 }
                 , function (resp) {
-                    if(!resp.ok){
-                        console.log(resp);
-                        state.css('background-color','red');
-                        state.html(resp.description);
-                        alert('Failed to turn off laser!');
-                    }else{
-                        this.m_laser_warming = null;
-                        this.m_laser_warm = null;
+                    if(resp.ok ){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = null;
+                            this.m_laser_warm = null;
+                            return
+                        }
                     }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
+                    alert('Failed to turn off laser!');
                 }.bind(this)
             );
         }.bind(this);
