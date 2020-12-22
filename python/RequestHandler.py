@@ -319,9 +319,6 @@ class Handler:
         print(caen.read())
 
         # time.sleep(2)
-
-        caen.send_cmd(caen.Commands.Close)
-        time.sleep(0.5)
         caen.disconnect()
 
     def las_connect(self, req):

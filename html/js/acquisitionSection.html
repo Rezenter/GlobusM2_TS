@@ -129,7 +129,7 @@
                     if(resp.ok) {
                         setInterval(this.LasStatus, 500);
                     }else{
-                        alert(resp);
+                        alert(resp.description);
                     }
                 }.bind(this)
             );
