@@ -364,7 +364,7 @@ class Processor:
                     if event['T_e'][poly_ind]['processed_bad']:
                         line += '--, --, '
                     else:
-                        line += '%.1f, %.1f ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+                        line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
                 out_file.write(line[:-2] + '\n')
 
         with open('%sn(t).csv' % out_folder, 'w') as out_file:
@@ -382,7 +382,7 @@ class Processor:
                     if poly['processed_bad']:
                         line += '--, --, '
                     else:
-                        line += '%.1f, %.1f, ' % (poly['n'], poly['n_err'])
+                        line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
                 out_file.write(line[:-2] + '\n')
 
         with open('%sn(R).csv' % out_folder, 'w') as out_file:
@@ -399,7 +399,7 @@ class Processor:
                     if event['T_e'][poly_ind]['processed_bad']:
                         line += '--, --, '
                     else:
-                        line += '%.1f, %.1f ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
+                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
                 out_file.write(line[:-2] + '\n')
 
         '''
