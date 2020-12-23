@@ -272,10 +272,15 @@ class Handler:
                 'description': '"isPlasma" field is missing from request.'
             }
 
-        shot_filename = "%s/shotn.txt" % DB_PATH
+        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
         isPlasma = req['isPlasma']
         if isPlasma:
             shot_filename = SHOTN_FILE
+        if not os.path.isfile(shot_filename):
+            return {
+                'ok': False,
+                'description': 'Shotn file "%s" not found.' %shot_filename
+            }
         shotn = 0
         with open(shot_filename, 'r') as shotn_file:
             line = shotn_file.readline()
@@ -316,13 +321,13 @@ class Handler:
             }
 
         caen.send_cmd(caen.Commands.Disarm)
-        print(caen.read())
+        caen.read()
 
-        # time.sleep(2)
-
-        caen.send_cmd(caen.Commands.Close)
         time.sleep(0.5)
         caen.disconnect()
+        return {
+            'ok': True
+        }
 
     def las_connect(self, req):
         return self.las.connect()

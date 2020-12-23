@@ -61,7 +61,7 @@
                     reqtype: 'status'
                 }
                 , function (resp) {
-                    console.log(resp);
+                    //console.log(resp);
                     if(resp.ok){
                         state.css('background-color','green');
                         state.html('Connected');
@@ -75,6 +75,9 @@
         }.bind(this);
 
         this.ADCArm = function(ev) {
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
             let req = {
                 reqtype: 'arm',
                 isPlasma: $('#is_plasma')[0].checked
@@ -96,6 +99,9 @@
         }.bind(this);
 
         this.ADCDisarm = function(ev){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
             let req = {
                 reqtype: 'disarm'
             }
@@ -104,7 +110,6 @@
                     if(resp.ok){
                         state.css('background-color','green');
                         state.html('Disarmed');
-                        alert(resp.shotn);
                     }else{
                         state.css('background-color','red');
                         state.html('No connection');
@@ -129,7 +134,8 @@
                     if(resp.ok) {
                         setInterval(this.LasStatus, 500);
                     }else{
-                        alert(resp);
+                        console.log(resp);
+                        alert(resp.description);
                     }
                 }.bind(this)
             );
