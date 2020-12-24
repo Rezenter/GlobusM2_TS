@@ -193,7 +193,7 @@
                         this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                         this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     }.bind(this),
-                    hidden: function(e){
+                    hidden: function(){
                         this.m_T_evo_chart.toolTip.hide();
                         this.m_n_evo_chart.toolTip.hide();
                     }.bind(this)
@@ -269,7 +269,7 @@
                         this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
                     }.bind(this),
-                    hidden: function (e){
+                    hidden: function (){
                         this.m_n_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
@@ -294,7 +294,7 @@
                     this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
                 }.bind(this),
-                hidden: function(e){
+                hidden: function(){
                     this.m_n_evo_chart.toolTip.hide();
                     this.m_timestamp_chart.charts[0].toolTip.hide();
                 }.bind(this)
@@ -365,7 +365,7 @@
                         this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
                     }.bind(this),
-                    hidden: function (e){
+                    hidden: function (){
                         this.m_T_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
@@ -389,7 +389,7 @@
                     this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
                 }.bind(this),
-                hidden: function(e){
+                hidden: function(){
                     this.m_T_evo_chart.toolTip.hide();
                     this.m_timestamp_chart.charts[0].toolTip.hide();
                 }.bind(this)
@@ -493,7 +493,7 @@
             },
             toolTip: {
                 shared: true,
-                contentFormatter: function(e){
+                contentFormatter: function(){
                     let poly_ind = $('#poly_input').val();
                     let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) + 'eV</p>' +
                         '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
@@ -510,9 +510,10 @@
                 cursor: "pointer",
                 itemmouseover: function(e) {
                     if(e.dataSeries.visible) {
+                        let poly_ind = $('#poly_input').val();
                         // fuck up
                         let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
-                        let poly_ind = $('#poly_input').val();
+
                         let series_index = 0;
                         let ch = 0;
                         for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
@@ -530,8 +531,8 @@
 
                         this.m_raw_chart.options.data[ch].lineThickness = this.m_raw_chart.data[ch].lineThickness * 2;
                         this.m_raw_chart.options.axisX.stripLines = [{
-                            startValue: (this.m_current_event_sig.poly[$('#poly_input').val()].ch[ch].from - this.m_current_event_raw.start) * dt,
-                            endValue: (this.m_current_event_sig.poly[$('#poly_input').val()].ch[ch].to - this.m_current_event_raw.start) * dt,
+                            startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.start) * dt,
+                            endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.start) * dt,
                             color: this.palette[ch],
                             opacity: .2
                         }];
@@ -697,7 +698,7 @@
             this.m_n_evo_chart.options.axisX.minimum = e.minimum;
             this.m_n_evo_chart.options.axisX.maximum = e.maximum;
             this.m_n_evo_chart.render();
-            this.UpdateProfiles({'data': this});
+            this.UpdateProfiles();
         };
 
         this.Request = function (req, callback) {
@@ -712,26 +713,23 @@
             }, 'json');
         };
 
-
-        this.Refresh = function(ev) {
-            let self = ev.data;
-            self.Request(
+        this.Refresh = function() {
+            this.Request(
                 {
                     reqtype: 'refresh'
                 }
                 , function (resp) {
-                    self.m_plasma_shots = resp['plasma'];
-                    self.m_debug_shots = resp['debug'];
-                    self.UpdateShotSelect({data: self});
-                }
+                    this.m_plasma_shots = resp['plasma'];
+                    this.m_debug_shots = resp['debug'];
+                    this.UpdateShotSelect();
+                }.bind(this)
             );
-        };
+        }
 
-        this.UpdateShotSelect = function(ev) {
-            let self = ev.data;
-            let shots = self.m_plasma_shots;
+        this.UpdateShotSelect = function() {
+            let shots = this.m_plasma_shots;
             if(! $('#is_plasma')[0].checked){
-                shots = self.m_debug_shots;
+                shots = this.m_debug_shots;
             }
             let options = [];
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
@@ -747,58 +745,57 @@
             $('#spectral_select').html(options);
 
             if(options.length && $('#auto_load')[0].checked){
-                self.Select({data: self});
+                this.Select();
             }
-        };
+        }
 
-        this.Select = function(ev){
-            let self = ev.data;
-            self.Request(
+        this.Select = function(){
+            let shotn = $('#shot_select').val();
+            this.Request(
                 {
                     reqtype: 'get_shot',
                     is_plasma: $('#is_plasma')[0].checked,
-                    shotn: $('#shot_select').val(),
+                    shotn: shotn,
                     config: $('#config_select').val()
                 }, function (resp) {
                     //console.log(resp);
-                    Object.assign(self.m_currentShot, resp);
-                    $('#poly_input').attr('max', self.m_currentShot.polys.length - 1);
-                    $('#time_input').attr('max', self.m_currentShot.polys.length - 1);
-                    self.m_timestamp_chart.options.charts[0].data = [{
+                    Object.assign(this.m_currentShot, resp);
+                    $('#poly_input').attr('max', this.m_currentShot.polys.length - 1);
+                    $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
+                    this.m_timestamp_chart.options.charts[0].data = [{
                         color: "#B0D0B0",
                         type: "column",
                         showInLegend: false,
                         name: 'Laser energy',
                         dataPoints: [],
-                        click: self.ShowEvent.bind(self)
+                        click: this.ShowEvent.bind(this)
                     }];
 
-                    self.m_T_evo_chart.options.data = [];
-                    self.m_n_evo_chart.options.data = [];
-                    self.m_radius_chart.options.data = [];
-                    self.m_T_profile_data = [];
-                    self.m_n_profile_data = [];
-
-                    self.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.timestamp_title;
-                    self.m_radius_chart.options.title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.radius_title;
-                    self.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.T_evo_title;
-                    self.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.T_prof_title;
-                    self.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.n_evo_title;
-                    self.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
-                        $('#shot_select').val() + self.m_defaults.n_prof_title;
+                    this.m_T_evo_chart.options.data = [];
+                    this.m_n_evo_chart.options.data = [];
+                    this.m_radius_chart.options.data = [];
+                    this.m_T_profile_data = [];
+                    this.m_n_profile_data = [];
+                    this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.timestamp_title;
+                    this.m_radius_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.radius_title;
+                    this.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.T_evo_title;
+                    this.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.T_prof_title;
+                    this.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.n_evo_title;
+                    this.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.n_prof_title;
                     //console.log(resp);
                     for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
                         let h05 = resp.polys[poly_ind].h * 0.5;
-                        self.m_radius_chart.options.data.push(
+                        this.m_radius_chart.options.data.push(
                             {
                                 type: "rangeArea",
                                 markerType: "none",
-                                color: self.palette[poly_ind],
+                                color: this.palette[poly_ind],
                                 showInLegend: true,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: [{
@@ -812,10 +809,10 @@
                             }
                         );
 
-                        self.m_T_evo_chart.options.data.push(
+                        this.m_T_evo_chart.options.data.push(
                             {
                                 type: "line",
-                                color: self.palette[poly_ind],
+                                color: this.palette[poly_ind],
                                 visible: true,
                                 markerType: "none",
                                 showInLegend: true,
@@ -823,24 +820,24 @@
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: self.ShowEvent.bind(self)
+                                click: this.ShowEvent.bind(this)
                             }
                         );
-                        self.m_T_evo_chart.options.data.push(
+                        this.m_T_evo_chart.options.data.push(
                             {
                                 type: "error",
-                                color: self.palette[poly_ind],
+                                color: this.palette[poly_ind],
                                 visible: true,
                                 showInLegend: false,
                                 dataPoints: [],
-                                //click: self.ShowEvent.bind(self)
+                                //click: this.ShowEvent.bind(this)
                             }
                         );
 
-                        self.m_n_evo_chart.options.data.push(
+                        this.m_n_evo_chart.options.data.push(
                             {
                                 type: "line",
-                                color: self.palette[poly_ind],
+                                color: this.palette[poly_ind],
                                 visible: true,
                                 markerType: "none",
                                 showInLegend: false,
@@ -848,33 +845,33 @@
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: self.ShowEvent.bind(self)
+                                click: this.ShowEvent.bind(this)
                             }
                         );
-                        self.m_n_evo_chart.options.data.push(
+                        this.m_n_evo_chart.options.data.push(
                             {
                                 type: "error",
-                                color: self.palette[poly_ind],
+                                color: this.palette[poly_ind],
                                 visible: true,
                                 showInLegend: false,
                                 dataPoints: [],
-                                //click: self.ShowEvent.bind(self)
+                                //click: this.ShowEvent.bind(this)
                             }
                         );
                     }
-                    self.m_radius_chart.render();
+                    this.m_radius_chart.render();
 
                     //console.log(resp);
                     for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
                         if(resp.events[event_ind].processed_bad){
-                            self.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                            this.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
                                 {
                                     x: resp.events[event_ind].timestamp,
                                     y: null
                                 }
                             );
                         }else {
-                            self.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                            this.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
                                 {
                                     x: resp.events[event_ind].timestamp,
                                     y: resp.events[event_ind].energy
@@ -882,7 +879,7 @@
                             );
                         }
 
-                        self.m_T_profile_data.push({
+                        this.m_T_profile_data.push({
                             //color: "#B0D0B0",
                             type: "line",
                             markerType: "none",
@@ -895,7 +892,7 @@
                                 console.log(e);
                             }
                         });
-                        self.m_T_profile_data.push(
+                        this.m_T_profile_data.push(
                             {
                                 //color: "#B0D0B0",
                                 type: "error",
@@ -904,7 +901,7 @@
                             }
                         );
 
-                        self.m_n_profile_data.push({
+                        this.m_n_profile_data.push({
                             //color: "#B0D0B0",
                             type: "line",
                             markerType: "none",
@@ -917,7 +914,7 @@
                                 console.log(e);
                             }
                         });
-                        self.m_n_profile_data.push(
+                        this.m_n_profile_data.push(
                             {
                                 //color: "#B0D0B0",
                                 type: "error",
@@ -928,26 +925,26 @@
 
                         for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++) {
                             if(resp.events[event_ind].T_e[poly_ind].processed_bad){
-                                self.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: null
                                     }
                                 );
-                                self.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: null
                                     }
                                 );
                             }else {
-                                self.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: resp.events[event_ind].T_e[poly_ind].T
                                     }
                                 );
-                                self.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
+                                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
@@ -956,13 +953,13 @@
                                 );
 
 
-                                self.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
+                                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: resp.events[event_ind].T_e[poly_ind].n
                                     }
                                 );
-                                self.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
+                                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
                                     {
                                         x: resp.events[event_ind].timestamp,
                                         y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
@@ -970,26 +967,26 @@
                                     }
                                 );
 
-                                self.m_T_profile_data[self.m_T_profile_data.length - 2].dataPoints.push(
+                                this.m_T_profile_data[this.m_T_profile_data.length - 2].dataPoints.push(
                                     {
                                         x: resp.polys[poly_ind].R,
                                         y: resp.events[event_ind].T_e[poly_ind].T
                                     }
                                 );
-                                self.m_T_profile_data[self.m_T_profile_data.length - 1].dataPoints.push(
+                                this.m_T_profile_data[this.m_T_profile_data.length - 1].dataPoints.push(
                                     {
                                         x: resp.polys[poly_ind].R,
                                         y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
                                             resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
                                     }
                                 );
-                                self.m_n_profile_data[self.m_n_profile_data.length - 2].dataPoints.push(
+                                this.m_n_profile_data[this.m_n_profile_data.length - 2].dataPoints.push(
                                     {
                                         x: resp.polys[poly_ind].R,
                                         y: resp.events[event_ind].T_e[poly_ind].n
                                     }
                                 );
-                                self.m_n_profile_data[self.m_n_profile_data.length - 1].dataPoints.push(
+                                this.m_n_profile_data[this.m_n_profile_data.length - 1].dataPoints.push(
                                     {
                                         x: resp.polys[poly_ind].R,
                                         y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
@@ -999,225 +996,218 @@
                             }
                         }
                     }
-                    self.m_timestamp_chart.options.navigator.data[0].dataPoints =
-                        self.m_timestamp_chart.options.charts[0].data[0].dataPoints;
-                    self.m_timestamp_chart.render();
-                    self.m_T_evo_chart.render();
-                    self.m_n_evo_chart.render();
+                    this.m_timestamp_chart.options.navigator.data[0].dataPoints =
+                        this.m_timestamp_chart.options.charts[0].data[0].dataPoints;
+                    this.m_timestamp_chart.render();
+                    this.m_T_evo_chart.render();
+                    this.m_n_evo_chart.render();
 
-                    self.m_timestamp_chart.navigator.slider.set("maximum", self.m_defaults.time_max);
-                    self.m_timestamp_chart.navigator.slider.set("minimum", self.m_defaults.time_min);
-                    self.RangeChanged({
-                        minimum: self.m_timestamp_chart.navigator.slider.get("minimum"),
-                        maximum: self.m_timestamp_chart.navigator.slider.get("maximum")
+                    this.m_timestamp_chart.navigator.slider.set("maximum", this.m_defaults.time_max);
+                    this.m_timestamp_chart.navigator.slider.set("minimum", this.m_defaults.time_min);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                     });
-                }
+                }.bind(this)
             );
         };
 
         this.ShowEvent = function (ev){
             //console.log('showing', ev);
             this.m_selected_event_ind = ev.dataPointIndex;
-            this.update_fit({data: this})
+            this.update_fit()
             $('#draggable')[0].removeAttribute('hidden');
         };
 
-        this.update_fit = function (ev){
-            let self = ev.data;
-            if(jQuery.isEmptyObject(self.m_expected) || self.m_expected.name === self.m_currentShot.spectral_name){
-                self.Request(
+        this.update_fit = function (){
+            if(jQuery.isEmptyObject(this.m_expected) || this.m_expected.name === this.m_currentShot.spectral_name){
+                this.Request(
                     {
                         reqtype: 'get_expected'
                     }
                     , function (resp) {
-                        Object.assign(self.m_expected, resp);
-                        self.m_expected['name'] = self.m_currentShot.spectral_name;
-                        self.draw_popup(ev);
-                    }
+                        Object.assign(this.m_expected, resp);
+                        this.m_expected['name'] = this.m_currentShot.spectral_name;
+                    }.bind(this)
                 );
-            }else{
-                self.draw_popup({data: self});
             }
-        };
+            this.draw_popup();
+        }
 
-        this.draw_popup = function(ev){
-            let self = ev.data;
+        this.draw_popup = function(){
             let poly_ind = $('#poly_input').val();
-
-            $('#event_timestamp').html(self.m_currentShot.events[self.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
-            $('#poly_radius').html(self.m_currentShot.polys[poly_ind].R + ' mm');
-            self.m_fitting_chart.options.data = [];
-            self.m_current_event_sig = {};
-            self.Request(
+            let is_plasma = $('#is_plasma')[0].checked;
+            let shotn = $('#shot_select').val();
+            $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
+            $('#poly_radius').html(this.m_currentShot.polys[poly_ind].R + ' mm');
+            this.m_fitting_chart.options.data = [];
+            this.m_current_event_sig = {};
+            this.Request(
                 {
                     reqtype: 'get_event_sig',
-                    event: self.m_selected_event_ind,
-                    is_plasma: $('#is_plasma')[0].checked,
-                    shotn: $('#shot_select').val()
+                    event: this.m_selected_event_ind,
+                    is_plasma: is_plasma,
+                    shotn: shotn
                 }
                 , function (resp) {
-                    Object.assign(self.m_current_event_sig, resp);
-                    //console.log(self.m_current_event_sig);
-                    for(let ch = 0; ch < self.m_expected.poly[poly_ind].expected.length; ch++){
+                    Object.assign(this.m_current_event_sig, resp);
+                    //console.log(this.m_current_event_sig);
+                    for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
                         let data = [];
-                        for(let temp_ind = 0; temp_ind < self.m_expected.T_arr.length; temp_ind++){
+                        for(let temp_ind = 0; temp_ind < this.m_expected.T_arr.length; temp_ind++){
                             data.push(
                                 {
-                                    x: self.m_expected.T_arr[temp_ind],
-                                    y: self.m_expected.poly[poly_ind].expected[ch][temp_ind]
+                                    x: this.m_expected.T_arr[temp_ind],
+                                    y: this.m_expected.poly[poly_ind].expected[ch][temp_ind]
                                 });
                         }
-                        self.m_fitting_chart.options.data.push({
+                        this.m_fitting_chart.options.data.push({
                             type: "line",
-                            visible: self.m_current_channels[ch],
+                            visible: this.m_current_channels[ch],
                             markerType: "none",
-                            color: self.palette[ch],
+                            color: this.palette[ch],
                             showInLegend: true,
                             name: 'ch ' + (ch + 1),
                             dataPoints: data
                         });
                         if(!resp.poly[poly_ind].ch[ch].processed_bad) {
-                            self.m_fitting_chart.options.data.push({
+                            this.m_fitting_chart.options.data.push({
                                 type: "scatter",
-                                visible: self.m_current_channels[ch],
-                                color: self.palette[ch],
+                                visible: this.m_current_channels[ch],
+                                color: this.palette[ch],
                                 showInLegend: false,
                                 name: 'measured ' + (ch + 1),
                                 dataPoints: [{
-                                    x: self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T,
-                                    y: resp.poly[poly_ind].ch[ch].ph_el / self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
+                                    y: resp.poly[poly_ind].ch[ch].ph_el / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
                                 }]
                             });
-                            self.m_fitting_chart.options.data.push({
+                            this.m_fitting_chart.options.data.push({
                                 type: "error",
-                                visible: self.m_current_channels[ch],
-                                color: self.palette[ch],
+                                visible: this.m_current_channels[ch],
+                                color: this.palette[ch],
                                 showInLegend: false,
                                 name: 'measured ' + (ch + 1),
                                 dataPoints: [{
-                                    x: self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T,
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
                                     y: [
                                         (resp.poly[poly_ind].ch[ch].ph_el - resp.poly[poly_ind].ch[ch].err) /
-                                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult,
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult,
                                         (resp.poly[poly_ind].ch[ch].ph_el + resp.poly[poly_ind].ch[ch].err) /
-                                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].mult
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
                                     ]
                                 }]
                             });
                         }
                     }
-                    self.m_fitting_chart.options.axisX.minimum =
-                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T * 0;
-                    self.m_fitting_chart.options.axisX.maximum =
-                        self.m_currentShot.events[self.m_selected_event_ind].T_e[poly_ind].T * 2;
-                    self.m_fitting_chart.render();
+                    this.m_fitting_chart.options.axisX.minimum = 0;
+                    this.m_fitting_chart.options.axisX.maximum =
+                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2;
+                    this.m_fitting_chart.render();
 
-                }
+                }.bind(this)
             );
-            self.m_raw_chart.options.data = [];
-            self.m_current_event_raw = {};
-            self.Request(
+            this.m_raw_chart.options.data = [];
+            this.m_current_event_raw = {};
+            this.Request(
                 {
                     reqtype: 'get_event_raw',
-                    event: self.m_selected_event_ind,
-                    is_plasma: $('#is_plasma')[0].checked,
-                    shotn: $('#shot_select').val(),
-                    poly: $('#poly_input').val(),
+                    event: this.m_selected_event_ind,
+                    is_plasma: is_plasma,
+                    shotn: shotn,
+                    poly: poly_ind,
                     config: $('#config_select').val()
                 }
                 , function (resp) {
-                    Object.assign(self.m_current_event_raw, resp);
-                    //console.log(self.m_current_event_sig);
-                    //console.log(self.m_currentShot);
-                    let dt = 1 / parseFloat(self.m_currentShot.header.frequency)
-                    self.m_raw_chart.options.axisX.minimum = - self.m_current_event_raw.start * dt;
-                    self.m_raw_chart.options.axisX.maximum = (self.m_currentShot.header.eventLength -
-                        self.m_current_event_raw.start) * dt;
-                    for(let ch = 0; ch < self.m_current_event_raw.data.length; ch++){
+                    Object.assign(this.m_current_event_raw, resp);
+                    //console.log(this.m_current_event_sig);
+                    //console.log(this.m_currentShot);
+                    let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
+                    this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.start * dt;
+                    this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
+                        this.m_current_event_raw.start) * dt;
+                    for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
                         let data = [];
-                        for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
+                        for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
                             if(ch !== 5) {
                                 data.push(
                                     {
-                                        x: (time_ind - self.m_current_event_raw.start) * dt,
-                                        y: self.m_current_event_raw.data[ch][time_ind] -
-                                            self.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
+                                        x: (time_ind - this.m_current_event_raw.start) * dt,
+                                        y: this.m_current_event_raw.data[ch][time_ind] -
+                                            this.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
                                     });
                             }else{
                                 data.push(
                                     {
-                                        x: (time_ind - self.m_current_event_raw.start) * dt,
-                                        y: self.m_current_event_raw.data[ch][time_ind]
+                                        x: (time_ind - this.m_current_event_raw.start) * dt,
+                                        y: this.m_current_event_raw.data[ch][time_ind]
                                     });
                             }
                         }
-                        self.m_raw_chart.options.data.push({
+                        this.m_raw_chart.options.data.push({
                             type: "line",
-                            color: self.palette[ch],
+                            color: this.palette[ch],
                             markerType: "none",
                             showInLegend: ch === 5,
                             name: 'ch ' + (ch + 1),
                             dataPoints: data,
                             ch_ind: ch,
-                            visible: self.m_current_channels[ch]
+                            visible: this.m_current_channels[ch]
                         });
                     }
                     let data = [];
-                    for(let time_ind = 0; time_ind < self.m_currentShot.header.eventLength; time_ind++){
+                    for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
                         data.push(
                             {
-                                x: (time_ind - self.m_current_event_raw.start) * dt,
-                                y: self.m_current_event_raw.laser[time_ind]
+                                x: (time_ind - this.m_current_event_raw.start) * dt,
+                                y: this.m_current_event_raw.laser[time_ind]
                             });
                     }
-                    self.m_raw_chart.options.data.push({
+                    this.m_raw_chart.options.data.push({
                         color: "#B0D0B0",
                         type: "line",
                         markerType: "none",
                         showInLegend: true,
                         name: 'laser',
                         dataPoints: data,
-                        visible: self.m_current_channels[6]
+                        visible: this.m_current_channels[6]
                     });
-                    self.m_raw_chart.render();
-                }
+                    this.m_raw_chart.render();
+                }.bind(this)
             );
         }
 
-        this.UpdateProfiles = function(ev){
-            let self = ev.data;
+        this.UpdateProfiles = function(){
+            this.m_T_profile_chart.options.data = [];
+            this.m_n_profile_chart.options.data = [];
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if(this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.minimum &&
+                    this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.maximum){
+                    this.m_T_profile_chart.options.data.push(this.m_T_profile_data[event_ind * 2]);
+                    this.m_T_profile_chart.options.data.push(this.m_T_profile_data[event_ind * 2 + 1]);
 
-            self.m_T_profile_chart.options.data = [];
-            self.m_n_profile_chart.options.data = [];
-            for(let event_ind = 0; event_ind < self.m_currentShot.events.length; event_ind++) {
-                if(self.m_currentShot.events[event_ind].timestamp >= self.m_timestamp_chart.navigator.slider.minimum &&
-                    self.m_currentShot.events[event_ind].timestamp <= self.m_timestamp_chart.navigator.slider.maximum){
-                    self.m_T_profile_chart.options.data.push(self.m_T_profile_data[event_ind * 2]);
-                    self.m_T_profile_chart.options.data.push(self.m_T_profile_data[event_ind * 2 + 1]);
-
-                    self.m_n_profile_chart.options.data.push(self.m_n_profile_data[event_ind * 2]);
-                    self.m_n_profile_chart.options.data.push(self.m_n_profile_data[event_ind * 2 + 1]);
+                    this.m_n_profile_chart.options.data.push(this.m_n_profile_data[event_ind * 2]);
+                    this.m_n_profile_chart.options.data.push(this.m_n_profile_data[event_ind * 2 + 1]);
                 }
             }
-            self.m_T_profile_chart.render();
-            self.m_n_profile_chart.render();
+            this.m_T_profile_chart.render();
+            this.m_n_profile_chart.render();
         };
 
-        this.ConnectControls = function (ev) {
-            let self = ev.data;
+        this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
                 if(!$('#draggable')[0].contains(document.activeElement)) {
-                    self.KeydownMain(event);
+                    this.KeydownMain(event);
                 }else{
-                    self.KeydownDraggable(event);
+                    this.KeydownDraggable(event);
                 }
-            }.bind(self));
+            }.bind(this));
 
             dragElement($('#draggable')[0]);
-            $('#hide_draggable').on('click', this, function (ev) {
+            $('#hide_draggable').on('click', this, function () {
                 $('#draggable').attr('hidden', true);
             });
 
@@ -1360,22 +1350,24 @@
                 event.preventDefault();
                 this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
                     this.m_currentShot.events.length - 1);
-                this.draw_popup({data: this});
+                this.draw_popup();
             }else if (event.key === 'ArrowRight') {
                 event.preventDefault();
                 this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
-                this.draw_popup({data: this});
+                this.draw_popup();
             }else if (event.key === 'ArrowUp') {
+                let poly_input = $('#poly_input');
                 event.preventDefault();
-                if($('#poly_input').val() < $('#poly_input').attr('max')){
+                if(poly_input.val() < poly_input.attr('max')){
                     $('#poly_input')[0].stepUp();
-                    this.draw_popup({data: this});
+                    this.draw_popup();
                 }
             }else if (event.key === 'ArrowDown') {
+                let poly_input = $('#poly_input');
                 event.preventDefault();
-                if($('#poly_input').val() > $('#poly_input').attr('min')){
+                if(poly_input.val() > poly_input.attr('min')){
                     $('#poly_input')[0].stepDown();
-                    this.draw_popup({data: this});
+                    this.draw_popup();
                 }
             }else if (event.key === 'f') {
                 event.preventDefault();
@@ -1403,19 +1395,13 @@
             }
         }.bind(this);
 
-        this.ConnectControls({data: this});
+        this.ConnectControls();
     }
 
     function dragElement(elmnt) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
-        if ($('#' + elmnt.id + "header")[0]) {
-            // if present, the header is where you move the DIV from:
-            $('#' + elmnt.id + "header")[0].onmousedown = dragMouseDown;
-        } else {
-            // otherwise, move the DIV from anywhere inside the DIV:
-            elmnt.onmousedown = dragMouseDown;
-        }
+        $('#' + elmnt.id + "header")[0].onmousedown = dragMouseDown;
         elmnt.style.top = 10 + '%';
         elmnt.style.left = 70 + '%'
 
@@ -1452,7 +1438,7 @@
     $(document).ready(
         function () {
             let viewer = new Main();
-            viewer.Refresh({data: viewer});
+            viewer.Refresh();
         }
     )
 </script>
