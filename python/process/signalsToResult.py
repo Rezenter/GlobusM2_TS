@@ -91,6 +91,13 @@ class Processor:
                 'error': err
             }
 
+    def update_events(self, events):
+        if len(self.result['events']) != len(events):
+            self.error = "New events have different length"
+            return False
+        self.result['events'] = events
+        self.save_result()
+        return True
 
     def get_error(self):
         tmp = self.error
@@ -198,7 +205,7 @@ class Processor:
                 poly = []
                 energy = self.expected['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
 
-                energy = 1  ## DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                #energy = 1  ## DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
                     temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
@@ -207,12 +214,15 @@ class Processor:
                 proc_event['T_e'] = poly
             proc_event['processed_bad'] = bad_flag
             self.result['events'].append(proc_event)
+        self.save_result()
+
+    def save_result(self):
         result_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
         if not os.path.isdir(result_folder):
             os.mkdir(result_folder)
         with open('%s%05d%s' % (result_folder, self.shotn, self.FILE_EXT), 'w') as out_file:
             json.dump(self.result, out_file)
-        self.to_csv(stray)
+        #self.to_csv()
 
     def calc_temp(self, event, poly, stray, E):
         channels = []
@@ -330,7 +340,7 @@ class Processor:
             }
         return res
 
-    def to_csv(self, stray):
+    def to_csv(self):
         out_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
         with open('%sT(t).csv' % out_folder, 'w') as out_file:
             line = 't, '

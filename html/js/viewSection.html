@@ -51,6 +51,8 @@
             <label for="abs_select">Abs. calibr.:</label><select id="abs_select"></select>
             <button class="btn btn-success glyphicon glyphicon-refresh" id="shot_refresh">Refresh</button>
             <label for="auto_load">Load last shot automatically?</label><input type="checkbox" id="auto_load" checked>
+            <button class="btn btn-success glyphicon glyphicon-cloud-upload" id="save_shot">Save to DB</button>
+            <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
         </div>
 
         <hr>
@@ -85,20 +87,23 @@
                     <div id="draggableheader" tabindex="2">Hold here to move</div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <button class="btn btn-danger" id="hide_draggable">Hide</button>
+                    <button class="btn btn-danger" id="hide_draggable">Hide window</button>
                 </div>
             </div>
         </div>
         <div class="container-fluid">
             <div class="row">
-                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                     <label for="poly_input">Poly</label><input id="poly_input" type="number" value="0" min="0" maxlength="1">
                 </div>
-                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                     <p id="poly_radius"></p>
                 </div>
-                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                     <p id="event_timestamp"></p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <label for="is_show">Show</label><input type="checkbox" id="is_show" checked>
                 </div>
             </div>
         </div>
@@ -119,7 +124,9 @@
             T_evo_title: ' electron temperature evolution',
             T_prof_title: ' electron temperature profile',
             n_evo_title: ' electron density evolution',
-            n_prof_title: ' electron density profile'
+            n_prof_title: ' electron density profile',
+            line_thickness_base: 2,
+            line_thickness_high: 4
         };
         this.m_currentShot = {};
         this.m_current_event_raw = {};
@@ -303,21 +310,21 @@
                 cursor: "pointer",
                 itemmouseover: function(e) {
                     if(e.dataSeries.visible) {
-                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_T_evo_chart.data[e.dataSeriesIndex].lineThickness * 2;
-                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_T_evo_chart.data[e.dataSeriesIndex + 1].lineThickness * 2;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_T_evo_chart.render();
-                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_n_evo_chart.data[e.dataSeriesIndex].lineThickness * 2;
-                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_n_evo_chart.data[e.dataSeriesIndex + 1].lineThickness * 2;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_n_evo_chart.render();
                     }
                 }.bind(this),
                 itemmouseout: function(e) {
                     if(e.dataSeries.visible) {
-                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_T_evo_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
-                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_T_evo_chart.data[e.dataSeriesIndex + 1].lineThickness * 0.5;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_base;
                         this.m_T_evo_chart.render();
-                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_n_evo_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
-                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_n_evo_chart.data[e.dataSeriesIndex + 1].lineThickness * 0.5;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_base;
                         this.m_n_evo_chart.render();
                     }
                 }.bind(this),
@@ -526,10 +533,10 @@
                                 series_index += 3;
                             }
                         }
-                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex].lineThickness * 2;
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_fitting_chart.render();
 
-                        this.m_raw_chart.options.data[ch].lineThickness = this.m_raw_chart.data[ch].lineThickness * 2;
+                        this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_raw_chart.options.axisX.stripLines = [{
                             startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.start) * dt,
                             endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.start) * dt,
@@ -555,10 +562,10 @@
                                 series_index += 3;
                             }
                         }
-                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_fitting_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
                         this.m_fitting_chart.render();
 
-                        this.m_raw_chart.options.data[ch].lineThickness = this.m_raw_chart.data[ch].lineThickness * 0.5;
+                        this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_base;
                         this.m_raw_chart.options.axisX.stripLines = [];
                         this.m_raw_chart.render();
                     }
@@ -659,7 +666,7 @@
                 itemmouseover: function(e) {
                     if(e.dataSeries.visible) {
                         let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
-                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex].lineThickness * 2;
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
                         if(e.dataSeriesIndex !== 5) {
                             this.m_raw_chart.options.axisX.stripLines = [{
                                 startValue: 0,
@@ -674,7 +681,7 @@
                 }.bind(this),
                 itemmouseout: function(e) {
                     if(e.dataSeries.visible) {
-                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex].lineThickness * 0.5;
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
                         this.m_raw_chart.options.axisX.stripLines = [];
                         this.m_raw_chart.render();
                     }
@@ -724,7 +731,7 @@
                     this.UpdateShotSelect();
                 }.bind(this)
             );
-        }
+        };
 
         this.UpdateShotSelect = function() {
             let shots = this.m_plasma_shots;
@@ -747,19 +754,22 @@
             if(options.length && $('#auto_load')[0].checked){
                 this.Select();
             }
-        }
+        };
 
         this.Select = function(){
             let shotn = $('#shot_select').val();
+            let is_plasma = $('#is_plasma')[0].checked;
             this.Request(
                 {
                     reqtype: 'get_shot',
-                    is_plasma: $('#is_plasma')[0].checked,
+                    is_plasma: is_plasma,
                     shotn: shotn,
                     config: $('#config_select').val()
                 }, function (resp) {
                     //console.log(resp);
                     Object.assign(this.m_currentShot, resp);
+                    this.m_currentShot.shotn = shotn;
+                    this.m_currentShot.is_plasma = is_plasma;
                     $('#poly_input').attr('max', this.m_currentShot.polys.length - 1);
                     $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
                     this.m_timestamp_chart.options.charts[0].data = [{
@@ -829,8 +839,7 @@
                                 color: this.palette[poly_ind],
                                 visible: true,
                                 showInLegend: false,
-                                dataPoints: [],
-                                //click: this.ShowEvent.bind(this)
+                                dataPoints: []
                             }
                         );
 
@@ -855,7 +864,6 @@
                                 visible: true,
                                 showInLegend: false,
                                 dataPoints: [],
-                                //click: this.ShowEvent.bind(this)
                             }
                         );
                     }
@@ -924,83 +932,12 @@
                         );
 
                         for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++) {
-                            if(resp.events[event_ind].T_e[poly_ind].processed_bad){
-                                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: null
-                                    }
-                                );
-                                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: null
-                                    }
-                                );
-                            }else {
-                                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: resp.events[event_ind].T_e[poly_ind].T
-                                    }
-                                );
-                                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
-                                            resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
-                                    }
-                                );
-
-
-                                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: resp.events[event_ind].T_e[poly_ind].n
-                                    }
-                                );
-                                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.push(
-                                    {
-                                        x: resp.events[event_ind].timestamp,
-                                        y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
-                                            resp.events[event_ind].T_e[poly_ind].n + resp.events[event_ind].T_e[poly_ind].n_err]
-                                    }
-                                );
-
-                                this.m_T_profile_data[this.m_T_profile_data.length - 2].dataPoints.push(
-                                    {
-                                        x: resp.polys[poly_ind].R,
-                                        y: resp.events[event_ind].T_e[poly_ind].T
-                                    }
-                                );
-                                this.m_T_profile_data[this.m_T_profile_data.length - 1].dataPoints.push(
-                                    {
-                                        x: resp.polys[poly_ind].R,
-                                        y: [resp.events[event_ind].T_e[poly_ind].T - resp.events[event_ind].T_e[poly_ind].Terr,
-                                            resp.events[event_ind].T_e[poly_ind].T + resp.events[event_ind].T_e[poly_ind].Terr]
-                                    }
-                                );
-                                this.m_n_profile_data[this.m_n_profile_data.length - 2].dataPoints.push(
-                                    {
-                                        x: resp.polys[poly_ind].R,
-                                        y: resp.events[event_ind].T_e[poly_ind].n
-                                    }
-                                );
-                                this.m_n_profile_data[this.m_n_profile_data.length - 1].dataPoints.push(
-                                    {
-                                        x: resp.polys[poly_ind].R,
-                                        y: [resp.events[event_ind].T_e[poly_ind].n - resp.events[event_ind].T_e[poly_ind].n_err,
-                                            resp.events[event_ind].T_e[poly_ind].n + resp.events[event_ind].T_e[poly_ind].n_err]
-                                    }
-                                );
-                            }
+                            this.MainChartsSetPoint(event_ind, poly_ind);                            
                         }
                     }
                     this.m_timestamp_chart.options.navigator.data[0].dataPoints =
                         this.m_timestamp_chart.options.charts[0].data[0].dataPoints;
                     this.m_timestamp_chart.render();
-                    this.m_T_evo_chart.render();
-                    this.m_n_evo_chart.render();
 
                     this.m_timestamp_chart.navigator.slider.set("maximum", this.m_defaults.time_max);
                     this.m_timestamp_chart.navigator.slider.set("minimum", this.m_defaults.time_min);
@@ -1012,14 +949,138 @@
             );
         };
 
+        this.MainChartsSetPoint = function(event_ind, poly_ind){
+            let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
+            if(this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad ||
+                this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: null
+                    }
+                );
+                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [null,
+                            null]
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: null
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [null,
+                            null]
+                    }
+                );
+
+                this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: null
+                    }
+                );
+                this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: [null,
+                            null]
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: null
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: [null,
+                            null]
+                    }
+                );
+            }else {
+                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                    }
+                );
+                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                    }
+                );
+
+
+                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
+                    }
+                );
+
+                this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                    }
+                );
+                this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.polys[poly_ind].R,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
+                    }
+                );
+            }
+        };
+
         this.ShowEvent = function (ev){
             //console.log('showing', ev);
             this.m_selected_event_ind = ev.dataPointIndex;
-            this.update_fit()
+            let poly_ind = 0;
+            if(ev.dataSeriesIndex % 2 === 0){
+                poly_ind = ev.dataSeriesIndex / 2;
+            }else{
+                console.log('WTF? this is not expected!', ev);
+                poly_ind = (ev.dataSeriesIndex - 1) / 2;
+            }
+            $('#poly_input').val(poly_ind);
+            this.update_popup_data()
             $('#draggable')[0].removeAttribute('hidden');
         };
 
-        this.update_fit = function (){
+        this.update_popup_data = function (){
             if(jQuery.isEmptyObject(this.m_expected) || this.m_expected.name === this.m_currentShot.spectral_name){
                 this.Request(
                     {
@@ -1032,14 +1093,30 @@
                 );
             }
             this.draw_popup();
-        }
+        };
 
         this.draw_popup = function(){
             let poly_ind = $('#poly_input').val();
             let is_plasma = $('#is_plasma')[0].checked;
             let shotn = $('#shot_select').val();
+
+            //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind]);
+            if(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden){
+                $('#is_show').prop('checked', false);
+                //console.log('unchecked');
+            }else{
+                $('#is_show').prop('checked', true);
+                //console.log('checked');
+            }
+
             $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
             $('#poly_radius').html(this.m_currentShot.polys[poly_ind].R + ' mm');
+
+            this.update_fitting_chart(poly_ind, is_plasma, shotn);
+            this.update_raw_chart(poly_ind, is_plasma, shotn);
+        };
+
+        this.update_fitting_chart = function(poly_ind, is_plasma, shotn){
             this.m_fitting_chart.options.data = [];
             this.m_current_event_sig = {};
             this.Request(
@@ -1107,6 +1184,9 @@
 
                 }.bind(this)
             );
+        };
+
+        this.update_raw_chart = function(poly_ind, is_plasma, shotn){
             this.m_raw_chart.options.data = [];
             this.m_current_event_raw = {};
             this.Request(
@@ -1175,7 +1255,22 @@
                     this.m_raw_chart.render();
                 }.bind(this)
             );
-        }
+        };
+
+        this.ToggleShow = function(){
+            let poly_ind = $('#poly_input').val();
+            if($('#is_show')[0].checked){
+                //console.log('display', poly_ind, this.m_selected_event_ind);
+                delete this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden;
+            }else{
+                this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden = true;
+                //console.log('hide', poly_ind, this.m_selected_event_ind);
+            }
+            this.MainChartsSetPoint(this.m_selected_event_ind, poly_ind);
+            this.m_T_evo_chart.render();
+            this.m_n_evo_chart.render();
+            this.UpdateProfiles();
+        };
 
         this.UpdateProfiles = function(){
             this.m_T_profile_chart.options.data = [];
@@ -1194,6 +1289,19 @@
             this.m_n_profile_chart.render();
         };
 
+        this.Save = function(){
+            this.Request(
+                {
+                    reqtype: 'save_shot',
+                    is_plasma: this.m_currentShot.is_plasma,
+                    shotn: this.m_currentShot.shotn,
+                    events: this.m_currentShot.events
+                }, function (resp) {
+                    alert('saved');
+                }.bind(this)
+            );
+        };
+
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
@@ -1205,13 +1313,16 @@
                     this.KeydownDraggable(event);
                 }
             }.bind(this));
+            $('#save_shot').on('click', this, this.Save.bind(this));
+
 
             dragElement($('#draggable')[0]);
             $('#hide_draggable').on('click', this, function () {
                 $('#draggable').attr('hidden', true);
             });
 
-            $('#poly_input').on('change', this, this.draw_popup);
+            $('#poly_input').on('change', this, this.draw_popup.bind(this));
+            $('#is_show').on('change', this, this.ToggleShow.bind(this));
         };
 
         //can be optimised by disabling auto-render
@@ -1343,15 +1454,15 @@
                 this.m_n_evo_chart.axisX[0].crosshair.hide();
                 this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
             }
-        }.bind(this);
+        };
 
         this.KeydownDraggable = function(event){
-            if (event.key === 'ArrowLeft') {
+            if (event.key === 'ArrowRight') {
                 event.preventDefault();
                 this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
                     this.m_currentShot.events.length - 1);
                 this.draw_popup();
-            }else if (event.key === 'ArrowRight') {
+            }else if (event.key === 'ArrowLeft') {
                 event.preventDefault();
                 this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
                 this.draw_popup();
@@ -1393,7 +1504,7 @@
                 this.m_fitting_chart.render();
                 this.m_raw_chart.render();
             }
-        }.bind(this);
+        };
 
         this.ConnectControls();
     }
@@ -1433,13 +1544,13 @@
             document.onmouseup = null;
             document.onmousemove = null;
         }
-    }
+    };
 
     $(document).ready(
         function () {
             let viewer = new Main();
             viewer.Refresh();
         }
-    )
+    );
 </script>
 </html>
