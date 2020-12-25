@@ -340,104 +340,89 @@ class Processor:
             }
         return res
 
-    def to_csv(self):
-        out_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
-        with open('%sT(t).csv' % out_folder, 'w') as out_file:
-            line = 't, '
-            for poly in self.signal['common']['config']['poly']:
-                line += '%.1f, err, ' % poly['R']
-            out_file.write(line[:-2] + '\n')
-            line = 'ms, '
-            for poly in self.signal['common']['config']['poly']:
-                line += 'eV, eV,'
-            out_file.write(line[:-2] + '\n')
-            for event_ind in range(len(self.result['events'])):
+    def to_csv(self, x_from, x_to):
+        temp_evo = ''
+        line = 't, '
+        for poly in self.result['polys']:
+            line += '%.1f, err, ' % poly['R']
+        temp_evo += line[:-2] + '\n'
+        line = 'ms, '
+        for poly in self.result['polys']:
+            line += 'eV, eV,'
+        temp_evo += line[:-2] + '\n'
+        for event_ind in range(len(self.result['events'])):
+            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
                 for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['processed_bad']:
+                    if poly['processed_bad'] or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
-                out_file.write(line[:-2] + '\n')
+                temp_evo += line[:-2] + '\n'
 
-        with open('%sT(R).csv' % out_folder, 'w') as out_file:
-            names = 'R, '
-            units = 'mm, '
-            for event in self.result['events']:
+        temp_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in self.result['events']:
+            if x_from <= event['timestamp'] <= x_to:
                 names += '%.1f, err, ' % event['timestamp']
                 units += 'eV, eV, '
-            out_file.write(names[:-2] + '\n')
-            out_file.write(units[:-2] + '\n')
-            for poly_ind in range(len(self.signal['common']['config']['poly'])):
-                line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
-                for event in self.result['events']:
-                    if event['T_e'][poly_ind]['processed_bad']:
+        temp_prof += names[:-2] + '\n'
+        temp_prof += units[:-2] + '\n'
+        for poly_ind in range(len(self.result['polys'])):
+            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
+            for event in self.result['events']:
+                if x_from <= event['timestamp'] <= x_to:
+                    if event['T_e'][poly_ind]['processed_bad'] or \
+                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
-                out_file.write(line[:-2] + '\n')
+            temp_prof += line[:-2] + '\n'
 
-        with open('%sn(t).csv' % out_folder, 'w') as out_file:
-            line = 't, '
-            for poly in self.signal['common']['config']['poly']:
-                line += '%.1f, err, ' % poly['R']
-            out_file.write(line[:-2] + '\n')
-            line = 'ms, '
-            for poly in self.signal['common']['config']['poly']:
-                line += 'a.u., a.u.,'
-            out_file.write(line[:-2] + '\n')
-            for event_ind in range(len(self.result['events'])):
+        dens_evo = ''
+        line = 't, '
+        for poly in self.result['polys']:
+            line += '%.1f, err, ' % poly['R']
+        dens_evo += line[:-2] + '\n'
+        line = 'ms, '
+        for poly in self.result['polys']:
+            line += 'a.u., a.u.,'
+        dens_evo += line[:-2] + '\n'
+        for event_ind in range(len(self.result['events'])):
+            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
                 for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['processed_bad']:
+                    if poly['processed_bad'] or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
-                out_file.write(line[:-2] + '\n')
+                dens_evo += line[:-2] + '\n'
 
-        with open('%sn(R).csv' % out_folder, 'w') as out_file:
-            names = 'R, '
-            units = 'mm, '
-            for event in self.result['events']:
+        dens_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in self.result['events']:
+            if x_from <= event['timestamp'] <= x_to:
                 names += '%.1f, err, ' % event['timestamp']
                 units += 'a.u., a.u., '
-            out_file.write(names[:-2] + '\n')
-            out_file.write(units[:-2] + '\n')
-            for poly_ind in range(len(self.signal['common']['config']['poly'])):
-                line = '%.1f, ' % self.signal['common']['config']['poly'][poly_ind]['R']
-                for event in self.result['events']:
-                    if event['T_e'][poly_ind]['processed_bad']:
+        dens_prof += names[:-2] + '\n'
+        dens_prof += units[:-2] + '\n'
+        for poly_ind in range(len(self.result['polys'])):
+            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
+            for event in self.result['events']:
+                if x_from <= event['timestamp'] <= x_to:
+                    if event['T_e'][poly_ind]['processed_bad'] or \
+                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
-                out_file.write(line[:-2] + '\n')
+            dens_prof += line[:-2] + '\n'
 
-        '''
-        with open('%sAux(t).csv' % out_folder, 'w') as out_file:
-            names = 't, E, '
-            names += 'p0c1, err, p0c2, err, p0c3, err, '
-            names += 'p1c1, err, p1c2, err, p1c3, err, '
-            names += 'p2c1, err, p2c2, err, p2c3, err, '
-            out_file.write(names[:-2] + '\n')
-
-            units = 'ms, mv*ns, '
-            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
-            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
-            units += 'ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., '
-            out_file.write(units[:-2] + '\n')
-
-            for event in self.signal['data']:
-                line = '%.1f, %.2f, ' % (event['timestamp'], event['laser']['ave']['int'])
-                for poly_ind in range(3):
-                    poly = event['poly']['%d' % poly_ind]
-                    for ch in range(3):
-                        if poly['ch'][ch]['processed_bad']:
-                            line += '--, --, '
-                        else:
-                            if ch == 0:
-                                line += '%.1f, %.1f, ' % (poly['ch'][ch]['ph_el'] - stray[poly_ind][ch],
-                                                          poly['ch'][ch]['err'])
-                            else:
-                                line += '%.1f, %.1f, ' % (poly['ch'][ch]['ph_el'], poly['ch'][ch]['err'])
-                out_file.write(line[:-2] + '\n')
-        '''
+        return {
+            'ok': True,
+            'Tt': temp_evo,
+            'TR': temp_prof,
+            'nt': dens_evo,
+            'nR': dens_prof
+        }

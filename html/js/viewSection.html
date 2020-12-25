@@ -1302,6 +1302,41 @@
             );
         };
 
+        this.Export = function(){
+            this.Request(
+                {
+                    reqtype: 'export_shot',
+                    is_plasma: this.m_currentShot.is_plasma,
+                    shotn: this.m_currentShot.shotn,
+                    from: this.m_T_evo_chart.options.axisX.minimum,
+                    to: this.m_T_evo_chart.options.axisX.maximum
+                }, function (resp) {
+                    this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
+                    this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
+                    this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
+                    this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
+                }.bind(this)
+            );
+        };
+
+        this.DownloadFile = function(text, filename){
+            const textToBLOB = new Blob([text], { type: 'text/plain' });
+
+            let newLink = document.createElement("a");
+            newLink.download = filename;
+
+            if (window.webkitURL != null) {
+                newLink.href = window.webkitURL.createObjectURL(textToBLOB);
+            }
+            else {
+                newLink.href = window.URL.createObjectURL(textToBLOB);
+                newLink.style.display = "none";
+                document.body.appendChild(newLink);
+            }
+
+            newLink.click();
+        };
+
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
@@ -1314,7 +1349,7 @@
                 }
             }.bind(this));
             $('#save_shot').on('click', this, this.Save.bind(this));
-
+            $('#export').on('click', this, this.Export.bind(this));
 
             dragElement($('#draggable')[0]);
             $('#hide_draggable').on('click', this, function () {

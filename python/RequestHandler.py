@@ -46,7 +46,8 @@ class Handler:
                 'get_event_sig': self.get_event_sig,
                 'get_event_raw': self.get_event_raw,
                 'get_expected': self.get_expected,
-                'save_shot': self.save_shot
+                'save_shot': self.save_shot,
+                'export_shot': self.export_shot
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -150,6 +151,38 @@ class Handler:
                 'ok': False,
                 'descrioption': self.fine_processor.get_error()
             }
+
+    def export_shot(self, req):
+        if 'is_plasma' not in req:
+            return {
+                'ok': False,
+                'description': '"is-plasma" field is missing from request.'
+            }
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+        if 'from' not in req:
+            return {
+                'ok': False,
+                'description': '"from" field is missing from request.'
+            }
+        if 'to' not in req:
+            return {
+                'ok': False,
+                'description': '"to" field is missing from request.'
+            }
+        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.25',
+                                                      '2020.11.06')
+            err = self.fine_processor.get_error()
+            if err is not None:
+                return {
+                    'ok': False,
+                    'description': err
+                }
+        return self.fine_processor.to_csv(req['from'], req['to'])
 
     def get_integrals_shot(self, req):
         resp = {}
