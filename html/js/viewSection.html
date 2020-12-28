@@ -160,10 +160,10 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <div id="singleEventHeader" class="draggable-header" tabindex="2">Hold here to move</div>
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <button class="btn btn-danger hide_btn" id="hide_draggable">Hide window</button>
+                    <button class="btn btn-danger hide_btn">Hide window</button>
                 </div>
             </div>
         </div>
@@ -1455,8 +1455,8 @@
             $('#export').on('click', this, this.Export.bind(this));
 
 
-            this.initDragElement($('#singleEvent'));
-            this.initResizeElement($('#singleEvent')[0]);
+            this.initDragElement($('.draggable'));
+            this.initResizeElement($('.draggable'));
 
             $('.hide_btn').each(function(el){
                 this.addEventListener('click', function (e) {
@@ -1652,16 +1652,16 @@
 
         this.initDragElement = function(elements) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let current;
 
             $(elements).each(function(){
-                $(this).
+                $(this).find('.draggable-header')[0].onmousedown = dragMouseDown;
+                this.style.top = 10 + '%';
+                this.style.left = 70 + '%'
             })
-            $('#' + elmnt.id + "Header")[0].onmousedown = dragMouseDown;
-            elmnt.style.top = 10 + '%';
-            elmnt.style.left = 70 + '%'
 
             function dragMouseDown(e) {
-                //console.log(e);
+                current = $(e.target).parents('.draggable')[0];
                 //e.preventDefault();
                 // get the mouse cursor position at startup:
                 pos3 = e.clientX;
@@ -1672,30 +1672,31 @@
             }
 
             function elementDrag(e) {
-                //e.preventDefault();
-                // calculate the new cursor position:
+                e.stopPropagation();
                 pos1 = pos3 - e.clientX;
                 pos2 = pos4 - e.clientY;
                 pos3 = e.clientX;
                 pos4 = e.clientY;
-                // set the element's new position:
-                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
-                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+
+                current.style.top = (current.offsetTop - pos2) + "px";
+                current.style.left = (current.offsetLeft - pos1) + "px";
             }
 
             function closeDragElement() {
-                // stop moving when mouse button is released:
                 document.onmouseup = null;
                 document.onmousemove = null;
             }
         };
 
-        this.initResizeElement = function(elmnt) {
+        this.initResizeElement = function(elements) {
             let startX, startY, startWidth, startHeight;
+            let current;
 
             this.doDrag = function(e) {
-                elmnt.style.width = startWidth + e.clientX - startX + "px";
-                elmnt.style.height = startHeight + e.clientY - startY + "px";
+
+                e.stopPropagation();
+                current.style.width = startWidth + e.clientX - startX + "px";
+                current.style.height = startHeight + e.clientY - startY + "px";
             };
 
             this.stopDrag = function() {
@@ -1706,41 +1707,43 @@
             }.bind(this);
 
             this.initDrag = function(e) {
+                e.stopPropagation();
                 startX = e.clientX;
                 startY = e.clientY;
+                current = e.target.parentPopup;
                 startWidth = parseInt(
-                    document.defaultView.getComputedStyle(elmnt).width,
+                    document.defaultView.getComputedStyle(current).width,
                     10
                 );
                 startHeight = parseInt(
-                    document.defaultView.getComputedStyle(elmnt).height,
+                    document.defaultView.getComputedStyle(current).height,
                     10
                 );
                 document.documentElement.addEventListener("mousemove", this.doDrag, false);
                 document.documentElement.addEventListener("mouseup", this.stopDrag, false);
             }.bind(this);
 
+            for(let ind = 0; ind < elements.length; ind++){
+                let dragElmnt = elements[ind];
 
-            let right = document.createElement("div");
-            right.className = "resizer-right";
-            elmnt.appendChild(right);
-            right.addEventListener("mousedown", this.initDrag, false);
-            right.parentPopup = elmnt;
+                let right = document.createElement("div");
+                right.className = "resizer-right";
+                dragElmnt.appendChild(right);
+                right.addEventListener("mousedown", this.initDrag, false);
+                right.parentPopup = dragElmnt;
 
-            let bottom = document.createElement("div");
-            bottom.className = "resizer-bottom";
-            elmnt.appendChild(bottom);
-            bottom.addEventListener("mousedown", this.initDrag, false);
-            bottom.parentPopup = elmnt;
+                let bottom = document.createElement("div");
+                bottom.className = "resizer-bottom";
+                dragElmnt.appendChild(bottom);
+                bottom.addEventListener("mousedown", this.initDrag, false);
+                bottom.parentPopup = dragElmnt;
 
-            let both = document.createElement("div");
-            both.className = "resizer-both";
-            elmnt.appendChild(both);
-            both.addEventListener("mousedown", this.initDrag, false);
-            both.parentPopup = elmnt;
-
-
-
+                let both = document.createElement("div");
+                both.className = "resizer-both";
+                dragElmnt.appendChild(both);
+                both.addEventListener("mousedown", this.initDrag, false);
+                both.parentPopup = dragElmnt;
+            }
         };
 
         this.contextMenu = function() {
