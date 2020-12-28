@@ -21,6 +21,8 @@
         top: 0 !important;
         bottom: auto !important;
     }
+
+    /*draggable*/
     .draggable {
         position: absolute;
         z-index: 9;
@@ -67,6 +69,49 @@
         bottom: 0;
         cursor: nw-resize;
     }
+
+    /* context menu */
+    .context-menu {
+        display: none;
+        position: absolute;
+        z-index: 10;
+        padding: 12px 0;
+        width: 240px;
+        background-color: #fff;
+        border: solid 1px #dfdfdf;
+        box-shadow: 1px 1px 2px #cfcfcf;
+    }
+
+    .context-menu--active {
+        display: block;
+    }
+
+    .context-menu__items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .context-menu__item {
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .context-menu__item:last-child {
+        margin-bottom: 0;
+    }
+
+    .context-menu__link {
+        display: block;
+        padding: 4px 12px;
+        color: #0066aa;
+        text-decoration: none;
+    }
+
+    .context-menu__link:hover {
+        color: #fff;
+        background-color: #0066aa;
+    }
 </style>
 <body>
     <div id="focus-all" tabindex="0">
@@ -90,7 +135,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                    <div id="timestamp_chart" style="width:100%; height:200px;"></div>
+                    <div id="timestamp_chart" style="width:100%; height:200px;" class="context-target" las evo></div>
                 </div>
                 <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                     <div id="radius_chart" style="width:100%; height:200px;"></div>
@@ -101,12 +146,12 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                    <div id="T_evo_chart" style="width:100%; height:400px;"></div>
-                    <div id="n_evo_chart" style="width:100%; height:400px;"></div>
+                    <div id="T_evo_chart" style="width:100%; height:400px;" class="context-target" te evo></div>
+                    <div id="n_evo_chart" style="width:100%; height:400px;" class="context-target" ne evo></div>
                 </div>
                 <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                    <div id="T_profile_chart" style="width:100%; height:400px;"></div>
-                    <div id="n_profile_chart" style="width:100%; height:400px;"></div>
+                    <div id="T_profile_chart" style="width:100%; height:400px;" class="context-target" te prof></div>
+                    <div id="n_profile_chart" style="width:100%; height:400px;" class="context-target" ne prof></div>
                 </div>
             </div>
         </div>
@@ -118,7 +163,7 @@
                     <div id="singleEventHeader" class="draggable-header" tabindex="2">Hold here to move</div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <button class="btn btn-danger" id="hide_draggable">Hide window</button>
+                    <button class="btn btn-danger hide_btn" id="hide_draggable">Hide window</button>
                 </div>
             </div>
         </div>
@@ -142,6 +187,30 @@
         <div id="raw_chart" style="width:100%; height:400px;"></div>
 
     </div>
+    <div id="chiPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="chiPopupHeader" class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+                <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <label for="chi_poly">Poly</label><input id="chi_poly" type="number" value="0" min="0" maxlength="1">
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <p id="chi_poly_radius"></p>
+                </div>
+            </div>
+            <div id="chi_chart" style="width:100%; height:400px;"></div>
+        </div>
+    </div>
+    <nav id="context-menu" class="context-menu">
+
+    </nav>
 </body>
 <script>
     function Main () {
@@ -1367,6 +1436,10 @@
             newLink.click();
         };
 
+        this.DrawChi = function(){
+            console.log('DrawChi');
+        };
+
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
             $('#shot_select').on('change', this, this.Select);
@@ -1381,18 +1454,19 @@
             $('#save_shot').on('click', this, this.Save.bind(this));
             $('#export').on('click', this, this.Export.bind(this));
 
-            this.initDragElement($('#singleEvent')[0]);
+
+            this.initDragElement($('#singleEvent'));
             this.initResizeElement($('#singleEvent')[0]);
-            $('#hide_draggable').on('click', this, function () {
-                $('#singleEvent').attr('hidden', true);
-            });
-            $( "#focus-all" ).contextmenu(function(event) {
-                event.preventDefault();
-                console.log('It`s alive!');
+
+            $('.hide_btn').each(function(el){
+                this.addEventListener('click', function (e) {
+                    $(this).parents('.draggable').attr('hidden', true);
+                });
             });
 
             $('#poly_input').on('change', this, this.draw_popup.bind(this));
             $('#is_show').on('change', this, this.ToggleShow.bind(this));
+            this.contextMenu();
         };
 
         //can be optimised by disabling auto-render
@@ -1576,9 +1650,12 @@
             }
         };
 
-        this.initDragElement = function(elmnt) {
+        this.initDragElement = function(elements) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
+            $(elements).each(function(){
+                $(this).
+            })
             $('#' + elmnt.id + "Header")[0].onmousedown = dragMouseDown;
             elmnt.style.top = 10 + '%';
             elmnt.style.left = 70 + '%'
@@ -1663,6 +1740,190 @@
             both.parentPopup = elmnt;
 
 
+
+        };
+
+        this.contextMenu = function() {
+            function clickInsideElement( e, className ) {
+                let el = e.srcElement || e.target;
+
+                if ( el.classList.contains(className) ) {
+                    return el;
+                } else {
+                    while ( el = el.parentNode ) {
+                        if ( el.classList && el.classList.contains(className) ) {
+                            return el;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            function getPosition(e) {
+                if (!e){
+                    console.log('Warning! getPosition from null event!');
+                    e = window.event;
+                }
+
+                if (e.pageX || e.pageY) {
+                    return {
+                        x: e.pageX,
+                        y: e.pageY
+                    }
+                }
+                if (e.clientX || e.clientY) {
+                    return {
+                        x: e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft,
+                        y: e.clientY + document.body.scrollTop + document.documentElement.scrollTop
+                    }
+                }
+                console.log('getPosition warning! zeroes:', e);
+                return {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+
+            const contextMenuLinkClassName = "context-menu__link";
+            const contextMenuActive = "context-menu--active";
+
+            const taskItemClassName = "context-target";
+            let taskItemInContext;
+
+            let clickCoords;
+            let clickCoordsX;
+            let clickCoordsY;
+
+            const menu = document.querySelector("#context-menu");
+
+            let menuState = false;
+            let menuWidth;
+            let menuHeight;
+
+            let windowWidth;
+            let windowHeight;
+
+            this.init = function() {
+                contextListener();
+                this.clickListener();
+                keyupListener();
+                resizeListener();
+            }.bind(this);
+
+            function contextListener() {
+                document.addEventListener("contextmenu", function(e) {
+                    taskItemInContext = clickInsideElement(e, taskItemClassName );
+
+                    if (taskItemInContext) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleMenuOn();
+                        positionMenu(e);
+                    } else {
+                        taskItemInContext = null;
+                        toggleMenuOff();
+                    }
+                });
+            }
+
+            this.clickListener = function() {
+                document.addEventListener("click", function(e) {
+                    let clickeElIsLink = clickInsideElement( e, contextMenuLinkClassName);
+                    if (clickeElIsLink) {
+                        e.preventDefault();
+                        this.menuItemListener(clickeElIsLink);
+                        e.stopPropagation();
+                    } else {
+                        let button = e.which || e.button;
+                        if ( button === 1 ) {
+                            toggleMenuOff();
+                        }
+                    }
+                }.bind(this));
+            }.bind(this);
+
+            function keyupListener() {
+                window.onkeyup = function(e) {
+                    if ( e.keyCode === 27 ) {
+                        toggleMenuOff();
+                        e.stopPropagation();
+                    }
+                }
+            }
+
+            function resizeListener() {
+                window.onresize = function(e) {
+                    toggleMenuOff();
+                };
+            }
+
+            function toggleMenuOn() {
+                if (!menuState) {
+                    //build menu here
+
+                    menu.innerHTML = `
+<ul class="context-menu__items">
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="save">Save as picture(not implemented yet)</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="chi">Chi-squared distribution(not implemented yet)</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="3d">3D map(not implemented yet)</a>
+    </li>
+</ul>
+                    `;
+
+                    menuState = true;
+                    menu.classList.add( contextMenuActive );
+                }
+            }
+
+            function toggleMenuOff() {
+                if (menuState) {
+                    menu.innerHTML = 'Nothing to see here.';
+                    menuState = false;
+                    menu.classList.remove( contextMenuActive );
+                }
+            }
+
+            function positionMenu(e) {
+                clickCoords = getPosition(e);
+                clickCoordsX = clickCoords.x;
+                clickCoordsY = clickCoords.y;
+
+                menuWidth = menu.offsetWidth + 4;
+                menuHeight = menu.offsetHeight + 4;
+
+                windowWidth = window.innerWidth + window.scrollX;
+                windowHeight = window.innerHeight + window.scrollY;
+
+                if ((windowWidth - clickCoordsX) < menuWidth) {
+                    menu.style.left = windowWidth - menuWidth + "px";
+                } else {
+                    menu.style.left = clickCoordsX + "px";
+                }
+
+                if ((windowHeight - clickCoordsY) < menuHeight ) {
+                    menu.style.top = windowHeight - menuHeight + "px";
+                } else {
+                    menu.style.top = clickCoordsY + "px";
+                }
+            }
+
+            this.menuItemListener = function( link ) {
+                toggleMenuOff();
+                if(link.getAttribute("data-action") === 'chi'){
+                    this.DrawChi();
+                }else{
+                    console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
+                }
+            }.bind(this);
+
+            this.init();
 
         };
 
