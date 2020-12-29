@@ -156,7 +156,7 @@
             </div>
         </div>
     </div>
-    <div id="singleEvent" class="draggable" hidden tabindex="1" style="width: 400px;">
+    <div id="singleEventPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
@@ -170,7 +170,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <label for="poly_input">Poly</label><input id="poly_input" type="number" value="0" min="0" maxlength="1">
+                    <label for="poly_input_1">Poly</label><input id="poly_input_1" type="number" class="poly_input" value="0" min="0" maxlength="1">
                 </div>
                 <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                     <p id="poly_radius"></p>
@@ -191,26 +191,30 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <div id="chiPopupHeader" class="draggable-header" tabindex="2">Hold here to move</div>
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
                     <button class="btn btn-danger hide_btn">Hide window</button>
                 </div>
             </div>
                 <div class="row">
-                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <label for="chi_poly">Poly</label><input id="chi_poly" type="number" value="0" min="0" maxlength="1">
-                </div>
-                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <p id="chi_poly_radius"></p>
-                </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <label for="poly_input_2">Poly</label><input id="poly_input_2" class="poly_input" type="number" value="0" min="0" maxlength="1">
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p id="chi_poly_radius"></p>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p id="chi_pointCount"></p>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p id="chi_offscale"></p>
+                    </div>
             </div>
             <div id="chi_chart" style="width:100%; height:400px;"></div>
         </div>
     </div>
-    <nav id="context-menu" class="context-menu">
-
-    </nav>
+    <nav id="context-menu" class="context-menu"></nav>
 </body>
 <script>
     function Main () {
@@ -259,6 +263,18 @@
             true
         ];
 
+        this.selectors = {
+            chiPopup: $('#chiPopup')[0],
+            singleEventPopup: $('#singleEventPopup')[0],
+            draggables: $('.draggable'),
+            polyInputs: $('.poly_input'),
+            isShowSingleEvent: $('#is_show'),
+            chi_count: $('#chi_pointCount'),
+            chi_offscale: $('#chi_offscale'),
+            chi_radius: $('#chi_poly_radius')
+        };
+
+        //header charts
         this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
             theme: "light2",
             charts: [{
@@ -322,7 +338,6 @@
                 this.RangeChanged(e);
             }.bind(this),
         });
-
         this.m_radius_chart = new CanvasJS.Chart("radius_chart", {
             title: {
                 text: "Spatial points",
@@ -347,6 +362,7 @@
         });
         this.m_radius_chart.render();
 
+        //main charts
         this.m_T_evo_chart = new CanvasJS.Chart("T_evo_chart", {
             title: {
                 text: 'Electron temperature evolution',
@@ -570,6 +586,7 @@
         });
         this.m_n_profile_chart.render();
 
+        //single event popup charts
         this.m_fitting_chart = new CanvasJS.Chart("fitting_chart", {
             zoomEnabled: true,
             title: {
@@ -600,7 +617,7 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(){
-                    let poly_ind = $('#poly_input').val();
+                    let poly_ind = this.selectors.polyInputs.val();
                     let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) + 'eV</p>' +
                         '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
                     for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
@@ -616,7 +633,7 @@
                 cursor: "pointer",
                 itemmouseover: function(e) {
                     if(e.dataSeries.visible) {
-                        let poly_ind = $('#poly_input').val();
+                        let poly_ind = this.selectors.polyInputs.val();
                         // fuck up
                         let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
 
@@ -648,7 +665,7 @@
                 }.bind(this),
                 itemmouseout: function(e) {
                     if(e.dataSeries.visible) {
-                        let poly_ind = $('#poly_input').val();
+                        let poly_ind = this.selectors.polyInputs.val();
                         let series_index = 0;
                         let ch = 0;
                         for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
@@ -671,7 +688,7 @@
                 }.bind(this),
                 itemclick: function (e) {
                     e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
-                    let poly_ind = $('#poly_input').val();
+                    let poly_ind = this.selectors.polyInputs.val();
                     let series_index = 0;
                     let ch = 0;
                     for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
@@ -730,7 +747,7 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
-                    let poly_ind = $('#poly_input').val();
+                    let poly_ind = this.selectors.polyInputs.val();
                     let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns</p>';
                     text += '<p>cell = ' + e.entries[0].index + '</p>';
                     let ch = 0;
@@ -797,6 +814,44 @@
         });
         this.m_raw_chart.render();
 
+        //chi popup
+        this.m_chi_chart = new CanvasJS.Chart("chi_chart", {
+            title: {
+                text: '𝜒\u00B2 distribution.',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'probability density',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: '𝜒\u00B2',
+                titleFontSize: 12,
+                minimum: 0,
+                maximum: 8,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial',
+            },
+            data: [{
+                showInLegend: true,
+                legendText: "Experimental",
+                type: 'column',
+                color: "#6D78AD",
+                dataPoints: []
+            }]
+        });
+        this.m_chi_chart.render();
+
         this.RangeChanged = function(e){
             this.m_T_evo_chart.options.axisX.minimum = e.minimum;
             this.m_T_evo_chart.options.axisX.maximum = e.maximum;
@@ -805,6 +860,10 @@
             this.m_n_evo_chart.options.axisX.maximum = e.maximum;
             this.m_n_evo_chart.render();
             this.UpdateProfiles();
+
+            if(!this.selectors.chiPopup.hasAttribute("hidden")){
+                this.DrawChi();
+            }
         };
 
         this.Request = function (req, callback) {
@@ -869,7 +928,7 @@
                     Object.assign(this.m_currentShot, resp);
                     this.m_currentShot.shotn = shotn;
                     this.m_currentShot.is_plasma = is_plasma;
-                    $('#poly_input').attr('max', this.m_currentShot.polys.length - 1);
+                    this.selectors.polyInputs.attr('max', this.m_currentShot.polys.length - 1);
                     $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
                     this.m_timestamp_chart.options.charts[0].data = [{
                         color: "#B0D0B0",
@@ -1174,9 +1233,9 @@
                 console.log('WTF? this is not expected!', ev);
                 poly_ind = (ev.dataSeriesIndex - 1) / 2;
             }
-            $('#poly_input').val(poly_ind);
+            this.selectors.polyInputs.val(poly_ind);
             this.update_popup_data()
-            $('#singleEvent')[0].removeAttribute('hidden');
+            this.selectors.singleEventPopup.removeAttribute('hidden');
         };
 
         this.update_popup_data = function (){
@@ -1195,16 +1254,16 @@
         };
 
         this.draw_popup = function(){
-            let poly_ind = $('#poly_input').val();
+            let poly_ind = this.selectors.polyInputs.val();
             let is_plasma = $('#is_plasma')[0].checked;
             let shotn = $('#shot_select').val();
 
             //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind]);
             if(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden){
-                $('#is_show').prop('checked', false);
+                this.selectors.isShowSingleEvent.prop('checked', false);
                 //console.log('unchecked');
             }else{
-                $('#is_show').prop('checked', true);
+                this.selectors.isShowSingleEvent.prop('checked', true);
                 //console.log('checked');
             }
 
@@ -1357,8 +1416,8 @@
         };
 
         this.ToggleShow = function(){
-            let poly_ind = $('#poly_input').val();
-            if($('#is_show')[0].checked){
+            let poly_ind = this.selectors.polyInputs.val();
+            if(this.selectors.isShowSingleEvent[0].checked){
                 //console.log('display', poly_ind, this.m_selected_event_ind);
                 delete this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden;
             }else{
@@ -1437,7 +1496,62 @@
         };
 
         this.DrawChi = function(){
-            console.log('DrawChi');
+            this.selectors.chiPopup.removeAttribute('hidden');
+            let start_ind = null;
+            let end_ind = null;
+            let pointCount = 0;
+            let poly_ind = this.selectors.polyInputs.val();
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if(!this.m_currentShot.events[event_ind].processed_bad &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden &&
+                    this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.get("minimum") &&
+                    this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.get("maximum")){
+                    if(!start_ind){
+                        start_ind = event_ind;
+                    }
+                    end_ind = event_ind;
+                    pointCount++;
+                }
+            }
+            let binCount = Math.floor(Math.sqrt(pointCount));
+            let width = this.m_chi_chart.options.axisX.maximum / binCount;
+            let bins = new Array(binCount).fill(0);
+            let offscale = 0;
+            for(let event_ind = start_ind; event_ind <= end_ind; event_ind++){
+                if(!this.m_currentShot.events[event_ind].processed_bad &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+
+                    let bin_ind = Math.floor(this.m_currentShot.events[event_ind].T_e[poly_ind].chi2 / width);
+                    if(bin_ind < binCount){
+                        bins[bin_ind]++;
+                    }else{
+                        offscale++;
+                    }
+                }
+            }
+            this.m_chi_chart.options.data[0].dataPoints = [];
+            for(let bin_ind = 0; bin_ind < binCount; bin_ind++){
+                this.m_chi_chart.options.data[0].dataPoints.push({
+                    x: width * (bin_ind + 0.5),
+                    y: bins[bin_ind] / pointCount
+                });
+            }
+            this.m_chi_chart.options.dataPointWidth = 0.9 * this.m_chi_chart.axisX[0].bounds.width / binCount;
+            this.m_chi_chart.render();
+            this.selectors.chi_radius.html(this.m_currentShot.polys[poly_ind].R + ' mm');
+            this.selectors.chi_count.html('Total: ' + pointCount);
+            this.selectors.chi_offscale.html('Offscale: ' + offscale);
+        };
+
+        this.UpdatePopups = function () {
+            if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
+                this.draw_popup();
+            }
+            if(!this.selectors.chiPopup.hasAttribute("hidden")){
+                this.DrawChi();
+            }
         };
 
         this.ConnectControls = function () {
@@ -1445,18 +1559,21 @@
             $('#shot_select').on('change', this, this.Select);
             $('#is_plasma').on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
-                if(!$('#singleEvent')[0].contains(document.activeElement)) {
-                    this.KeydownMain(event);
+                if(this.selectors.singleEventPopup.contains(document.activeElement)){
+                    this.KeydownSingleEventPopup(event);
+                }else if(this.selectors.chiPopup.contains(document.activeElement)){
+                    this.KeydownChiPopup(event);
                 }else{
-                    this.KeydownDraggable(event);
+                    this.KeydownMain(event);
                 }
+
             }.bind(this));
             $('#save_shot').on('click', this, this.Save.bind(this));
             $('#export').on('click', this, this.Export.bind(this));
 
 
-            this.initDragElement($('.draggable'));
-            this.initResizeElement($('.draggable'));
+            this.initDragElement(this.selectors.draggables);
+            this.initResizeElement(this.selectors.draggables);
 
             $('.hide_btn').each(function(el){
                 this.addEventListener('click', function (e) {
@@ -1464,8 +1581,11 @@
                 });
             });
 
-            $('#poly_input').on('change', this, this.draw_popup.bind(this));
-            $('#is_show').on('change', this, this.ToggleShow.bind(this));
+            this.selectors.polyInputs.on('change', this, function(e){
+                this.selectors.polyInputs.val(e.target.value);
+                this.UpdatePopups();
+            }.bind(this));
+            this.selectors.isShowSingleEvent.on('change', this, this.ToggleShow.bind(this));
             this.contextMenu();
         };
 
@@ -1474,6 +1594,7 @@
             let resized = false;
             if (event.key === 'ArrowLeft') {
                 event.preventDefault();
+                event.stopPropagation();
                 if (event.altKey) {
                     if (event.ctrlKey) {
                         console.log('fuck off');
@@ -1507,6 +1628,7 @@
                 }
             } else if (event.key === 'ArrowRight') {
                 event.preventDefault();
+                event.stopPropagation();
                 if (event.altKey) {
                     if (event.ctrlKey) {
                         console.log('fuck off');
@@ -1540,6 +1662,7 @@
                 }
             } else if (event.key === 'f') {
                 event.preventDefault();
+                event.stopPropagation();
                 if('labelBackgroundColor' in this.m_timestamp_chart.options.charts[0].axisY){
                     //console.log('release');
                     delete this.m_timestamp_chart.options.charts[0].axisY.maximum;
@@ -1600,32 +1723,31 @@
             }
         };
 
-        this.KeydownDraggable = function(event){
+        this.KeydownSingleEventPopup = function(event){
             if (event.key === 'ArrowRight') {
-                event.preventDefault();
                 this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
                     this.m_currentShot.events.length - 1);
                 this.draw_popup();
             }else if (event.key === 'ArrowLeft') {
-                event.preventDefault();
+                event.stopPropagation();
                 this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
                 this.draw_popup();
             }else if (event.key === 'ArrowUp') {
-                let poly_input = $('#poly_input');
-                event.preventDefault();
-                if(poly_input.val() < poly_input.attr('max')){
-                    $('#poly_input')[0].stepUp();
-                    this.draw_popup();
+                if(this.selectors.polyInputs.val() < this.selectors.polyInputs.attr('max')){
+                    this.selectors.polyInputs.each(function(){
+                        $(this)[0].stepUp();
+                    });
+                    this.UpdatePopups();
                 }
             }else if (event.key === 'ArrowDown') {
-                let poly_input = $('#poly_input');
-                event.preventDefault();
-                if(poly_input.val() > poly_input.attr('min')){
-                    $('#poly_input')[0].stepDown();
-                    this.draw_popup();
+                if(this.selectors.polyInputs.val() > this.selectors.polyInputs.attr('min')){
+
+                    this.selectors.polyInputs.each(function(){
+                      $(this)[0].stepDown();
+                    });
+                    this.UpdatePopups();
                 }
             }else if (event.key === 'f') {
-                event.preventDefault();
                 if('labelBackgroundColor' in this.m_fitting_chart.options.charts[0].axisY){
                     //console.log('release');
                     delete this.m_fitting_chart.options.charts[0].axisY.maximum;
@@ -1647,7 +1769,38 @@
                 }
                 this.m_fitting_chart.render();
                 this.m_raw_chart.render();
+            }else{
+                return;
             }
+            event.stopPropagation();
+            event.preventDefault();
+        };
+
+        this.KeydownChiPopup = function(event){
+            if (event.key === 'ArrowRight') {
+                this.KeydownMain(event);
+            }else if (event.key === 'ArrowLeft') {
+                this.KeydownMain(event);
+            }else if (event.key === 'ArrowUp') {
+                if(this.selectors.polyInputs.val() < this.selectors.polyInputs.attr('max')){
+                    this.selectors.polyInputs.each(function(){
+                        $(this)[0].stepUp();
+                    });
+                    this.UpdatePopups();
+                }
+            }else if (event.key === 'ArrowDown') {
+
+                if(this.selectors.polyInputs.val() > this.selectors.polyInputs.attr('min')){
+                    this.selectors.polyInputs.each(function(){
+                      $(this)[0].stepDown();
+                    });
+                    this.UpdatePopups();
+                }
+            }else{
+                return;
+            }
+            event.stopPropagation();
+            event.preventDefault();
         };
 
         this.initDragElement = function(elements) {
@@ -1688,6 +1841,7 @@
             }
         };
 
+        //render only child charts
         this.initResizeElement = function(elements) {
             let startX, startY, startWidth, startHeight;
             let current;
@@ -1702,8 +1856,11 @@
             this.stopDrag = function() {
                 document.documentElement.removeEventListener("mousemove", this.doDrag, false);
                 document.documentElement.removeEventListener("mouseup", this.stopDrag, false);
+                //render only child charts
+
                 this.m_fitting_chart.render();
                 this.m_raw_chart.render();
+                this.m_chi_chart.render();
             }.bind(this);
 
             this.initDrag = function(e) {
@@ -1930,7 +2087,37 @@
 
         };
 
+        this.staticChi = function(){
+            function gamma(z) {
+                return Math.sqrt(2 * Math.PI / z) * Math.pow((1 / Math.E) * (z + 1 / (12 * z - 1 / (10 * z))), z);
+            }
+
+            function density(chi, k){
+                return Math.pow(0.5, k * 0.5) * Math.pow(chi, (k * 0.5) - 1) * Math.exp(- chi * 0.5) / gamma(k * 0.5)
+            }
+
+            let step = 0.2
+
+            for(let degreesOfFreedom = 2; degreesOfFreedom < 5; degreesOfFreedom++){
+                let line = {
+                    showInLegend: true,
+                    legendText: "K = " + degreesOfFreedom,
+                    type: 'line',
+                    color: this.palette[degreesOfFreedom],
+                    dataPoints: []
+                };
+                for(let chi = 0; chi < this.m_chi_chart.options.axisX.maximum; chi += step){
+                    line.dataPoints.push({
+                        x: chi,
+                        y: density(chi, degreesOfFreedom)
+                    });
+                }
+                this.m_chi_chart.options.data.push(line);
+            }
+        };
+
         this.ConnectControls();
+        this.staticChi();
     }
 
 
