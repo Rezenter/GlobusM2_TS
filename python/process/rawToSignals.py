@@ -189,22 +189,23 @@ class Integrator:
     def process_shot(self):
         print('Processing shot...')
         for event_ind in range(self.laser_count):
-            bad_flag = False
             # print('Event %d' % event_ind)
-            laser, laser_bad = self.process_laser_event(event_ind)
-            bad_flag = bad_flag or laser_bad
+            laser, error = self.process_laser_event(event_ind)
             proc_event = {
                 'timestamp': self.config['adc']['first_shot'] + event_ind * 3.0303,
                 'laser': laser,
                 'poly': {},
-                'processed_bad': bad_flag
+                'error': error
             }
-            for poly in self.config['poly']:
-                proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
+            if error is None:
+                for poly in self.config['poly']:
+                    proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
 
-                #break  # debug!
-
-            self.processed.append(proc_event)
+                self.processed.append(proc_event)
+            else:
+                self.processed.append({
+                    'error': 'laser'
+                })
 
         self.save_processed()
 
@@ -251,7 +252,7 @@ class Integrator:
         return res, integration_stop
 
     def process_laser_event(self, event_ind):
-        bad_flag = False
+        error = None
         laser = {
             'boards': [],
             'ave': {
@@ -268,15 +269,14 @@ class Integrator:
                 laser['boards'].append({
                     'captured_bad': True
                 })
-                bad_flag = True
+                error = 'bad captured'
                 continue
             adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             front_ind = find_front_findex(signal, self.header['triggerThreshold'])
             integration_limit = math.floor(front_ind) - self.config['adc']['prehistorySep']
             if integration_limit < self.left_limit:
-                print('Warning, sync signal is too close to the left.')
-                bad_flag = True
+                error = 'Sync left'
             zero = statistics.fmean(signal[:integration_limit])
             maximum = float('-inf')
             minimum = float('inf')
@@ -285,8 +285,7 @@ class Integrator:
                 minimum = min(minimum, cell)
             if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
                     maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                print('Warning! sync signal offscale!')
-                bad_flag = True
+                error = 'sync offscale'
             integral, stop_ind = self.integrate_energy(signal[integration_limit:], zero)
             laser['boards'].append({
                 'sync_ind': front_ind,
@@ -310,39 +309,33 @@ class Integrator:
                 continue
             if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
                     laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
-                print('Warning! Boards prehistory differ too much for event %d' % event_ind)
-                bad_flag = True
+                error = 'prehistory differ'
             if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                     laser['ave']['int'] > self.laser_integral_residual_pc:
-                print('Warning! Boards integrals differ too much for event %d' % event_ind)
-                bad_flag = True
+                error = 'integrals differ'
             if math.fabs(laser['ave']['int_len'] - laser['boards'][board_ind]['int_len']) > \
                     self.laser_length_residual_ind:
-                print('Warning! Boards integral length differ too much for event %d' % event_ind)
-                bad_flag = True
-        return laser, bad_flag
+                error = 'integral length differ'
+        if error is not None:
+            print(error)
+        return laser, error
 
     def process_poly_event(self, event_ind, poly, laser):
         res = {
             'ch': []
         }
         for ch_ind in range(len(poly['channels'])):
-            bad_flag = False
+            error = None
             sp_ch = poly['channels'][ch_ind]
             board_ind = sp_ch['adc']
             if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
                 res['ch'].append({
-                    'processed_bad': True
-                })
-                continue
-            if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
-                res['ch'].append({
-                    'processed_bad': True
+                    'error': 'bad captured'
                 })
                 continue
             if 'skip' in sp_ch and sp_ch['skip']:
                 res['ch'].append({
-                    'processed_bad': True
+                    'error': 'skip'
                 })
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
@@ -351,27 +344,25 @@ class Integrator:
                                           (poly['delay'] + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
             integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
             if integration_from < self.left_limit:
-                print('Warning! Integration limit is too close to the left for Poly %d channel %d  in event %d!' %
-                      (poly['ind'], sp_ch['ch'], event_ind))
-                bad_flag = True
+                error = 'left boundary'
             if integration_to > self.header['eventLength'] - self.right_limit:
-                print('Warning! Integration limit is too close to the right for Poly %d channel %d  in event %d!' %
-                      (poly['ind'], sp_ch['ch'], event_ind))
-                bad_flag = True
+                error = 'right boundary'
             zero = statistics.fmean(signal[:integration_from])
             maximum = float('-inf')
             minimum = float('inf')
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
-                    maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                print('Warning! Poly %d sp.channel %d offscale in event %d!' % (poly['ind'], ch_ind + 1, event_ind))
-                bad_flag = True
+            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline:
+                error = 'minimum %.1f' % minimum
+            elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
+                error = 'maximum %.1f' % maximum
             integral = 0
-            if not bad_flag:
+            if error is None:
                 for cell in range(integration_from, integration_to - 1):
                     integral += self.time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
+            else:
+                print(error)
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
                                                        self.config['preamp']['charge'] *
                                                        self.config['preamp']['feedbackResistance'] *
@@ -390,48 +381,6 @@ class Integrator:
                 'int': integral,
                 'ph_el': photoelectrons,
                 'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
-                'processed_bad': bad_flag
+                'error': error
             })
         return res
-
-    def plot(self, event_ind, poly_ind):
-        if not self.loaded:
-            self.load_raw()
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        tmp = None
-        for ch_ind in range(len(self.config['poly'][poly_ind]['channels'])):
-            sp_ch = self.config['poly'][poly_ind]['channels'][ch_ind]
-            board_ind = sp_ch['adc']
-            if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
-                continue
-            #if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
-            #    continue
-            if 'skip' in sp_ch and sp_ch['skip']:
-                continue
-            adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
-            signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            start = self.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
-            tmp = plt.plot([(cell_ind - start) * self.time_step for cell_ind in range(len(signal))],
-                     [y - self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['zero_lvl'] for y in signal],
-                     label='ch %d' % (ch_ind + 1))
-            ax.axvspan((self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['from'] - start) * self.time_step,
-                       (self.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['to'] - start) * self.time_step,
-                       alpha=0.3, color=tmp[-1].get_color())
-            del signal
-        plt.ylabel('signal, mV')
-        plt.xlabel('timeline, ns')
-        plt.title('Poly %d, event %d' % (poly_ind, event_ind))
-        plt.xlim(-5, 175)
-        plt.ylim(-50, 2350)
-
-        ax.legend()
-        plt.grid(color='k', linestyle='-', linewidth=1)
-        #plt.show()
-        filename = 'figs/ev%d_p%d.png' % (event_ind, poly_ind)
-        plt.savefig(filename, dpi=600)
-        plt.close(fig)
-        del tmp
-        del fig
-        del ax
-        print('plotted %s' % filename)

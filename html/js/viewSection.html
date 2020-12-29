@@ -173,7 +173,7 @@
                     <label for="poly_input_1">Poly</label><input id="poly_input_1" type="number" class="poly_input" value="0" min="0" maxlength="1">
                 </div>
                 <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <p id="poly_radius"></p>
+                    <p class="poly_radius"></p>
                 </div>
                 <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                     <p id="event_timestamp"></p>
@@ -183,8 +183,8 @@
                 </div>
             </div>
         </div>
-        <div id="fitting_chart" style="width:100%; height:400px;"></div>
-        <div id="raw_chart" style="width:100%; height:400px;"></div>
+        <div id="fitting_chart" style="width:100%; height:400px;" class="context-target" single expected></div>
+        <div id="raw_chart" style="width:100%; height:400px;" class="context-target" single raw></div>
 
     </div>
     <div id="chiPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
@@ -202,7 +202,7 @@
                         <label for="poly_input_2">Poly</label><input id="poly_input_2" class="poly_input" type="number" value="0" min="0" maxlength="1">
                     </div>
                     <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                        <p id="chi_poly_radius"></p>
+                        <p class="poly_radius"></p>
                     </div>
                     <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
                         <p id="chi_pointCount"></p>
@@ -211,7 +211,7 @@
                         <p id="chi_offscale"></p>
                     </div>
             </div>
-            <div id="chi_chart" style="width:100%; height:400px;"></div>
+            <div id="chi_chart" style="width:100%; height:400px;" class="context-target"></div>
         </div>
     </div>
     <nav id="context-menu" class="context-menu"></nav>
@@ -271,7 +271,9 @@
             isShowSingleEvent: $('#is_show'),
             chi_count: $('#chi_pointCount'),
             chi_offscale: $('#chi_offscale'),
-            chi_radius: $('#chi_poly_radius')
+            poly_radius: $('.poly_radius'),
+            shotn: $('#shot_select'),
+            isPlasma: $('#is_plasma')
         };
 
         //header charts
@@ -643,7 +645,7 @@
                             if(series_index === e.dataSeriesIndex){
                                 break;
                             }
-                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].processed_bad) {
+                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
                                 series_index += 1;
                             }else{
                                 series_index += 3;
@@ -672,7 +674,7 @@
                             if(series_index === e.dataSeriesIndex){
                                 break;
                             }
-                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].processed_bad) {
+                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
                                 series_index += 1;
                             }else{
                                 series_index += 3;
@@ -695,7 +697,7 @@
                         if(series_index === e.dataSeriesIndex){
                             break;
                         }
-                        if(this.m_current_event_sig.poly[poly_ind].ch[ch].processed_bad) {
+                        if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
                             series_index += 1;
                         }else{
                             series_index += 3;
@@ -703,7 +705,7 @@
                     }
                     this.m_current_channels[ch] = e.dataSeries.visible;
                     this.m_fitting_chart.options.data[e.dataSeriesIndex].visible = e.dataSeries.visible;
-                    if(!this.m_current_event_sig.poly[poly_ind].ch[ch].processed_bad) {
+                    if(this.m_current_event_sig.poly[poly_ind].ch[ch].error === null) {
                         this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
                         this.m_fitting_chart.options.data[e.dataSeriesIndex + 2].visible = e.dataSeries.visible;
                     }
@@ -748,8 +750,7 @@
                 shared: true,
                 contentFormatter: function(e){
                     let poly_ind = this.selectors.polyInputs.val();
-                    let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns</p>';
-                    text += '<p>cell = ' + e.entries[0].index + '</p>';
+                    let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns; cell = ' + e.entries[0].index + '</p>';
                     let ch = 0;
                     for(; ch < this.m_current_event_raw.data.length; ch++){
                         if(this.m_current_channels[ch]) {
@@ -893,12 +894,12 @@
 
         this.UpdateShotSelect = function() {
             let shots = this.m_plasma_shots;
-            if(! $('#is_plasma')[0].checked){
+            if(! this.selectors.isPlasma[0].checked){
                 shots = this.m_debug_shots;
             }
             let options = [];
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
-            $('#shot_select').html(options);
+            this.selectors.shotn.html(options);
 
             options = ['<option>2020.12.10</option>'];
             $('#config_select').html(options);
@@ -915,8 +916,8 @@
         };
 
         this.Select = function(){
-            let shotn = $('#shot_select').val();
-            let is_plasma = $('#is_plasma')[0].checked;
+            let shotn = this.selectors.shotn.val();
+            let is_plasma = this.selectors.isPlasma[0].checked;
             this.Request(
                 {
                     reqtype: 'get_shot',
@@ -1029,7 +1030,7 @@
 
                     //console.log(resp);
                     for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
-                        if(resp.events[event_ind].processed_bad){
+                        if(resp.events[event_ind].error !== null){
                             this.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
                                 {
                                     x: resp.events[event_ind].timestamp,
@@ -1109,7 +1110,7 @@
 
         this.MainChartsSetPoint = function(event_ind, poly_ind){
             let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
-            if(this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad ||
+            if(this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
                 this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
                 this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
@@ -1255,8 +1256,6 @@
 
         this.draw_popup = function(){
             let poly_ind = this.selectors.polyInputs.val();
-            let is_plasma = $('#is_plasma')[0].checked;
-            let shotn = $('#shot_select').val();
 
             //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind]);
             if(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden){
@@ -1268,10 +1267,10 @@
             }
 
             $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
-            $('#poly_radius').html(this.m_currentShot.polys[poly_ind].R + ' mm');
 
-            this.update_fitting_chart(poly_ind, is_plasma, shotn);
-            this.update_raw_chart(poly_ind, is_plasma, shotn);
+
+            this.update_fitting_chart(poly_ind, this.m_currentShot.is_plasma, this.m_currentShot.shotn);
+            this.update_raw_chart(poly_ind, this.m_currentShot.is_plasma, this.m_currentShot.shotn);
         };
 
         this.update_fitting_chart = function(poly_ind, is_plasma, shotn){
@@ -1305,7 +1304,7 @@
                             name: 'ch ' + (ch + 1),
                             dataPoints: data
                         });
-                        if(!resp.poly[poly_ind].ch[ch].processed_bad) {
+                        if(resp.poly[poly_ind].ch[ch].error === null) {
                             this.m_fitting_chart.options.data.push({
                                 type: "scatter",
                                 visible: this.m_current_channels[ch],
@@ -1337,7 +1336,8 @@
                     }
                     this.m_fitting_chart.options.axisX.minimum = 0;
                     this.m_fitting_chart.options.axisX.maximum =
-                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2;
+                        Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2,
+                            this.m_expected.T_arr[this.m_expected.T_arr.length - 1]);
                     this.m_fitting_chart.render();
 
                 }.bind(this)
@@ -1502,8 +1502,8 @@
             let pointCount = 0;
             let poly_ind = this.selectors.polyInputs.val();
             for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
-                if(!this.m_currentShot.events[event_ind].processed_bad &&
-                    !this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad &&
+                if(this.m_currentShot.events[event_ind].error === null &&
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
                     !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden &&
                     this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.get("minimum") &&
                     this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.get("maximum")){
@@ -1519,8 +1519,8 @@
             let bins = new Array(binCount).fill(0);
             let offscale = 0;
             for(let event_ind = start_ind; event_ind <= end_ind; event_ind++){
-                if(!this.m_currentShot.events[event_ind].processed_bad &&
-                    !this.m_currentShot.events[event_ind].T_e[poly_ind].processed_bad &&
+                if(this.m_currentShot.events[event_ind].error === null &&
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
                     !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
 
                     let bin_ind = Math.floor(this.m_currentShot.events[event_ind].T_e[poly_ind].chi2 / width);
@@ -1540,12 +1540,33 @@
             }
             this.m_chi_chart.options.dataPointWidth = 0.9 * this.m_chi_chart.axisX[0].bounds.width / binCount;
             this.m_chi_chart.render();
-            this.selectors.chi_radius.html(this.m_currentShot.polys[poly_ind].R + ' mm');
             this.selectors.chi_count.html('Total: ' + pointCount);
             this.selectors.chi_offscale.html('Offscale: ' + offscale);
         };
 
+        this.Dump = function(target){
+            let res = {
+                target: target
+            };
+            if(target.getNamedItem('evo') !== null || target.getNamedItem('prof') !== null){
+                res.m_currentShot = this.m_currentShot;
+            }
+            if(target.getNamedItem('single') !== null){
+                res.m_current_event_sig = this.m_current_event_sig;
+                res.m_current_event_sig.poly_ind = this.selectors.polyInputs.val();
+                res.m_current_event_sig.R_ind = this.selectors.poly_radius.val();
+                //event #
+            }
+            if(target.getNamedItem('expected') !== null) {
+                res.m_expected = this.m_expected;
+                res.m_expected.poly_ind = this.selectors.polyInputs.val();
+                res.m_expected.R_ind = this.selectors.poly_radius.val();
+            }
+            console.log(res);
+        };
+
         this.UpdatePopups = function () {
+            this.selectors.poly_radius.html(this.m_currentShot.polys[this.selectors.polyInputs.val()].R + ' mm');
             if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
                 this.draw_popup();
             }
@@ -1556,8 +1577,8 @@
 
         this.ConnectControls = function () {
             $('#shot_refresh').on('click', this, this.Refresh);
-            $('#shot_select').on('change', this, this.Select);
-            $('#is_plasma').on('change', this, this.UpdateShotSelect);
+            this.selectors.shotn.on('change', this, this.Select);
+            this.selectors.isPlasma.on('change', this, this.UpdateShotSelect);
             $(document).keydown(function(event){
                 if(this.selectors.singleEventPopup.contains(document.activeElement)){
                     this.KeydownSingleEventPopup(event);
@@ -2026,11 +2047,15 @@
                     menu.innerHTML = `
 <ul class="context-menu__items">
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="save">Save as picture(not implemented yet)</a>
+        <a href="#" class="context-menu__link" data-action="chi">Chi-squared distribution</a>
     </li>
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="chi">Chi-squared distribution(not implemented yet)</a>
+        <a href="#" class="context-menu__link" data-action="dump">Dump to console</a>
     </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="save">Save as picture(not implemented yet)</a>
+    </li>
+
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="3d">3D map(not implemented yet)</a>
     </li>
@@ -2078,6 +2103,8 @@
                 toggleMenuOff();
                 if(link.getAttribute("data-action") === 'chi'){
                     this.DrawChi();
+                }if(link.getAttribute("data-action") === 'dump'){
+                    this.Dump(taskItemInContext.attributes);
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }

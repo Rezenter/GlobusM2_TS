@@ -87,7 +87,6 @@ class Processor:
             return self.result
         else:
             return {
-                'processed_bad': True,
                 'error': err
             }
 
@@ -172,10 +171,10 @@ class Processor:
         current_index = 0
         while self.signal['data'][current_index]['timestamp'] <= 100:
             event = self.signal['data'][current_index]
-            if not event['processed_bad']:
+            if event['error'] is None:
                 for poly_ind in range(len(event['poly'])):
                     for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
-                        if event['poly']['%d' % poly_ind]['ch'][ch_ind]['processed_bad']:
+                        if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
                             continue
                         count[poly_ind][ch_ind] += 1
                         stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
@@ -194,17 +193,16 @@ class Processor:
             # print(poly)
 
         for event_ind in range(len(self.signal['data'])):
-            bad_flag = False
+            error = None
             proc_event = {
                 'timestamp': self.signal['data'][event_ind]['timestamp'],
                 'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected['J_from_int']
             }
-            if self.signal['data'][event_ind]['processed_bad']:
-                bad_flag = True
+            if self.signal['data'][event_ind]['error'] is not None:
+                error = self.signal['data'][event_ind]['error']
             else:
                 poly = []
                 energy = self.expected['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
-
                 #energy = 1  ## DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
@@ -212,7 +210,7 @@ class Processor:
                                           stray[poly_ind], energy)
                     poly.append(temp)
                 proc_event['T_e'] = poly
-            proc_event['processed_bad'] = bad_flag
+            proc_event['error'] = error
             self.result['events'].append(proc_event)
         self.save_result()
 
@@ -227,7 +225,7 @@ class Processor:
     def calc_temp(self, event, poly, stray, E):
         channels = []
         for ch_ind in range(5):
-            if not event['ch'][ch_ind]['processed_bad']:
+            if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
             else:
                 print('Warning! skipped ch%d' % ch_ind)
@@ -249,7 +247,7 @@ class Processor:
                     chi2 = current_chi
             if min_index >= len(self.expected['T_arr']) - 2 or min_index == 0:
                 res = {
-                    'processed_bad': True
+                    'error': 'minimized on edge'
                 }
             else:
                 left = {
@@ -331,12 +329,12 @@ class Processor:
                     'n': n_e,
                     'n_err': math.sqrt(nerr2),
                     'mult': mult,
-                    'processed_bad': False
+                    'error': None
                 }
         else:
             print('Less than 2 signals!')
             res = {
-                'processed_bad': True
+                'error': '< 2 channels'
             }
         return res
 
@@ -354,7 +352,7 @@ class Processor:
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
                 for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['processed_bad'] or ('hidden' in poly and poly['hidden']):
+                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
@@ -373,7 +371,7 @@ class Processor:
             line = '%.1f, ' % self.result['polys'][poly_ind]['R']
             for event in self.result['events']:
                 if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['processed_bad'] or \
+                    if event['T_e'][poly_ind]['error'] is not None or \
                             ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
@@ -393,7 +391,7 @@ class Processor:
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
                 for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['processed_bad'] or ('hidden' in poly and poly['hidden']):
+                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
                         line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
@@ -412,7 +410,7 @@ class Processor:
             line = '%.1f, ' % self.result['polys'][poly_ind]['R']
             for event in self.result['events']:
                 if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['processed_bad'] or \
+                    if event['T_e'][poly_ind]['error'] is not None or \
                             ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
