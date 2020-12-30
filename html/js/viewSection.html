@@ -406,10 +406,15 @@
                 contentFormatter: function(e){
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
                     for(let entry of e.entries){
+
                         if(typeof entry.dataPoint.y == 'number'){
                             text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', T<sub>e</sub> = ' + entry.dataPoint.y.toFixed(1);
-                        }else{
-                            text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0])*0.5).toFixed(1) + ' eV</p>'
+                        }else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toFixed(1) + ' eV</p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
                         }
                     }
                     return text;
@@ -500,11 +505,15 @@
                 shared: true,
                 contentFormatter: function(e){
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
-                    for(let entry of e.entries){
-                        if(typeof entry.dataPoint.y == 'number'){
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
                             text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
-                        }else{
-                            text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0])*0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
                         }
                     }
                     return text;
@@ -620,7 +629,8 @@
                 shared: true,
                 contentFormatter: function(){
                     let poly_ind = this.selectors.polyInputs.val();
-                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) + 'eV</p>' +
+                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) +
+                        '±' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].Terr.toFixed(1) + 'eV</p>' +
                         '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
                     for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
                         text += '<p style="color:' + this.palette[ch] + ';">' +
@@ -998,6 +1008,7 @@
                                 color: this.palette[poly_ind],
                                 visible: true,
                                 showInLegend: false,
+                                name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: []
                             }
                         );
@@ -1022,6 +1033,7 @@
                                 color: this.palette[poly_ind],
                                 visible: true,
                                 showInLegend: false,
+                                name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: [],
                             }
                         );
@@ -1305,6 +1317,10 @@
                             dataPoints: data
                         });
                         if(resp.poly[poly_ind].ch[ch].error === null) {
+                            let signal = resp.poly[poly_ind].ch[ch].ph_el;
+                            if(this.m_currentShot.polys[poly_ind].stray[ch] > 100){
+                                signal -= this.m_currentShot.polys[poly_ind].stray[ch];
+                            }
                             this.m_fitting_chart.options.data.push({
                                 type: "scatter",
                                 visible: this.m_current_channels[ch],
@@ -1313,7 +1329,7 @@
                                 name: 'measured ' + (ch + 1),
                                 dataPoints: [{
                                     x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
-                                    y: resp.poly[poly_ind].ch[ch].ph_el / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
+                                    y: signal / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
                                 }]
                             });
                             this.m_fitting_chart.options.data.push({
@@ -1325,9 +1341,9 @@
                                 dataPoints: [{
                                     x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
                                     y: [
-                                        (resp.poly[poly_ind].ch[ch].ph_el - resp.poly[poly_ind].ch[ch].err) /
+                                        (signal - resp.poly[poly_ind].ch[ch].err) /
                                         this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult,
-                                        (resp.poly[poly_ind].ch[ch].ph_el + resp.poly[poly_ind].ch[ch].err) /
+                                        (signal + resp.poly[poly_ind].ch[ch].err) /
                                         this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
                                     ]
                                 }]
@@ -1550,9 +1566,11 @@
                 res.m_currentShot = this.m_currentShot;
             }
             if(target.getNamedItem('single') !== null){
+                res.m_selected_event_ind = this.m_selected_event_ind;
                 res.m_current_event_sig = this.m_current_event_sig;
                 res.m_current_event_sig.poly_ind = this.selectors.polyInputs.val();
                 res.m_current_event_sig.poly_R = this.selectors.poly_radius.html();
+                res.m_currentShotEntry = this.m_currentShot.events[this.m_selected_event_ind];
                 //event #
             }
             if(target.getNamedItem('expected') !== null) {
@@ -2106,7 +2124,7 @@
                 toggleMenuOff();
                 if(link.getAttribute("data-action") === 'chi'){
                     this.DrawChi();
-                }if(link.getAttribute("data-action") === 'dump'){
+                }else if(link.getAttribute("data-action") === 'dump'){
                     this.Dump(taskItemInContext.attributes);
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);

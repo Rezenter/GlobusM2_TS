@@ -180,17 +180,16 @@ class Processor:
                         stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
             current_index += 1
         for poly_ind in range(len(stray)):
+            for ch_ind in range(len(stray[poly_ind])):
+                stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
             self.result['polys'].append({
                 'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
                 'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
                 'R': self.signal['common']['config']['poly'][poly_ind]['R'],
                 'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
-                'h': self.signal['common']['config']['poly'][poly_ind]['h']
+                'h': self.signal['common']['config']['poly'][poly_ind]['h'],
+                'stray': stray[poly_ind]
             })
-            poly = stray[poly_ind]
-            for ch_ind in range(len(poly)):
-                poly[ch_ind] /= count[poly_ind][ch_ind]
-            # print(poly)
 
         for event_ind in range(len(self.signal['data'])):
             error = None
@@ -235,7 +234,7 @@ class Processor:
             sigm2_i = []
             for ch in channels:
                 N_i.append(event['ch'][ch]['ph_el'])
-                if stray[ch] > 500:
+                if stray[ch] > 100:
                     N_i[-1] -= stray[ch]
                 sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
             min_index = -1
@@ -319,7 +318,8 @@ class Processor:
 
                 Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
                 nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
-                res = {
+
+                res = self.filter({
                     'index': min_index,
                     'min': self.expected['T_arr'][min_index],
                     'ch': channels,
@@ -330,12 +330,21 @@ class Processor:
                     'n_err': math.sqrt(nerr2),
                     'mult': mult,
                     'error': None
-                }
+                })
         else:
             print('Less than 2 signals!')
             res = {
                 'error': '< 2 channels'
             }
+        return res
+
+    def filter(self, res):
+        if res['Terr'] / res['T'] > 0.3:
+            res['error'] = 'high Te error'
+        elif res['n_err'] / res['n'] > 0.1:
+            res['error'] = 'high ne error'
+        elif res['chi2'] > 20:
+            res['error'] = 'high chi'
         return res
 
     def to_csv(self, x_from, x_to):
