@@ -1545,22 +1545,25 @@
         };
 
         this.Dump = function(target){
-            let res = {
-                target: target
-            };
+            let res = {};
             if(target.getNamedItem('evo') !== null || target.getNamedItem('prof') !== null){
                 res.m_currentShot = this.m_currentShot;
             }
             if(target.getNamedItem('single') !== null){
                 res.m_current_event_sig = this.m_current_event_sig;
                 res.m_current_event_sig.poly_ind = this.selectors.polyInputs.val();
-                res.m_current_event_sig.R_ind = this.selectors.poly_radius.val();
+                res.m_current_event_sig.poly_R = this.selectors.poly_radius.html();
                 //event #
             }
             if(target.getNamedItem('expected') !== null) {
                 res.m_expected = this.m_expected;
                 res.m_expected.poly_ind = this.selectors.polyInputs.val();
-                res.m_expected.R_ind = this.selectors.poly_radius.val();
+                res.m_expected.poly_R = this.selectors.poly_radius.html();
+            }
+            if(target.getNamedItem('raw') !== null) {
+                res.m_current_event_raw = this.m_current_event_raw;
+                res.m_current_event_raw.poly_ind = this.selectors.polyInputs.val();
+                res.m_current_event_raw.poly_R = this.selectors.poly_radius.html();
             }
             console.log(res);
         };
