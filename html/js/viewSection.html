@@ -947,7 +947,9 @@
                         showInLegend: false,
                         name: 'Laser energy',
                         dataPoints: [],
-                        click: this.ShowEvent.bind(this)
+                        click: function(event){
+                            this.ShowEvent(event, 0);
+                        }.bind(this)
                     }];
 
                     this.m_T_evo_chart.options.data = [];
@@ -999,7 +1001,9 @@
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: this.ShowEvent.bind(this)
+                                click: function(event){
+                                    this.ShowEvent(event, poly_ind);
+                                }.bind(this)
                             }
                         );
                         this.m_T_evo_chart.options.data.push(
@@ -1009,7 +1013,10 @@
                                 visible: true,
                                 showInLegend: false,
                                 name: 'R = ' + resp.polys[poly_ind].R,
-                                dataPoints: []
+                                dataPoints: [],
+                                click: function(event){
+                                    this.ShowEvent(event, poly_ind);
+                                }.bind(this)
                             }
                         );
 
@@ -1024,7 +1031,9 @@
                                 connectNullData: true,
                                 nullDataLineDashType:  "dot",
                                 dataPoints: [],
-                                click: this.ShowEvent.bind(this)
+                                click: function(event){
+                                    this.ShowEvent(event, poly_ind);
+                                }.bind(this)
                             }
                         );
                         this.m_n_evo_chart.options.data.push(
@@ -1035,6 +1044,9 @@
                                 showInLegend: false,
                                 name: 'R = ' + resp.polys[poly_ind].R,
                                 dataPoints: [],
+                                click: function(event){
+                                    this.ShowEvent(event, poly_ind);
+                                }.bind(this)
                             }
                         );
                     }
@@ -1066,10 +1078,7 @@
                             name: 'time = ' + resp.events[event_ind].timestamp,
                             connectNullData: true,
                             nullDataLineDashType:  "dot",
-                            dataPoints: [],
-                            click: function (e) {
-                                console.log(e);
-                            }
+                            dataPoints: []
                         });
                         this.m_T_profile_data.push(
                             {
@@ -1088,10 +1097,7 @@
                             name: 'time = ' + resp.events[event_ind].timestamp,
                             connectNullData: true,
                             nullDataLineDashType:  "dot",
-                            dataPoints: [],
-                            click: function (e) {
-                                console.log(e);
-                            }
+                            dataPoints: []
                         });
                         this.m_n_profile_data.push(
                             {
@@ -1236,16 +1242,9 @@
             }
         };
 
-        this.ShowEvent = function (ev){
+        this.ShowEvent = function (ev, poly_ind){
             //console.log('showing', ev);
             this.m_selected_event_ind = ev.dataPointIndex;
-            let poly_ind = 0;
-            if(ev.dataSeriesIndex % 2 === 0){
-                poly_ind = ev.dataSeriesIndex / 2;
-            }else{
-                console.log('WTF? this is not expected!', ev);
-                poly_ind = (ev.dataSeriesIndex - 1) / 2;
-            }
             this.selectors.polyInputs.val(poly_ind);
             this.update_popup_data()
             this.selectors.singleEventPopup.removeAttribute('hidden');
@@ -1260,10 +1259,12 @@
                     , function (resp) {
                         Object.assign(this.m_expected, resp);
                         this.m_expected['name'] = this.m_currentShot.spectral_name;
+                        this.draw_popup();
                     }.bind(this)
                 );
+            }else{
+                this.draw_popup();
             }
-            this.draw_popup();
         };
 
         this.draw_popup = function(){
@@ -1512,6 +1513,7 @@
         };
 
         this.DrawChi = function(){
+            let firstTime = this.selectors.chiPopup.hasAttribute("hidden");
             this.selectors.chiPopup.removeAttribute('hidden');
             let start_ind = null;
             let end_ind = null;
@@ -1558,6 +1560,10 @@
             this.m_chi_chart.render();
             this.selectors.chi_count.html('Total: ' + pointCount);
             this.selectors.chi_offscale.html('Offscale: ' + offscale);
+            if(firstTime){
+                this.m_chi_chart.options.dataPointWidth = 0.9 * this.m_chi_chart.axisX[0].bounds.width / binCount;
+                this.m_chi_chart.render();
+            }
         };
 
         this.Dump = function(target){
@@ -1629,6 +1635,40 @@
             }.bind(this));
             this.selectors.isShowSingleEvent.on('change', this, this.ToggleShow.bind(this));
             this.contextMenu();
+
+            $('#T_evo_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#n_evo_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#timestamp_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#radius_chart')[0].addEventListener('mouseleave', function () {
+                this.m_radius_chart.toolTip.hide();
+            }.bind(this));
+            $('#T_profile_chart')[0].addEventListener('mouseleave', function () {
+                this.m_T_profile_chart.toolTip.hide();
+            }.bind(this));
+            $('#n_profile_chart')[0].addEventListener('mouseleave', function () {
+                this.m_n_profile_chart.toolTip.hide();
+            }.bind(this));
+            $('#fitting_chart')[0].addEventListener('mouseleave', function () {
+                this.m_fitting_chart.toolTip.hide();
+            }.bind(this));
+            $('#raw_chart')[0].addEventListener('mouseleave', function () {
+                this.m_raw_chart.toolTip.hide();
+            }.bind(this));
+            $('#chi_chart')[0].addEventListener('mouseleave', function () {
+                this.m_chi_chart.toolTip.hide();
+            }.bind(this));
+        };
+
+        this.HideMainRightTooltips = function(){
+            this.m_timestamp_chart.charts[0].toolTip.hide();
+            this.m_T_evo_chart.toolTip.hide();
+            this.m_n_evo_chart.toolTip.hide();
         };
 
         //can be optimised by disabling auto-render
