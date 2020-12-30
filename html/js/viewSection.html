@@ -155,6 +155,7 @@
                 </div>
             </div>
         </div>
+        <div id="d3"></div>
     </div>
     <div id="singleEventPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
         <div class="container-fluid">
@@ -1566,12 +1567,12 @@
             }
         };
 
-        this.Dump = function(target){
+        this.Dump = function(targetAttr){
             let res = {};
-            if(target.getNamedItem('evo') !== null || target.getNamedItem('prof') !== null){
+            if(targetAttr.getNamedItem('evo') !== null || targetAttr.getNamedItem('prof') !== null){
                 res.m_currentShot = this.m_currentShot;
             }
-            if(target.getNamedItem('single') !== null){
+            if(targetAttr.getNamedItem('single') !== null){
                 res.m_selected_event_ind = this.m_selected_event_ind;
                 res.m_current_event_sig = this.m_current_event_sig;
                 res.m_current_event_sig.poly_ind = this.selectors.polyInputs.val();
@@ -1579,12 +1580,12 @@
                 res.m_currentShotEntry = this.m_currentShot.events[this.m_selected_event_ind];
                 //event #
             }
-            if(target.getNamedItem('expected') !== null) {
+            if(targetAttr.getNamedItem('expected') !== null) {
                 res.m_expected = this.m_expected;
                 res.m_expected.poly_ind = this.selectors.polyInputs.val();
                 res.m_expected.poly_R = this.selectors.poly_radius.html();
             }
-            if(target.getNamedItem('raw') !== null) {
+            if(targetAttr.getNamedItem('raw') !== null) {
                 res.m_current_event_raw = this.m_current_event_raw;
                 res.m_current_event_raw.poly_ind = this.selectors.polyInputs.val();
                 res.m_current_event_raw.poly_R = this.selectors.poly_radius.html();
@@ -1592,54 +1593,105 @@
             console.log(res);
         };
 
-        this.SavePNG = function(target){
-            if(target === 'timestamp_chart'){
+        this.SavePNG = function(targetId){
+            if(targetId === 'timestamp_chart'){
                 this.m_timestamp_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_las'
                 });
-            }else if(target === 'T_evo_chart'){
+            }else if(targetId === 'T_evo_chart'){
                 this.m_T_evo_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_Te_evo'
                 });
-            }else if(target === 'n_evo_chart'){
+            }else if(targetId === 'n_evo_chart'){
                 this.m_n_evo_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_ne_evo'
                 });
-            }else if(target === 'T_profile_chart'){
+            }else if(targetId === 'T_profile_chart'){
                 this.m_T_profile_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_Te_prof'
                 });
-            }else if(target === 'n_profile_chart'){
+            }else if(targetId === 'n_profile_chart'){
                 this.m_n_profile_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_ne_prof'
                 });
-            }else if(target === 'fitting_chart'){
+            }else if(targetId === 'fitting_chart'){
                 this.m_fitting_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_fit_' +
                         this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
                         this.selectors.polyInputs.val()
                 });
-            }else if(target === 'raw_chart'){
+            }else if(targetId === 'raw_chart'){
                 this.m_raw_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_raw_' +
                         this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
                         this.selectors.polyInputs.val()
                 });
-            }else if(target === 'chi_chart'){
+            }else if(targetId === 'chi_chart'){
                 this.m_chi_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_chi_' +
                         'polyInd' + this.selectors.polyInputs.val()
                 });
             }else{
-                console.log('Wtf? Unknown target: ', target);
+                console.log('Wtf? Unknown target: ', targetId);
+            }
+        };
+
+        this.Plot3D = function(targetAttr){
+            // Sample dataset. In a real application, you will probably get this data from another source such as AJAX.
+            var dataset = [5, 10, 15, 20, 25]
+
+// Sizing variables for our chart. These are saved as variables as they will be used in calculations.
+            var chartWidth = 300
+            var chartHeight = 100
+            var padding = 5
+
+// We want our our bars to take up the full height of the chart, so, we will apply a scaling factor to the height of every bar.
+            var heightScalingFactor = chartHeight / getMax(dataset)
+
+// Here we are creating the SVG that will be our chart.
+            var svg = d3
+                .select('#d3')           // I'm starting off by selecting the container.
+                .append('svg')               // Appending an SVG element to that container.
+                .attr('width', chartWidth)   // Setting the width of the SVG.
+                .attr('height', chartHeight) // And setting the height of the SVG.
+
+// The next step is to create the rectangles that will make up the bars in our bar chart.
+            svg
+                .selectAll('rect')                                          // I'm selecting all of the rectangles in the SVG (note that at this point, there actually aren't any, but we'll be creating them in a couple of steps).
+                .data(dataset)                                              // Then I'm mapping the dataset to those rectangles.
+                .enter()                                                    // This step is important in that it allows us to dynamically create the rectangle elements that we selected previously.
+                .append('rect')                                           // For each element in the dataset, append a new rectangle.
+                .attr('x', function (value, index) {                    // Set the X position of the rectangle by taking the index of the current item we are creating, multiplying it by the calculated width of each bar, and adding a padding value so we can see some space between bars.
+                    return (index * (chartWidth / dataset.length)) + padding
+                })
+                .attr('y', function (value, index) {                    // Set the rectangle by subtracting the scaled height from the height of the chart (this has to be done becuase SVG coordinates start with 0,0 at their top left corner).
+                    return chartHeight - (value * heightScalingFactor)
+                })
+                .attr('width', (chartWidth / dataset.length) - padding) // The width is dynamically calculated to have an even distribution of bars that take up the entire width of the chart.
+                .attr('height', function (value, index) {               // The height is simply the value of the item in the dataset multiplied by the height scaling factor.
+                    return value * heightScalingFactor
+                })
+                .attr('fill', 'pink')                                   // Sets the color of the bars.
+
+            /**
+             *  Gets the maximum value in a collection of numbers.
+             */
+            function getMax(collection) {
+                var max = 0
+
+                collection.forEach(function (element) {
+                    max = element > max ? element : max
+                })
+
+                return max
             }
         };
 
@@ -2107,11 +2159,15 @@
 
             function contextListener() {
                 document.addEventListener("contextmenu", function(e) {
+                    let prev = taskItemInContext;
                     taskItemInContext = clickInsideElement(e, taskItemClassName );
 
                     if (taskItemInContext) {
                         e.preventDefault();
                         e.stopPropagation();
+                        if(prev !== taskItemInContext){
+                            toggleMenuOff();
+                        }
                         toggleMenuOn();
                         positionMenu(e);
                     } else {
@@ -2154,9 +2210,7 @@
 
             function toggleMenuOn() {
                 if (!menuState) {
-                    //build menu here
-
-                    menu.innerHTML = `
+                    let html = `
 <ul class="context-menu__items">
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="chi">Chi-squared distribution</a>
@@ -2167,13 +2221,19 @@
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="save">Save as png</a>
     </li>
+                    `;
 
+                    if((taskItemInContext.attributes.getNamedItem('evo') !== null ||
+                        taskItemInContext.attributes.getNamedItem('prof') !== null) &&
+                        taskItemInContext.attributes.getNamedItem('las') === null){
+                        html += `
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="3d">3D map(not implemented yet)</a>
     </li>
-</ul>
-                    `;
+                        `;
+                    }
 
+                    menu.innerHTML = html + '\n</ul>';
                     menuState = true;
                     menu.classList.add( contextMenuActive );
                 }
@@ -2219,6 +2279,8 @@
                     this.Dump(taskItemInContext.attributes);
                 }else if(link.getAttribute("data-action") === 'save'){
                     this.SavePNG(taskItemInContext.id);
+                }else if(link.getAttribute("data-action") === '3d'){
+                    this.Plot3D(taskItemInContext.attributes);
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }
