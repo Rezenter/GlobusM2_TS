@@ -1593,7 +1593,54 @@
         };
 
         this.SavePNG = function(target){
-            console.log(target);
+            if(target === 'timestamp_chart'){
+                this.m_timestamp_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_las'
+                });
+            }else if(target === 'T_evo_chart'){
+                this.m_T_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_Te_evo'
+                });
+            }else if(target === 'n_evo_chart'){
+                this.m_n_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_ne_evo'
+                });
+            }else if(target === 'T_profile_chart'){
+                this.m_T_profile_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_Te_prof'
+                });
+            }else if(target === 'n_profile_chart'){
+                this.m_n_profile_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_ne_prof'
+                });
+            }else if(target === 'fitting_chart'){
+                this.m_fitting_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_fit_' +
+                        this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
+                        this.selectors.polyInputs.val()
+                });
+            }else if(target === 'raw_chart'){
+                this.m_raw_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_raw_' +
+                        this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
+                        this.selectors.polyInputs.val()
+                });
+            }else if(target === 'chi_chart'){
+                this.m_chi_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_chi_' +
+                        'polyInd' + this.selectors.polyInputs.val()
+                });
+            }else{
+                console.log('Wtf? Unknown target: ', target);
+            }
         };
 
         this.UpdatePopups = function () {
@@ -2118,7 +2165,7 @@
         <a href="#" class="context-menu__link" data-action="dump">Dump to console</a>
     </li>
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="save">Save as png(not implemented yet)</a>
+        <a href="#" class="context-menu__link" data-action="save">Save as png</a>
     </li>
 
     <li class="context-menu__item">
@@ -2171,7 +2218,7 @@
                 }else if(link.getAttribute("data-action") === 'dump'){
                     this.Dump(taskItemInContext.attributes);
                 }else if(link.getAttribute("data-action") === 'save'){
-                    this.SavePNG(taskItemInContext);
+                    this.SavePNG(taskItemInContext.id);
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }
