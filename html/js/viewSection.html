@@ -1592,6 +1592,10 @@
             console.log(res);
         };
 
+        this.SavePNG = function(target){
+            console.log(target);
+        };
+
         this.UpdatePopups = function () {
             this.selectors.poly_radius.html(this.m_currentShot.polys[this.selectors.polyInputs.val()].R + ' mm');
             if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
@@ -2114,7 +2118,7 @@
         <a href="#" class="context-menu__link" data-action="dump">Dump to console</a>
     </li>
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="save">Save as picture(not implemented yet)</a>
+        <a href="#" class="context-menu__link" data-action="save">Save as png(not implemented yet)</a>
     </li>
 
     <li class="context-menu__item">
@@ -2166,6 +2170,8 @@
                     this.DrawChi();
                 }else if(link.getAttribute("data-action") === 'dump'){
                     this.Dump(taskItemInContext.attributes);
+                }else if(link.getAttribute("data-action") === 'save'){
+                    this.SavePNG(taskItemInContext);
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }
