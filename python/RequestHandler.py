@@ -13,7 +13,7 @@ def __init__():
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
-EXPECTED_FOLDER = 'calibration/expected/'
+#EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
