@@ -1706,9 +1706,9 @@
         };
 
         this.ConnectControls = function () {
-            $('#shot_refresh').on('click', this, this.Refresh);
-            this.selectors.shotn.on('change', this, this.Select);
-            this.selectors.isPlasma.on('change', this, this.UpdateShotSelect);
+            $('#shot_refresh').on('click', this, this.Refresh.bind(this));
+            this.selectors.shotn.on('change', this, this.Select.bind(this));
+            this.selectors.isPlasma.on('change', this, this.UpdateShotSelect.bind(this));
             $(document).keydown(function(event){
                 if(this.selectors.singleEventPopup.contains(document.activeElement)){
                     this.KeydownSingleEventPopup(event);
