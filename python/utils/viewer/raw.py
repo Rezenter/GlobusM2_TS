@@ -32,7 +32,7 @@ def plot(poly_ind, event_ind):
     for ch_ind in range(len(integrator.config['poly'][poly_ind]['channels'])):
         sp_ch = integrator.config['poly'][poly_ind]['channels'][ch_ind]
         board_ind = sp_ch['adc']
-        if 'captured_bad' in integrator.data[board_ind][event_ind] and integrator.data[board_ind][event_ind][
+        if 'captured_bad' in integrator.result[board_ind][event_ind] and integrator.result[board_ind][event_ind][
             'captured_bad']:
             continue
         # if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
@@ -40,7 +40,7 @@ def plot(poly_ind, event_ind):
         if 'skip' in sp_ch and sp_ch['skip']:
             continue
         adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
-        signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+        signal = integrator.result[board_ind][event_ind][adc_gr]['data'][adc_ch]
         start = integrator.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
         tmp = plt.plot([(cell_ind - start) * integrator.time_step for cell_ind in range(len(signal))],
                        [y - integrator.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['zero_lvl'] for y in

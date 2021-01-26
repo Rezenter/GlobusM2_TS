@@ -15,7 +15,7 @@ import json
 db_path = 'd:/data/db/'
 calibr_path = 'calibration/abs/'
 
-abs_filename = '2020.11.06_raw'
+abs_filename = '2021.01.22_raw'
 abs_calibration = {}
 with open('%s%s%s.json' % (db_path, calibr_path, abs_filename), 'r') as abs_file:
     abs_calibration = json.load(abs_file)
@@ -29,10 +29,10 @@ def process_point(point):
         signals = {'%d' % poly: {'val': 0,
                                  'weight': 0} for poly in range(10)}
         for event in integrator.processed:
-            if event['processed_bad']:
+            if event['error'] is not None:
                 continue
             for poly_ind in event['poly']:
-                if event['poly'][poly_ind]['ch'][0]['processed_bad']:
+                if event['poly'][poly_ind]['ch'][0]['error'] is not None:
                     continue
                 signals[poly_ind]['weight'] += event['poly'][poly_ind]['ch'][0]['err']
                 signals[poly_ind]['val'] += event['poly'][poly_ind]['ch'][0]['ph_el'] * \
