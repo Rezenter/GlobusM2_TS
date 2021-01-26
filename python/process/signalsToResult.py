@@ -193,6 +193,11 @@ class Processor:
 
         for event_ind in range(len(self.signal['data'])):
             error = None
+            if self.signal['data'][event_ind]['error'] is not None:
+                self.result['events'].append({
+                    'error': self.signal['data'][event_ind]['error']
+                })
+                continue
             proc_event = {
                 'timestamp': self.signal['data'][event_ind]['timestamp'],
                 'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected['J_from_int']

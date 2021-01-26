@@ -120,7 +120,7 @@ class Integrator:
 
         signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
         if os.path.isfile(signal_path):
-            print('Loading existing processed result.')
+            print('Loading existing processed signals.')
             with open(signal_path, 'rb') as signal_file:
                 obj = ijson.items(signal_file, 'common.config_name', use_float=True)
                 for val in obj:
