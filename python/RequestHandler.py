@@ -290,14 +290,17 @@ class Handler:
         if not self.raw_processor.loaded:
             self.raw_processor.load_raw()
         event = []
+        starts = []
         for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
             event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
+            starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
         adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][ch['adc']]['ch'])
         resp = {
             'data': event,
             'laser': self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch],
-            'start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'],
+            'starts': starts,
+            'laser_start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'],
             'ok': True
         }
         return resp

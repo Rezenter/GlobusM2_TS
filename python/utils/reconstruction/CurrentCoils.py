@@ -184,21 +184,21 @@ points.extend(reversed(chord['up']))
 for p in points:
     if 'mid' in p and p['mid']:
         profile['z'].append(0)
-        t_i = ts['events'][event_ind]['T_e'][chord['mid']['in']]['T']
-        t_o = ts['events'][event_ind]['T_e'][chord['mid']['out']]['T']
+        t_i = ts['events'][event_ind]['T_e'][chord['mid']['in']]['n']
+        t_o = ts['events'][event_ind]['T_e'][chord['mid']['out']]['n']
         r_i = ts['polys'][chord['mid']['in']]['R'] * 0.1
         r_o = ts['polys'][chord['mid']['out']]['R'] * 0.1
         profile['val'].append(t_o + (r_o - r42) * (t_i - t_o) / (r_o - r_i))
     else:
         profile['z'].append(p['z'])
-        profile['val'].append(ts['events'][event_ind]['T_e'][p['poly']]['T'])
+        profile['val'].append(ts['events'][event_ind]['T_e'][p['poly']]['n'])
 #print(profile)
-plt.plot(profile['z'], profile['val'])
-plt.title('T_e at R=%d, #%d timestamp %.1f ms' % (r42, shotn, timestamps[t_ind] * 1000))
+plt.plot(profile['z'], profile['val'], marker='o', linestyle='solid')
+plt.title('n_e at R=%d, #%d timestamp %.1f ms' % (r42, shotn, timestamps[t_ind] * 1000))
 plt.xlim(-50, 50)
-plt.ylim(0, 1500)
+plt.ylim(0, 1e17)
 plt.xlabel('Z, cm')
-plt.ylabel('T_e, eV')
+plt.ylabel('n_e, eV')
 #plt.savefig('figs/poly%d.png' % poly)
 #print('processed %d' % poly)
 plt.show()

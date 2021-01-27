@@ -1379,23 +1379,23 @@
                     //console.log(this.m_current_event_sig);
                     //console.log(this.m_currentShot);
                     let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
-                    this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.start * dt;
+                    this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
                     this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
-                        this.m_current_event_raw.start) * dt;
+                        this.m_current_event_raw.starts[0]) * dt;
                     for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
                         let data = [];
                         for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
                             if(ch !== 5) {
                                 data.push(
                                     {
-                                        x: (time_ind - this.m_current_event_raw.start) * dt,
+                                        x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
                                         y: this.m_current_event_raw.data[ch][time_ind] -
                                             this.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
                                     });
                             }else{
                                 data.push(
                                     {
-                                        x: (time_ind - this.m_current_event_raw.start) * dt,
+                                        x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
                                         y: this.m_current_event_raw.data[ch][time_ind]
                                     });
                             }
@@ -1415,7 +1415,7 @@
                     for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
                         data.push(
                             {
-                                x: (time_ind - this.m_current_event_raw.start) * dt,
+                                x: (time_ind - this.m_current_event_raw.laser_start) * dt,
                                 y: this.m_current_event_raw.laser[time_ind]
                             });
                     }

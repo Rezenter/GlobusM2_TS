@@ -17,7 +17,7 @@ HEADER_FILE = 'header'
 FILE_EXT = 'json'
 
 is_plasma = False
-shotn = 280
+shotn = 383
 config = '2020.12.08_raman'
 
 integrator = rawToSignals.Integrator(DB_PATH, shotn, is_plasma, config)
@@ -68,6 +68,5 @@ def plot(poly_ind, event_ind):
     plt.close(fig)
     del tmp
     gc.collect()
-
 
 print('Viewer ok')

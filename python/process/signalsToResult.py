@@ -181,7 +181,8 @@ class Processor:
             current_index += 1
         for poly_ind in range(len(stray)):
             for ch_ind in range(len(stray[poly_ind])):
-                stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
+                if count[poly_ind][ch_ind] > 0:
+                    stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
             self.result['polys'].append({
                 'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
                 'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
