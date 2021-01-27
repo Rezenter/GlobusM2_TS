@@ -667,8 +667,8 @@
 
                         this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_raw_chart.options.axisX.stripLines = [{
-                            startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.start) * dt,
-                            endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.start) * dt,
+                            startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.starts[ch]) * dt,
+                            endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.starts[ch]) * dt,
                             color: this.palette[ch],
                             opacity: .2
                         }];
@@ -1129,7 +1129,7 @@
 
         this.MainChartsSetPoint = function(event_ind, poly_ind){
             let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
-            if(this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
+            if(this.m_currentShot.events[event_ind].error !== null || this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
                 this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
                 this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {

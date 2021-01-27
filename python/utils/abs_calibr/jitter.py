@@ -38,7 +38,7 @@ for event_ind in range(len(raw)):
     local_threshold = event['zero_lvl'] + threshold
     local_threshold = event['zero_lvl'] + (event['max'] - event['min']) * 0.5
 
-    #print(event['max'])
+    #print(data['data'][event_ind]['laser']['ave']['int'])
 
     result = 0
     for cell_ind in range(event['from'], event['to']):
