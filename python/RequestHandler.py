@@ -4,6 +4,7 @@ import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
+import python.utils.reconstruction.CurrentCoils as ccm
 
 
 def __init__():
@@ -47,7 +48,8 @@ class Handler:
                 'get_event_raw': self.get_event_raw,
                 'get_expected': self.get_expected,
                 'save_shot': self.save_shot,
-                'export_shot': self.export_shot
+                'export_shot': self.export_shot,
+                'chord_int': self.get_chord_integrals
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -183,6 +185,37 @@ class Handler:
                     'description': err
                 }
         return self.fine_processor.to_csv(req['from'], req['to'])
+
+    def get_chord_integrals(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        if 'r' not in req:
+            resp['ok'] = False
+            resp['description'] = '"r" field is missing from request.'
+            return resp
+        if 'start' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'stop' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+
+        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2020.11.25',
+                                                      '2020.11.06')
+            if self.fine_processor.get_error() is not None:
+                self.get_integrals_shot(req)
+                self.fine_processor.load()
+        return ccm.get_integrals(int(req['shotn']),
+                                 self.fine_processor.get_data(),
+                                 float(req['r']),
+                                 float(req['start']),
+                                 float(req['stop']))
 
     def get_integrals_shot(self, req):
         resp = {}

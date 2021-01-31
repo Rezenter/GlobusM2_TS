@@ -2,16 +2,17 @@ import json
 import ijson
 import statistics
 
-shotn = 383
-poly = '5'
-adc_ind = 1
-adc_ch = 11
-threshold = 1200/2
+shotn = 280
+poly_ind = 5
 
 with open('d:/data/db/debug/signal/%05d.json' % shotn, 'r') as data_fp:
     data = json.load(data_fp)
 if data is None:
     fuck
+
+adc_ind = data['common']['config']['poly'][poly_ind]['channels'][0]['adc']
+adc_ch = data['common']['config']['poly'][poly_ind]['channels'][0]['ch']
+
 print('Loading raw...')
 with open('d:/data/db/debug/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
     raw = []
@@ -30,15 +31,17 @@ if len(raw) != len(data['data']):
 with open('debug.json', 'w') as out_fp:
         json.dump(raw[0:2], out_fp)
 
-print('event count = %d' % len(data['data']))
+print('event count = %d\n' % len(data['data']))
 
 delay = []
 for event_ind in range(len(raw)):
-    event = data['data'][event_ind]['poly'][poly]['ch'][0]
-    local_threshold = event['zero_lvl'] + threshold
+    #if data['data'][event_ind]['error'] is not None:
+    #    continue
+    event = data['data'][event_ind]['poly']['%d' % poly_ind]['ch'][0]
     local_threshold = event['zero_lvl'] + (event['max'] - event['min']) * 0.5
 
     #print(data['data'][event_ind]['laser']['ave']['int'])
+    print(event['ph_el'])
 
     result = 0
     for cell_ind in range(event['from'], event['to']):
@@ -56,6 +59,8 @@ for event_ind in range(len(raw)):
     #with open('debug.json', 'w') as out_fp:
     #    json.dump(event, out_fp)
     #stop
+
+print('')
 print('normal event count = %d' % len(delay))
 
 mean = statistics.mean(delay)

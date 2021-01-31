@@ -236,6 +236,7 @@
         this.m_current_event_raw = {};
         this.m_current_event_sig = {};
         this.m_expected = {};
+        this.m_current_chord = {};
         this.m_selected_event_ind = 0;
         this.palette = [
             '#00FFFF',
@@ -1695,6 +1696,22 @@
             }
         };
 
+        this.PlotNl42 = function(){
+            this.Request(
+                {
+                    reqtype: 'chord_int',
+                    shotn: this.m_currentShot.shotn,
+                    r: 42,
+                    start: this.m_timestamp_chart.navigator.slider.minimum,
+                    stop: this.m_timestamp_chart.navigator.slider.maximum
+                }
+                , function (resp) {
+                    Object.assign(this.m_current_chord, resp);
+                    console.log(this.m_current_chord);
+                }.bind(this)
+            );
+        };
+
         this.UpdatePopups = function () {
             this.selectors.poly_radius.html(this.m_currentShot.polys[this.selectors.polyInputs.val()].R + ' mm');
             if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
@@ -2151,13 +2168,13 @@
             let windowHeight;
 
             this.init = function() {
-                contextListener();
+                this.contextListener();
                 this.clickListener();
                 keyupListener();
                 resizeListener();
             }.bind(this);
 
-            function contextListener() {
+            this.contextListener = function() {
                 document.addEventListener("contextmenu", function(e) {
                     let prev = taskItemInContext;
                     taskItemInContext = clickInsideElement(e, taskItemClassName );
@@ -2168,14 +2185,14 @@
                         if(prev !== taskItemInContext){
                             toggleMenuOff();
                         }
-                        toggleMenuOn();
+                        this.toggleMenuOn();
                         positionMenu(e);
                     } else {
                         taskItemInContext = null;
                         toggleMenuOff();
                     }
-                });
-            }
+                }.bind(this));
+            }.bind(this)
 
             this.clickListener = function() {
                 document.addEventListener("click", function(e) {
@@ -2208,7 +2225,7 @@
                 };
             }
 
-            function toggleMenuOn() {
+            this.toggleMenuOn = function(){
                 if (!menuState) {
                     let html = `
 <ul class="context-menu__items">
@@ -2233,11 +2250,18 @@
                         `;
                     }
 
+                    if(taskItemInContext.attributes.getNamedItem('ne') !== null && this.m_currentShot.is_plasma){
+                        html += `
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="nl42">N_e integral along R=42 chord.</a>
+    </li>
+                        `;
+                    }
                     menu.innerHTML = html + '\n</ul>';
                     menuState = true;
                     menu.classList.add( contextMenuActive );
                 }
-            }
+            }.bind(this);
 
             function toggleMenuOff() {
                 if (menuState) {
@@ -2281,6 +2305,8 @@
                     this.SavePNG(taskItemInContext.id);
                 }else if(link.getAttribute("data-action") === '3d'){
                     this.Plot3D(taskItemInContext.attributes);
+                }else if(link.getAttribute("data-action") === 'nl42'){
+                    this.PlotNl42();
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }
