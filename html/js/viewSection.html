@@ -215,6 +215,43 @@
             <div id="chi_chart" style="width:100%; height:400px;" class="context-target"></div>
         </div>
     </div>
+    <div id="chordPopup" class="draggable" hidden tabindex="1" style="width: 900px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p>'col1 text'</p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p>'col2 text'</p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p>'col3 text'</p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p>'col4 text'</p>
+                </div>
+            </div>
+        </div>
+        <div id="chord_evo_chart" style="width:100%; height:400px;" class="context-target"></div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div id="poloidal_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                    <div id="chord_profile_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <nav id="context-menu" class="context-menu"></nav>
 </body>
 <script>
@@ -264,8 +301,10 @@
             true,
             true
         ];
+        this.m_poloidal_poly = [];
 
         this.selectors = {
+            chordPopup: $('#chordPopup')[0],
             chiPopup: $('#chiPopup')[0],
             singleEventPopup: $('#singleEventPopup')[0],
             draggables: $('.draggable'),
@@ -865,6 +904,177 @@
         });
         this.m_chi_chart.render();
 
+        //chord popup
+        this.m_chord_evo_chart = new CanvasJS.Chart("chord_evo_chart", {
+            title: {
+                text: 'Electron density evolution averaged along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Averaged electron density, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_chord_profile_chart.options.data = [];
+                        this.m_chord_profile_chart.render();
+                        this.m_poloidal_chart.options.data = [];
+                        Object.assign(this.m_poloidal_chart.options.data, this.m_poloidal_poly);
+                        this.m_poloidal_chart.render();
+                        this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateChordSubcharts(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_chord_evo_chart.render();
+        this.m_poloidal_chart = new CanvasJS.Chart("poloidal_chart", {
+            title: {
+                text: "CCM reconstruction",
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                fontFamily: 'arial',
+                titleFontSize: 12,
+                includeZero: true,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true
+                },
+            },
+            axisX: {
+                title: "R, cm",
+                titleFontSize: 12,
+                interval: 20,
+                fontFamily: 'arial',
+                minimum: 0, //12
+                maximum: 65, //62
+                crosshair: {
+                    enabled: true
+                },
+                stripLines:[
+                    {
+                        value:12,
+                        color:'#000000'
+                    },
+                    {
+                        value:62,
+                        color:'#000000'
+                    },
+                    {
+                        value:42,
+                        color:'#00FF00'
+                    }
+                ]
+            },
+            data: []
+        });
+        this.m_poloidal_chart.render();
+        this.m_chord_profile_chart = new CanvasJS.Chart("chord_profile_chart", {
+            title: {
+                text: 'Electron density along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Z, cm",
+                titleFontSize: 12,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+
+                    }.bind(this),
+                    hidden: function (){
+
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_chord_profile_chart.render();
+
         this.RangeChanged = function(e){
             this.m_T_evo_chart.options.axisX.minimum = e.minimum;
             this.m_T_evo_chart.options.axisX.maximum = e.maximum;
@@ -873,6 +1083,10 @@
             this.m_n_evo_chart.options.axisX.maximum = e.maximum;
             this.m_n_evo_chart.render();
             this.UpdateProfiles();
+
+            this.m_chord_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_chord_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_chord_evo_chart.render();
 
             if(!this.selectors.chiPopup.hasAttribute("hidden")){
                 this.DrawChi();
@@ -916,7 +1130,7 @@
             options = ['<option>2020.12.10</option>'];
             $('#config_select').html(options);
 
-            options = ['<option>2020.11.06</option>'];
+            options = ['<option>2021.01.22</option>', '<option>2020.11.06</option>'];
             $('#abs_select').html(options);
 
             options = ['<option>2020.11.11</option>'];
@@ -935,7 +1149,8 @@
                     reqtype: 'get_shot',
                     is_plasma: is_plasma,
                     shotn: shotn,
-                    config: $('#config_select').val()
+                    config: $('#config_select').val(),
+                    calibr: $('#abs_select').val()
                 }, function (resp) {
                     //console.log(resp);
                     Object.assign(this.m_currentShot, resp);
@@ -957,6 +1172,7 @@
                     this.m_T_evo_chart.options.data = [];
                     this.m_n_evo_chart.options.data = [];
                     this.m_radius_chart.options.data = [];
+                    this.m_poloidal_poly = [];
                     this.m_T_profile_data = [];
                     this.m_n_profile_data = [];
                     this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
@@ -974,23 +1190,36 @@
                     //console.log(resp);
                     for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
                         let h05 = resp.polys[poly_ind].h * 0.5;
-                        this.m_radius_chart.options.data.push(
-                            {
-                                type: "rangeArea",
-                                markerType: "none",
-                                color: this.palette[poly_ind],
-                                showInLegend: true,
-                                name: 'R = ' + resp.polys[poly_ind].R,
-                                dataPoints: [{
-                                    x: resp.polys[poly_ind].R - resp.polys[poly_ind].l05,
+                        this.m_poloidal_poly.push({
+                            type: "rangeArea",
+                            markerType: "none",
+                            color: this.palette[poly_ind],
+                            showInLegend: true,
+                            name: 'R = ' + resp.polys[poly_ind].R,
+                            dataPoints: [{
+                                x: (resp.polys[poly_ind].R - resp.polys[poly_ind].l05) * 0.1,
+                                y: [-h05, h05]
+                            },
+                                {
+                                    x: (resp.polys[poly_ind].R + resp.polys[poly_ind].l05) * 0.1,
                                     y: [-h05, h05]
-                                },
-                                    {
-                                        x: resp.polys[poly_ind].R + resp.polys[poly_ind].l05,
-                                        y: [-h05, h05]
-                                    }]
-                            }
-                        );
+                                }]
+                        });
+                        this.m_radius_chart.options.data.push({
+                            type: "rangeArea",
+                            markerType: "none",
+                            color: this.palette[poly_ind],
+                            showInLegend: true,
+                            name: 'R = ' + resp.polys[poly_ind].R,
+                            dataPoints: [{
+                                x: resp.polys[poly_ind].R - resp.polys[poly_ind].l05,
+                                y: [-h05, h05]
+                            },
+                                {
+                                    x: resp.polys[poly_ind].R + resp.polys[poly_ind].l05,
+                                    y: [-h05, h05]
+                                }]
+                        });
 
                         this.m_T_evo_chart.options.data.push(
                             {
@@ -1053,6 +1282,9 @@
                         );
                     }
                     this.m_radius_chart.render();
+                    this.m_poloidal_chart.options.data = [];
+                    Object.assign(this.m_poloidal_chart.options.data, this.m_poloidal_poly);
+                    this.m_poloidal_chart.render();
 
                     //console.log(resp);
                     for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
@@ -1696,7 +1928,8 @@
             }
         };
 
-        this.PlotNl42 = function(){
+        this.RequestChord = function(){
+            this.m_chord_evo_chart.options.data = [];
             this.Request(
                 {
                     reqtype: 'chord_int',
@@ -1708,8 +1941,127 @@
                 , function (resp) {
                     Object.assign(this.m_current_chord, resp);
                     console.log(this.m_current_chord);
+                    this.DrawChord();
                 }.bind(this)
             );
+        };
+
+        this.DrawChord = function(){
+            this.selectors.chordPopup.removeAttribute('hidden');
+            let points = [];
+            let err = [];
+            console.log('check closest time is not too far & no errors');
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data.length; arr_ind++){
+                let chord_len = (this.m_current_chord.data[arr_ind].z_up + this.m_current_chord.data[arr_ind].z_down) *
+                    0.01;
+                points.push({
+                    x: this.m_current_chord.data[arr_ind].closest_time,
+                    y: this.m_current_chord.data[arr_ind].int / chord_len
+
+                });
+                err.push({
+                    x: this.m_current_chord.data[arr_ind].closest_time,
+                    y: [(this.m_current_chord.data[arr_ind].int - this.m_current_chord.data[arr_ind].int_err)/ chord_len,
+                        (this.m_current_chord.data[arr_ind].int + this.m_current_chord.data[arr_ind].int_err)/ chord_len
+                    ]
+                })
+            }
+
+            this.m_chord_evo_chart.options.data.push({
+                color: this.palette[0],
+                type: "line",
+                markerType: "none",
+                showInLegend: true,
+                name: 'TS',
+                dataPoints: points
+            });
+            this.m_chord_evo_chart.options.data.push({
+                color: this.palette[0],
+                type: "error",
+                showInLegend: false,
+                dataPoints: err
+            });
+            this.m_chord_evo_chart.render();
+        }
+
+        this.UpdateChordSubcharts = function(time){
+            let index = 0;
+            for(; index < this.m_current_chord.data.length; index++){
+                if(time === this.m_current_chord.data[index].closest_time){
+                    break;
+                }
+            }
+            let points = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].last_surf.R.length; arr_ind++){
+                points.push({
+                    x: this.m_current_chord.data[index].last_surf.R[arr_ind],
+                    y: this.m_current_chord.data[index].last_surf.z[arr_ind]
+                });
+            }
+            this.m_poloidal_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                showInLegend: true,
+                name: 'last',
+                dataPoints: points
+            });
+            for(let poly_ind = 0; poly_ind < this.m_current_chord.data[index].polys.length; poly_ind++){
+                points = [];
+                for(let param = 0; param < this.m_current_chord.data[index].polys[poly_ind].r.length; param++){
+                    points.push({
+                        x: this.m_current_chord.data[index].polys[poly_ind].r[param],
+                        y: this.m_current_chord.data[index].polys[poly_ind].z[param]
+                    })
+                }
+                this.m_poloidal_chart.options.data.push({
+                    color: this.palette[this.m_current_chord.data[index].polys[poly_ind].ind],
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    dataPoints: points
+                });
+            }
+
+            this.m_poloidal_chart.render();
+
+            points = [];
+            errors = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].profile.z.length; arr_ind++){
+                points.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: this.m_current_chord.data[index].profile.val[arr_ind]
+                });
+                errors.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: [this.m_current_chord.data[index].profile.val[arr_ind] - this.m_current_chord.data[index].profile.err[arr_ind],
+                        this.m_current_chord.data[index].profile.val[arr_ind] + this.m_current_chord.data[index].profile.err[arr_ind]
+                    ]
+                })
+            }
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                dataPoints: points
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "error",
+                //markerType: "none",
+                dataPoints: errors
+            });
+            this.m_chord_profile_chart.options.axisX.stripLines = [
+                {
+                    value: -this.m_current_chord.data[index].z_down,
+                    color: '#00FF00'
+                },
+                {
+                    value: this.m_current_chord.data[index].z_up,
+                    color: '#00FF00'
+                }
+            ]
+            this.m_chord_profile_chart.render();
         };
 
         this.UpdatePopups = function () {
@@ -2306,7 +2658,7 @@
                 }else if(link.getAttribute("data-action") === '3d'){
                     this.Plot3D(taskItemInContext.attributes);
                 }else if(link.getAttribute("data-action") === 'nl42'){
-                    this.PlotNl42();
+                    this.RequestChord();
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }

@@ -23,12 +23,13 @@ def get_integrals(shotn, ts, radius, start, stop):
             requested_time = ts['events'][event_ind]['timestamp'] * 0.001
 
             t_ind = 0
+            if timestamps[0] > requested_time or requested_time > timestamps[-1]:
+                continue
             for t_ind in range(len(timestamps) - 1):
                 if timestamps[t_ind] <= requested_time < timestamps[t_ind + 1]:
                     if (requested_time - timestamps[t_ind]) >= (timestamps[t_ind + 1] - requested_time):
                         t_ind += 1
                     break
-
             last = {
                 'R': data['boundary']['rbdy']['variable'][t_ind],
                 'z': data['boundary']['zbdy']['variable'][t_ind]
@@ -51,6 +52,22 @@ def get_integrals(shotn, ts, radius, start, stop):
             else:
                 last['R'] = data['boundary']['rbdy']['variable'][t_ind]
                 last['z'] = data['boundary']['zbdy']['variable'][t_ind]
+
+            z_up = 0
+            z_down = 0
+            for param_ind in range(len(data['boundary']['rbdy']['variable'][t_ind]) - 1):
+                if data['boundary']['rbdy']['variable'][t_ind][param_ind] <= \
+                        radius < \
+                        data['boundary']['rbdy']['variable'][t_ind][param_ind + 1]:
+                    z_up = data['boundary']['zbdy']['variable'][t_ind][param_ind] #interpolate
+                elif data['boundary']['rbdy']['variable'][t_ind][param_ind + 1] <= \
+                        radius < \
+                        data['boundary']['rbdy']['variable'][t_ind][param_ind]:
+                    z_down = data['boundary']['zbdy']['variable'][t_ind][param_ind] #interpolate
+            # dick move
+            z_up = math.fabs(z_up)
+            z_down = math.fabs(z_down)
+            #print(z_up + z_down)
 
             r_cw = 0
             z_cw = 0
@@ -124,12 +141,14 @@ def get_integrals(shotn, ts, radius, start, stop):
                         chord['mid']['out'] = poly_ind
                 polys.append({
                     'r': R,
-                    'z': Z
+                    'z': Z,
+                    'ind': poly_ind
                 })
 
             profile = {
                 'val': [],
-                'z': []
+                'z': [],
+                'err': []
             }
 
             points = chord['down']
@@ -154,18 +173,24 @@ def get_integrals(shotn, ts, radius, start, stop):
                     r_i = poly_r[chord['mid']['in']]
                     r_o = poly_r[chord['mid']['out']]
                     profile['val'].append(t_o + (r_o - radius) * (t_i - t_o) / (r_o - r_i))
+                    t_i = ts['events'][event_ind]['T_e'][chord['mid']['in']]['n_err']
+                    t_o = ts['events'][event_ind]['T_e'][chord['mid']['out']]['n_err']
+                    profile['err'].append(t_o + (r_o - radius) * (t_i - t_o) / (r_o - r_i))
                 else:
                     if ts['events'][event_ind]['T_e'][p['poly']]['error'] is not None:
                         lost.append(p_index)
                         continue
                     profile['z'].append(p['z'])
                     profile['val'].append(ts['events'][event_ind]['T_e'][p['poly']]['n'])
+                    profile['err'].append(ts['events'][event_ind]['T_e'][p['poly']]['n_err'])
 
             chord_dens = 0
+            dens_err = 0
             for point_ind in range(len(profile['z']) - 1):
                 chord_dens += (profile['val'][point_ind] + profile['val'][point_ind + 1]) * 0.5 * \
                         (profile['z'][point_ind + 1] - profile['z'][point_ind]) * 0.01
-
+                dens_err += (profile['err'][point_ind] + profile['err'][point_ind + 1]) * 0.5 * \
+                        (profile['z'][point_ind + 1] - profile['z'][point_ind]) * 0.01
             verdict = ''
             if error is not None:
                 verdict = error
@@ -176,7 +201,6 @@ def get_integrals(shotn, ts, radius, start, stop):
                             verdict = 'no TS data for 2 neighbour points'
                 if len(lost) / len(points) > 0.3:
                     verdict = 'no TS data in too many points'
-
             res_arr.append({
                 'ind': event_ind,
                 'closest_time': timestamps[t_ind] * 1000,
@@ -197,6 +221,9 @@ def get_integrals(shotn, ts, radius, start, stop):
                 'polys': polys,
                 'profile': profile,
                 'int': chord_dens,
+                'int_err': dens_err,
+                'z_up': z_up,
+                'z_down': z_down,
                 'error': verdict
             })
     return {

@@ -28,21 +28,27 @@ def process_point(point):
     with rawToSignals.Integrator(db_path, point['shotn'], False, '2020.12.08_raman') as integrator:
         signals = {'%d' % poly: {'val': 0,
                                  'weight': 0} for poly in range(10)}
+        laser = 0
+        count = 0
         for event in integrator.processed:
             if event['error'] is not None:
                 continue
+            laser += event['laser']['ave']['int']
+            count += 1
             for poly_ind in event['poly']:
                 if event['poly'][poly_ind]['ch'][0]['error'] is not None:
                     continue
                 signals[poly_ind]['weight'] += event['poly'][poly_ind]['ch'][0]['err']
                 signals[poly_ind]['val'] += event['poly'][poly_ind]['ch'][0]['ph_el'] * \
                                                 event['poly'][poly_ind]['ch'][0]['err']
+
         result = {
             'expected/A': n_N2,
             'shotn': point['shotn'],
             'pressure': point['pressure'],
             'temperature': abs_calibration['temperature'],
             'laser_energy': abs_calibration['laser_energy'],
+            'J_from_int': abs_calibration['laser_energy'] * count / laser,
             'measured': {},
             'A': {},
             'measured_w/o_stray': {}
