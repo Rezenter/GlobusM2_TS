@@ -318,7 +318,7 @@ def get_integrals(shotn, ts, radius, start, stop):
                         verdict = 'no TS data in too many points'
             else:
                 verdict = 'no plasma'
-            print(timestamps[t_ind], chord_dens, chord_dens + down_edge + up_edge)
+            #print(timestamps[t_ind], chord_dens, chord_dens + down_edge + up_edge)
             res_arr.append({
                 'ind': event_ind,
                 'closest_time': timestamps[t_ind] * 1000,
