@@ -106,7 +106,7 @@ class Handler:
             return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
-                                                      '2021.01.22')
+                                                      '2021.02.03')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()
@@ -136,7 +136,7 @@ class Handler:
             }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
-                                                      '2021.01.22')
+                                                      '2021.02.03')
             err = self.fine_processor.get_error()
             if err is not None:
                 return {
@@ -177,7 +177,7 @@ class Handler:
             }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
-                                                      '2021.01.22')
+                                                      '2021.02.03')
             err = self.fine_processor.get_error()
             if err is not None:
                 return {
@@ -207,7 +207,7 @@ class Handler:
 
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.02.01',
-                                                      '2021.01.22')
+                                                      '2021.02.03')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()

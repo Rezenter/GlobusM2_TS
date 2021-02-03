@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import math
 
 shotn = 39629
-event_ind = 62
+event_ind = 39
 
 theta_count = 360
 r42 = 42
@@ -74,6 +74,8 @@ for curr_ind in range(int(data['nj']['variable'][t_ind])):
     z_cw += data['current_coils']['I']['variable'][t_ind][curr_ind] * data['current_coils']['z']['variable'][t_ind][curr_ind]
 r_cw /= summ
 z_cw /= summ
+
+
 
 plt.vlines(
     [r_cw],

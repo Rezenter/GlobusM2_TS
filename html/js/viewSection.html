@@ -226,17 +226,24 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <p>'col1 text'</p>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_time"></p>
                 </div>
-                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <p>'col2 text'</p>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_len"></p>
                 </div>
-                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <p>'col3 text'</p>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_n"></p>
                 </div>
-                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                    <p>'col4 text'</p>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_nl"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_edge"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <label for="chord_divided">Divided by l?</label>
+                        <input type="checkbox" id="chord_divided" checked>
                 </div>
             </div>
         </div>
@@ -314,7 +321,13 @@
             chi_offscale: $('#chi_offscale'),
             poly_radius: $('.poly_radius'),
             shotn: $('#shot_select'),
-            isPlasma: $('#is_plasma')
+            isPlasma: $('#is_plasma'),
+            chord_time: $('#chord_time'),
+            chord_length: $('#chord_len'),
+            chord_nl: $('#chord_nl'),
+            chord_n: $('#chord_n'),
+            chord_div: $('#chord_divided'),
+            chord_edge: $('#chord_edge')
         };
 
         //header charts
@@ -973,6 +986,8 @@
         });
         this.m_chord_evo_chart.render();
         this.m_poloidal_chart = new CanvasJS.Chart("poloidal_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
             title: {
                 text: "CCM reconstruction",
                 fontSize: 14,
@@ -998,26 +1013,13 @@
                 maximum: 65, //62
                 crosshair: {
                     enabled: true
-                },
-                stripLines:[
-                    {
-                        value:12,
-                        color:'#000000'
-                    },
-                    {
-                        value:62,
-                        color:'#000000'
-                    },
-                    {
-                        value:42,
-                        color:'#00FF00'
-                    }
-                ]
+                }
             },
             data: []
         });
         this.m_poloidal_chart.render();
         this.m_chord_profile_chart = new CanvasJS.Chart("chord_profile_chart", {
+            zoomEnabled: true,
             title: {
                 text: 'Electron density along R=42 chord',
                 fontSize: 14,
@@ -1056,7 +1058,7 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
-                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    let text = '<p>Z = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
                     for(let entry of e.entries) {
                         if (typeof entry.dataPoint.y == 'number') {
                             text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
@@ -1866,12 +1868,17 @@
                         this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
                         this.selectors.polyInputs.val()
                 });
-            }else if(targetId === 'chi_chart'){
+            }else if(targetId === 'chi_chart') {
                 this.m_chi_chart.exportChart({
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_chi_' +
                         'polyInd' + this.selectors.polyInputs.val()
                 });
+            }else if(targetId === 'poloidal_chart'){
+                    this.m_poloidal_chart.exportChart({
+                        format: 'png',
+                        fileName: this.m_currentShot.shotn + '_pol_' + this.selectors.chord_time.html()
+                    });
             }else{
                 console.log('Wtf? Unknown target: ', targetId);
             }
@@ -1952,8 +1959,12 @@
             let err = [];
             console.log('check closest time is not too far & no errors');
             for(let arr_ind = 0; arr_ind < this.m_current_chord.data.length; arr_ind++){
-                let chord_len = (this.m_current_chord.data[arr_ind].z_up + this.m_current_chord.data[arr_ind].z_down) *
-                    0.01;
+                let chord_len = 1;
+                if(this.selectors.chord_div[0].checked){
+                    chord_len = (this.m_current_chord.data[arr_ind].z_up - this.m_current_chord.data[arr_ind].z_down) *
+                        0.01;
+                }
+
                 points.push({
                     x: this.m_current_chord.data[arr_ind].closest_time,
                     y: this.m_current_chord.data[arr_ind].int / chord_len
@@ -1966,31 +1977,48 @@
                     ]
                 })
             }
+            if(this.selectors.chord_div[0].checked){
+                this.m_chord_evo_chart.options.axisY.title = 'Averaged electron density (n), m⁻³'
+            }else{
+                this.m_chord_evo_chart.options.axisY.title = 'Integrated electron density (nl), m⁻²'
+            }
 
-            this.m_chord_evo_chart.options.data.push({
-                color: this.palette[0],
-                type: "line",
-                markerType: "none",
-                showInLegend: true,
-                name: 'TS',
-                dataPoints: points
-            });
-            this.m_chord_evo_chart.options.data.push({
-                color: this.palette[0],
-                type: "error",
-                showInLegend: false,
-                dataPoints: err
-            });
+            this.m_chord_evo_chart.options.data = [
+                {
+                    color: this.palette[0],
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: true,
+                    name: 'TS',
+                    dataPoints: points
+                },
+                {
+                    color: this.palette[0],
+                    type: "error",
+                    showInLegend: false,
+                    dataPoints: err
+                }
+            ];
             this.m_chord_evo_chart.render();
         }
 
         this.UpdateChordSubcharts = function(time){
+            this.selectors.chord_time.html('t: ' + time.toFixed(1) + 'ms');
+
             let index = 0;
             for(; index < this.m_current_chord.data.length; index++){
                 if(time === this.m_current_chord.data[index].closest_time){
                     break;
                 }
             }
+            let chord_len = this.m_current_chord.data[index].z_up - this.m_current_chord.data[index].z_down;
+            this.selectors.chord_length.html('l: ' + chord_len.toFixed(1) + 'cm');
+            this.selectors.chord_nl.html('nl: ' + this.m_current_chord.data[index].int.toExponential(1) + 'm^-2');
+            this.selectors.chord_n.html('&lt;n&gt;: ' +
+                (this.m_current_chord.data[index].int / (chord_len * 0.01)).toExponential(1) + 'm^-3');
+            this.selectors.chord_edge.html('edge_nl: ' +
+                (this.m_current_chord.data[index].edge.down.val +
+                this.m_current_chord.data[index].edge.up.val).toExponential(1) + 'm^-2');
             let points = [];
             for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].last_surf.R.length; arr_ind++){
                 points.push({
@@ -2022,7 +2050,44 @@
                     dataPoints: points
                 });
             }
+            this.m_poloidal_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.r,
+                    color: '#0000FF',
+                    label : "Geom",
+                    labelFontColor: "#0000FF"
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.r,
+                    color: '#FF0000',
+                    label : "Magn",
+                    labelFontColor: "#FF0000",
+                    labelPlacement:"outside",
+                },
+                {
+                    value:12,
+                    color:'#000000'
+                },
+                {
+                    value:62,
+                    color:'#000000'
+                },
+                {
+                    value:42,
+                    color:'#00FF00'
+                }
 
+            ]
+            this.m_poloidal_chart.options.axisY.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.z,
+                    color: '#0000FF'
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.z,
+                    color: '#FF0000'
+                }
+            ]
             this.m_poloidal_chart.render();
 
             points = [];
@@ -2051,9 +2116,44 @@
                 //markerType: "none",
                 dataPoints: errors
             });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_down,
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].z_down +
+                            this.m_current_chord.data[index].edge.down.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[0],
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].profile.z[0] +
+                            this.m_current_chord.data[index].edge.down.b
+                    }
+                ]
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_up,
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].z_up +
+                            this.m_current_chord.data[index].edge.up.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1],
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1] +
+                            this.m_current_chord.data[index].edge.up.b
+                    }
+                ]
+            });
+
             this.m_chord_profile_chart.options.axisX.stripLines = [
                 {
-                    value: -this.m_current_chord.data[index].z_down,
+                    value: this.m_current_chord.data[index].z_down,
                     color: '#00FF00'
                 },
                 {
@@ -2135,6 +2235,8 @@
             $('#chi_chart')[0].addEventListener('mouseleave', function () {
                 this.m_chi_chart.toolTip.hide();
             }.bind(this));
+
+            this.selectors.chord_div.on('change', this, this.DrawChord.bind(this));
         };
 
         this.HideMainRightTooltips = function(){

@@ -208,7 +208,6 @@ class Processor:
             else:
                 poly = []
                 energy = self.expected['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
-                #energy = 1  ## DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
                     temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
@@ -229,6 +228,9 @@ class Processor:
 
     def calc_temp(self, event, poly, stray, E):
         channels = []
+
+        E *= self.absolute['E_mult']
+
         for ch_ind in range(5):
             if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
@@ -238,6 +240,7 @@ class Processor:
             chi2 = float('inf')
             N_i = []
             sigm2_i = []
+
             for ch in channels:
                 N_i.append(event['ch'][ch]['ph_el'])
                 if stray[ch] > 100:
@@ -316,7 +319,7 @@ class Processor:
                     nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
                 fdf_sum = math.pow(fdf_sum, 2)
 
-                A = self.absolute['%d' % poly] * self.cross_section
+                A = self.absolute['A']['%d' % poly] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
 
