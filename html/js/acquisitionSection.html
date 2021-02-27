@@ -203,10 +203,10 @@
                         let enable = $('#laser_enable')
                         if(resp.state[15]){
                             enable.css('background-color','white');
-                            enable.html('Output enabled.');
+                            enable.html('Generation allowed.');
                         }else{
                             enable.css('background-color','yellow');
-                            enable.html('Output disabled.');
+                            enable.html('Generation blocked.');
                         }
                     }else{
                         console.log(resp);
