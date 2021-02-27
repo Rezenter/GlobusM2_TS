@@ -43,14 +43,17 @@ class Processor:
         self.error = None
         if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
+            print(self.error)
             return
         self.db_path = db_path
         if not os.path.isdir('%s%s' % (self.db_path, self.EXPECTED_FOLDER)):
             self.error = 'Spectral calibration path not found.'
+            print(self.error)
             return
         expected_full_name = '%s%s%s%s' % (self.db_path, self.EXPECTED_FOLDER, self.expected_id, self.FILE_EXT)
         if not os.path.isfile(expected_full_name):
             self.error = 'Calibration file not found.'
+            print(self.error)
             return
         self.expected = {}
         with open(expected_full_name, 'r') as expected_file:
@@ -61,10 +64,12 @@ class Processor:
 
         if not os.path.isdir('%s%s' % (self.db_path, self.ABSOLUTE_FOLDER)):
             self.error = 'Spectral calibration path not found.'
+            print(self.error)
             return
         absolute_full_name = '%s%s%s%s' % (self.db_path, self.ABSOLUTE_FOLDER, self.absolute_id, self.FILE_EXT)
         if not os.path.isfile(absolute_full_name):
             self.error = 'Calibration file not found.'
+            print(self.error)
             return
         self.absolute = {}
         with open(absolute_full_name, 'r') as absolute_file:
