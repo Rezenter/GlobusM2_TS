@@ -18,25 +18,29 @@ function viewerMain (container) {
     this.displayConfig = function(ev) {
         let self = ev.data;
         console.log('display config');
-        self.m_container.load('js/configSection.html')
+        self.m_container.empty();
+        self.m_container.load('js/configSection.html');
     };
 
     this.displayAcq = function(ev) {
         let self = ev.data;
         console.log('display acquire');
-        self.m_container.load('js/acquisitionSection.html')
+        self.m_container.empty();
+        self.m_container.load('js/acquisitionSection.html');
     };
 
     this.displayCalibr = function(ev) {
         let self = ev.data;
         console.log('display calibr');
-        self.m_container.load('js/calibrSection.html')
+        self.m_container.empty();
+        self.m_container.load('js/calibrSection.html');
     };
 
     this.displayView = function(ev) {
         let self = ev.data;
         console.log('display view');
-        self.m_container.load('js/viewSection.html')
+        self.m_container.empty();
+        self.m_container.load('js/viewSection.html');
     };
 
     this.BuildControls = function () {

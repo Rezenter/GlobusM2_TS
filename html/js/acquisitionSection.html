@@ -46,6 +46,7 @@
     function Main () {
         this.m_laser_warm = null;
         this.m_laser_warming = null;
+        this.m_lasWatchdog = null;
 
         this.RequestADC = function (req, callback) {
             req.subsystem = 'adc';
@@ -126,13 +127,16 @@
         };
 
         this.LasConnect = function(ev){
+            if(this.m_lasWatchdog){
+                clearTimeout(this.m_lasWatchdog);
+            }
             this.RequestLas(
                 {
                     reqtype: 'connect'
                 }
                 , function (resp) {
                     if(resp.ok) {
-                        setInterval(this.LasStatus, 500);
+                        this.m_lasWatchdog = setInterval(this.LasStatus, 500);
                     }else{
                         console.log(resp);
                         alert(resp.description);
@@ -142,6 +146,11 @@
         }.bind(this);
 
         this.LasStatus = function(ev){
+            if ($(document.body).find( "title" )[0].innerHTML !== 'Acquisition Section'){
+                clearTimeout(this.m_lasWatchdog);
+                console.log('stop laser requests');
+                return;
+            }
             let state = $('#laser_state');
             state.css('background-color','grey');
             state.html('Requesting...');
