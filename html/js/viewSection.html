@@ -1191,7 +1191,7 @@
                         shotn + this.m_defaults.n_prof_title;
                     //console.log(resp);
                     for(let poly_ind = 0; poly_ind < resp.polys.length; poly_ind++){
-                        let h05 = resp.polys[poly_ind].h * 0.5;
+                        let h05 = resp.polys[poly_ind].h * 0.5 * 0.1;
                         this.m_poloidal_poly.push({
                             type: "rangeArea",
                             markerType: "none",
