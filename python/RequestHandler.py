@@ -14,6 +14,9 @@ def __init__():
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
+CONFIG = 'config/'
+SPECTRAL_CAL = 'calibration/spectral/'
+ABS_CAL = 'calibration/abs/processed/'
 #EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
@@ -54,6 +57,9 @@ class Handler:
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
         self.debug_path = '%s%s' % (DB_PATH, DEBUG_SHOTS)
+        self.config_path = '%s%s' % (DB_PATH, CONFIG)
+        self.spectral_path = '%s%s' % (DB_PATH, SPECTRAL_CAL)
+        self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
         self.raw_processor = None
         self.fine_processor = None
         self.las = laser1064.Chatter()
@@ -81,6 +87,24 @@ class Handler:
             return resp
         resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
         resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
+
+        tmp = sorted(os.listdir(self.config_path), reverse=True)
+        resp['config'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['config'].append(entry[:-5])
+
+        tmp = sorted(os.listdir(self.spectral_path), reverse=True)
+        resp['spectral_cal'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['spectral_cal'].append(entry[:-5])
+
+        tmp = sorted(os.listdir(self.abs_path), reverse=True)
+        resp['abs_cal'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['abs_cal'].append(entry[:-5])
         resp['ok'] = True
         return resp
 

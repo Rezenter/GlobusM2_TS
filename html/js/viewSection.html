@@ -1115,6 +1115,9 @@
                 , function (resp) {
                     this.m_plasma_shots = resp['plasma'];
                     this.m_debug_shots = resp['debug'];
+                    this.m_config_list = resp['config'];
+                    this.m_spectralConf_list = resp['spectral_cal'];
+                    this.m_absConf_list = resp['abs_cal'];
                     this.UpdateShotSelect();
                 }.bind(this)
             );
@@ -1129,13 +1132,17 @@
             shots.forEach(shot => options.push("<option>" + shot + "</option>"));
             this.selectors.shotn.html(options);
 
-            options = ['<option>2020.12.10</option>'];
+            //options = ['<option>2020.12.10</option>'];
+            options = [];
+            this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('#config_select').html(options);
 
-            options = ['<option>2021.01.22</option>', '<option>2020.11.06</option>'];
+            options = [];
+            this.m_absConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('#abs_select').html(options);
 
-            options = ['<option>2020.11.11</option>'];
+            options = [];
+            this.m_spectralConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('#spectral_select').html(options);
 
             if(options.length && $('#auto_load')[0].checked){
