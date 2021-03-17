@@ -23,7 +23,6 @@ def counterclock(r, z, g_r, g_z):
         return [v for v in reversed(r)], [v for v in reversed(z)]
     return r, z
 
-
 def get_integrals(shotn, ts, radius, start, stop):
     with open('%smcc_%d.json' % (CCM_DB, shotn), 'r') as mcc_file:
         data = json.load(mcc_file)
@@ -362,3 +361,73 @@ def get_integrals(shotn, ts, radius, start, stop):
     }
 
 
+class CCM:
+    CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/'  # y = \\172.16.12.127
+
+    theta_count = 180
+    gamma_shift = 1
+    elong_0 = 1.5
+    shaf_shift = 3
+    linear_count = 3
+    data = {}
+    timestamps = []
+    error = None
+
+    def set_error(self, err):
+        print('Error! \n %s' % err)
+        self.error = err
+
+    def __init__(self, shotn):
+        with open('%smcc_%d.json' % (CCM_DB, shotn), 'r') as mcc_file:
+            self.data = json.load(mcc_file)
+        if self.data is None:
+            self.set_error('No mcc file!')
+            fuck
+        self.timestamps = self.data['time']['variable']
+
+    def counterclock(self, r, z, t_ind):
+        g_r = self.data['R']['variable'][t_ind]
+        g_z = self.data['Z']['variable'][t_ind]
+        count = len(r) // 10
+        dir = angle(r[0], z[0], g_r, g_z) - angle(r[count], z[count], g_r, g_z)
+        if dir < 0:
+            r = [v for v in reversed(r)]
+            z = [v for v in reversed(z)]
+
+        for i in range(1, len(r)):
+            if r[i] > g_r:
+                if z[i - 1] >= g_z > z[i]:
+                    start_ind = i - 1
+                    break
+        res_r = r[start_ind:]
+        res_r.extend(r[:start_ind])
+        res_z = z[start_ind:]
+        res_z.extend(z[:start_ind])
+        return res_r, res_z
+
+    def get_surface(self, t_ind, ra=1, theta_step=0):
+        sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
+                            self.data['boundary']['zbdy']['variable'][t_ind],
+                            t_ind)
+        if ra == 1:
+            return sep_r, sep_z
+        if ra > 1 or ra < 0:
+            print(ra)
+            fuck
+        if theta_step == 0:
+            theta_step = (math.tau / theta_count)
+        a = ra * (sep_r[0] - self.data['R']['variable'][t_ind])
+        triang = a * self.data['de']['variable'][t_ind] / self.data['a']['variable'][t_ind]
+        elong = self.elong_0 + \
+                a * (self.data['kx']['variable'][t_ind] - self.elong_0) / self.data['a']['variable'][t_ind]
+        shift = self.shaf_shift * math.pow((1 - math.pow(a / self.data['a']['variable'][t_ind], 2)), self.gamma_shift)
+
+        r = []
+        z = []
+        theta = 0
+        while theta < math.tau:
+            r.append(self.data['R']['variable'][t_ind] + shift +
+                     a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
+            z.append(self.data['Z']['variable'][t_ind] + a * elong * math.sin(theta))
+            theta += theta_step
+        return r, z

@@ -358,7 +358,8 @@ class Processor:
         elif res['n_err'] / res['n'] > 0.1:
             res['error'] = 'high ne error'
         elif res['chi2'] > 20:
-            res['error'] = 'high chi'
+            #res['error'] = 'high chi'
+            print('Warning! chi2 filter disabled!')
         return res
 
     def to_csv(self, x_from, x_to):
