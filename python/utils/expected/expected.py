@@ -76,7 +76,6 @@ def dump_expected(expected):
         for ch in expected:
             line += '%.4e ' % ch[t_ind]
         print(line[:-1])
-    fuck
 
 
 #dump_kappa(8)  # tmp
@@ -108,6 +107,7 @@ for poly in range(10):
     print('processed %d' % poly)
     #plt.show()
     plt.close()
-    dump_expected(expected)
+    #dump_expected(expected)
 with open('out/expected.json', 'w') as out_file:
     json.dump(result, out_file)
+print('OK')

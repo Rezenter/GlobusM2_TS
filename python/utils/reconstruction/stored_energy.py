@@ -178,6 +178,11 @@ for t_ind in range(len(ccm_data.timestamps) - 1):
         break
 
 sep_r, sep_z = ccm_data.get_surface(t_ind)
+
+for i in range(len(sep_r)):
+    print(sep_z[i], sep_r[i])
+fuck
+
 a0 = sep_r[0] - ccm_data.data['R']['variable'][t_ind]
 
 surfaces = []

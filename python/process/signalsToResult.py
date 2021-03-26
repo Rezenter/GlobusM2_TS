@@ -327,6 +327,7 @@ class Processor:
                 A = self.absolute['A']['%d' % poly] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
+                print('%.2e, %.2e, %.2f' % (A, n_e, E))
 
                 mult = nf_sum / f2_sum
 
