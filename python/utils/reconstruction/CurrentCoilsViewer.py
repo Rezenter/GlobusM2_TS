@@ -14,6 +14,7 @@ with open('d:/data/db/plasma/result/%05d/%05d.json' % (shotn, shotn), 'r') as ts
 if ts is None:
     fuck
 
+# y:/  = \\172.16.12.127\Data
 with open('y:/!!!CURRENT_COIL_METHOD/mcc_%d.json' % shotn, 'r') as mcc_file:
     data = json.load(mcc_file)
 if data is None:

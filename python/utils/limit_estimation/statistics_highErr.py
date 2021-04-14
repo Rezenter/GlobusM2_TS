@@ -90,7 +90,7 @@ shots = [
     },
 ]
 
-poly_list = [0, 1]
+poly_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 with open('error.csv', 'w') as out_fp:
     header = 'n_e, T_e, Te_Err_<20, Te_err_all\n'

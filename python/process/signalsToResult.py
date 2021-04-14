@@ -363,7 +363,7 @@ class Processor:
             print('Warning! chi2 filter disabled!')
         return res
 
-    def to_csv(self, x_from, x_to):
+    def to_csv(self, x_from, x_to, correction):
         temp_evo = ''
         line = 't, '
         for poly in self.result['polys']:
@@ -419,7 +419,8 @@ class Processor:
                     if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
-                        line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
+                        print(poly['n'], poly['n'] * correction)
+                        line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
                 dens_evo += line[:-2] + '\n'
 
         dens_prof = ''
@@ -439,7 +440,8 @@ class Processor:
                             ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
-                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
+                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
+                                                  event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
 
         return {
