@@ -361,6 +361,25 @@ def get_integrals(shotn, ts, radius, start, stop):
     }
 
 
+def interpol(x_prev, x, x_next, y_prev, y_next):
+    return y_prev + (y_next - y_prev) * (x - x_prev) / (x_next - x_prev)
+
+
+def linearization(x, y):
+    sum_x = 0
+    sum_y = 0
+    sum_xy = 0
+    sum_x2 = 0
+    for i in range(len(x)):
+        sum_x += x[i]
+        sum_y += y[i]
+        sum_xy += x[i] * y[i]
+        sum_x2 += math.pow(x[i], 2)
+    a = (len(x) * sum_xy - sum_x * sum_y) / (len(x) * sum_x2 - math.pow(sum_x, 2))
+    b = (sum_y - a * sum_x) / len(x)
+    return a, b
+
+
 class CCM:
     CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/'  # y = \\172.16.12.127
 
@@ -394,18 +413,19 @@ class CCM:
             r = [v for v in reversed(r)]
             z = [v for v in reversed(z)]
 
-        for i in range(1, len(r)):
+        for i in range(0, len(r)):
             if r[i] > g_r:
                 if z[i - 1] >= g_z > z[i]:
+                    if i == 0:
+                        return r, z
                     start_ind = i - 1
-                    break
-        res_r = r[start_ind:]
-        res_r.extend(r[:start_ind])
-        res_z = z[start_ind:]
-        res_z.extend(z[:start_ind])
-        return res_r, res_z
+                    res_r = r[start_ind:]
+                    res_r.extend(r[:start_ind])
+                    res_z = z[start_ind:]
+                    res_z.extend(z[:start_ind])
+                    return res_r, res_z
 
-    def get_surface(self, t_ind, ra=1, theta_step=0):
+    def get_surface(self, t_ind, ra=1, theta_count=360):
         sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
                             self.data['boundary']['zbdy']['variable'][t_ind],
                             t_ind)
@@ -414,8 +434,9 @@ class CCM:
         if ra > 1 or ra < 0:
             print(ra)
             fuck
-        if theta_step == 0:
-            theta_step = (math.tau / theta_count)
+
+        theta_step = (math.tau / theta_count)
+
         a = ra * (sep_r[0] - self.data['R']['variable'][t_ind])
         triang = a * self.data['de']['variable'][t_ind] / self.data['a']['variable'][t_ind]
         elong = self.elong_0 + \
@@ -424,10 +445,129 @@ class CCM:
 
         r = []
         z = []
-        theta = 0
-        while theta < math.tau:
+        for theta_ind in range(theta_count + 1):
+            theta = theta_step * theta_ind
             r.append(self.data['R']['variable'][t_ind] + shift +
                      a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
             z.append(self.data['Z']['variable'][t_ind] + a * elong * math.sin(theta))
-            theta += theta_step
         return r, z
+
+    def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):
+        tolerance = 0.1
+
+        min_a = 0
+        iteration = 1
+        while 1:
+            r, z = self.get_surface(t_ind, ra=((max_a + min_a) * 0.5))
+
+            for index in range(len(r) - 1):
+                if z[index] * z[index + 1] <= 0:
+                    if lfs:
+                        if r[index] > center_r:
+                            break
+                    else:
+                        if r[index] < center_r:
+                            break
+            else:
+                min_a = (max_a + min_a) * 0.5
+                iteration += 1
+                continue
+
+            candidate_r = interpol(z[index + 1], 0, z[index], r[index + 1], r[index])
+
+            if abs(candidate_r - requested_r) <= tolerance or max_a - min_a < 1e-4:
+                #print('FOUND:', (max_a + min_a) * 0.5, iteration, candidate_r, requested_r)
+                return (max_a + min_a) * 0.5, r, z
+            if lfs:
+                if candidate_r > requested_r:
+                    max_a = (max_a + min_a) * 0.5
+                else:
+                    min_a = (max_a + min_a) * 0.5
+            else:
+                if candidate_r > requested_r:
+                    min_a = (max_a + min_a) * 0.5
+                else:
+                    max_a = (max_a + min_a) * 0.5
+            iteration += 1
+
+    def find_poly(self, polys, t_ind):
+        sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
+                                         self.data['boundary']['zbdy']['variable'][t_ind],
+                                         t_ind)
+        if sep_z[0] < 0:
+            for index in range(len(sep_r) - 1, -1, -1):
+                if sep_z[index] > 0:
+                    equator_r = sep_r[index]
+                    break
+        else:
+            for index in range(len(sep_r)):
+                if sep_z[index] <= 0:
+                    equator_r = sep_r[index]
+                    break
+
+        center_r = self.data['R']['variable'][t_ind] + self.shaf_shift
+        lfs_poly = []
+        hfs_poly = []
+        for poly_ind in range(len(polys)):
+            poly = polys[poly_ind]
+            if poly['R'] >= center_r:
+                lfs_poly.append(poly)
+            else:
+                hfs_poly.insert(0, poly)
+
+        result = [{
+            'a': 1,
+            'r': sep_r,
+            'z': sep_z
+        }]
+        last_a = 1
+        for poly in lfs_poly:
+            if poly['R'] > equator_r:
+                continue
+            last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r)
+            poly['a'] = last_a
+            result.append(poly)
+        last_a = 1
+        for poly in hfs_poly:
+            #check poly inside separatrix!
+            last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r, lfs=False)
+            poly['a'] = last_a
+            for res_ind in range(len(result)):
+                if result[res_ind]['a'] < last_a:
+                    result.insert(res_ind, poly)
+                    break
+            else:
+                result.append(poly)
+        result.append({
+            'a': 0,
+            'r_min': center_r,
+            'r_max': center_r,
+            'z': self.data['Z']['variable'][t_ind]
+        })
+        r_arr = []
+        T_arr = []
+        n_arr = []
+        for i in range(3):
+            poly = result[i + 1]
+            r_arr.append(poly['a'])
+            T_arr.append(poly['Te'])
+            n_arr.append(poly['ne'])
+        a, b = linearization(r_arr, T_arr)
+        result[0]['Te'] = a * result[0]['a'] + b
+        a, b = linearization(r_arr, n_arr)
+        result[0]['ne'] = a * result[0]['a'] + b
+
+        r_arr = []
+        T_arr = []
+        n_arr = []
+        for i in range(3):
+            poly = result[-(i + 2)]
+            r_arr.append(poly['a'])
+            T_arr.append(poly['Te'])
+            n_arr.append(poly['ne'])
+        a, b = linearization(r_arr, T_arr)
+        result[-1]['Te'] = a * result[-1]['a'] + b
+        a, b = linearization(r_arr, n_arr)
+        result[-1]['ne'] = a * result[-1]['a'] + b
+        return result
+

@@ -5,6 +5,7 @@ import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.utils.reconstruction.CurrentCoils as ccm
+import python.utils.reconstruction.stored_energy as ccm_energy
 
 
 def __init__():
@@ -52,7 +53,8 @@ class Handler:
                 'get_expected': self.get_expected,
                 'save_shot': self.save_shot,
                 'export_shot': self.export_shot,
-                'chord_int': self.get_chord_integrals
+                'chord_int': self.get_chord_integrals,
+                'load_ccm': self.load_ccm
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -367,6 +369,51 @@ class Handler:
             'ok': True
         }
         return resp
+
+    def load_ccm(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, req['shotn'])
+        if not os.path.isdir(shot_path):
+            resp['ok'] = False
+            print(shot_path)
+            resp['description'] = 'Requested shotn is missing.'
+            return resp
+        if 'start' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'stop' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'r' not in req:
+            resp['ok'] = False
+            resp['description'] = '"r" field is missing from request.'
+            return resp
+        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.02.01',
+                                                      '2021.02.03')
+            if self.fine_processor.get_error() is not None:
+                self.get_integrals_shot(req)
+                self.fine_processor.load()
+        """return ccm.get_integrals(int(req['shotn']),
+                                 self.fine_processor.get_data(),
+                                 float(req['r']),
+                                 float(req['start']),
+                                 float(req['stop']))"""
+        stored_calc = ccm_energy.StoredCalculator(int(req['shotn']), self.fine_processor.get_data())
+        result = stored_calc.calc_dynamics(float(req['start']), float(req['stop']), float(req['r']))
+        if stored_calc.error is None:
+            return result
+        return {
+            'ok': False,
+            'description': 'Stored_calc error "%s"' % stored_calc.error,
+            'result': result
+        }
 
     def fast_status(self, req):
         print('status...')

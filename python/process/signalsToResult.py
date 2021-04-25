@@ -419,7 +419,6 @@ class Processor:
                     if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
-                        print(poly['n'], poly['n'] * correction)
                         line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
                 dens_evo += line[:-2] + '\n'
 
