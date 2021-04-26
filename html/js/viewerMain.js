@@ -24,7 +24,7 @@ function viewerMain (container) {
 
     this.displayAcq = function(ev) {
         let self = ev.data;
-        console.log('display acquire');
+        //console.log('display acquire');
         self.m_container.empty();
         self.m_container.load('js/acquisitionSection.html');
     };
@@ -38,7 +38,7 @@ function viewerMain (container) {
 
     this.displayView = function(ev) {
         let self = ev.data;
-        console.log('display view');
+        //console.log('display view');
         self.m_container.empty();
         self.m_container.load('js/viewSection.html');
     };

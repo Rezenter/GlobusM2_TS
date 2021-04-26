@@ -158,10 +158,10 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <div id="nl_evo_chart" style="width:100%; height:400px;" class="context-target" nl evo></div>
+                    <div id="nl_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                    <div id="w_evo_chart" style="width:100%; height:400px;" class="context-target" w evo></div>
+                    <div id="w_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
                 </div>
             </div>
         </div>
@@ -274,6 +274,28 @@
             </div>
         </div>
     </div>
+    <div id="ccmPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="ccm_surf_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="ccm_chord_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <nav id="context-menu" class="context-menu"></nav>
 </body>
 <script>
@@ -327,6 +349,7 @@
         this.m_poloidal_poly = [];
 
         this.selectors = {
+            ccmPopup: $('#ccmPopup')[0],
             chordPopup: $('#chordPopup')[0],
             chiPopup: $('#chiPopup')[0],
             singleEventPopup: $('#singleEventPopup')[0],
@@ -371,10 +394,14 @@
                         updated: function(e){
                             this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
                             this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         }.bind(this),
                         hidden: function (e){
-                            this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_n_evo_chart.axisX[0].crosshair.hide();
                             this.m_T_evo_chart.axisX[0].crosshair.hide();
+                            this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                            this.m_w_evo_chart.axisX[0].crosshair.hide();
                         }.bind(this)
                     }
                 },
@@ -386,10 +413,14 @@
                     updated: function(e){
                         this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                         this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                        this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                        this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     }.bind(this),
                     hidden: function(){
                         this.m_T_evo_chart.toolTip.hide();
                         this.m_n_evo_chart.toolTip.hide();
+                        this.m_nl_evo_chart.toolTip.hide();
+                        this.m_w_evo_chart.toolTip.hide();
                     }.bind(this)
                 },
                 data: []
@@ -461,10 +492,14 @@
                     },
                     updated: function(e){
                         this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
                 },
@@ -491,10 +526,14 @@
                 }.bind(this),
                 updated: function(e){
                     this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
                 }.bind(this),
                 hidden: function(){
                     this.m_n_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
                     this.m_timestamp_chart.charts[0].toolTip.hide();
                 }.bind(this)
             },
@@ -562,10 +601,14 @@
                     },
                     updated: function(e){
                         this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
                 },
@@ -590,10 +633,14 @@
                 },
                 updated: function(e){
                     this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
                     this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
                 }.bind(this),
                 hidden: function(){
                     this.m_T_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
                     this.m_timestamp_chart.charts[0].toolTip.hide();
                 }.bind(this)
             },
@@ -670,13 +717,13 @@
         //ccm charts
         this.m_nl_evo_chart = new CanvasJS.Chart("nl_evo_chart", {
             title: {
-                text: 'Electron density evolution averaged along R=42 chord',
+                text: 'Electron density evolution integrated along R=42 chord',
                 fontSize: 14,
                 fontFamily: 'arial'
             },
             axisY: {
                 includeZero: true,
-                title: 'Line electron density, m⁻²',
+                title: 'nl₄₂ , m⁻²',
                 titleFontSize: 12,
                 labelFormatter: function ( e ) {
                     return e.value.toExponential(1);
@@ -698,12 +745,14 @@
                     updated: function(e){
                         this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
-                        //this.UpdateChordSubcharts(e.value);
+                        this.UpdateCCMPopup(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_T_evo_chart.axisX[0].crosshair.hide();
                         this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
                 },
@@ -712,20 +761,29 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
-                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
-                    for(let entry of e.entries) {
-                        if (typeof entry.dataPoint.y == 'number') {
-                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
-                        } else {
-                            if (entry.dataPoint.y[0] !== null) {
-                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
-                            } else {
-                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
-                            }
-                        }
-                    }
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">nl<sub>42</sub> = ' + e.entries[0].dataPoint.y.toExponential(2) + ' [m<sup>-2</sup>]</p>';
+                    text += '<p style="color: #000000;">Chord length = ' +
+                        (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
+                            this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z)).toFixed(2) + ' [m]</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';"> &ltn<sub>e</sub>&gt = ' +
+                        (e.entries[0].dataPoint.y / (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z))).toExponential(2) +
+                        ' [m<sup>-3</sup>]</p>';
                     return text;
-                }
+                }.bind(this),
+                updated: function(e){
+                    this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                }.bind(this)
             },
             data: []
         });
@@ -738,7 +796,7 @@
             },
             axisY: {
                 includeZero: true,
-                title: 'Electron stored energy, J',
+                title: 'Wₑ, J',
                 titleFontSize: 12,
                 minimum: 0,
                 fontFamily: 'arial'
@@ -757,12 +815,14 @@
                     updated: function(e){
                         this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
-                        //this.UpdateChordSubcharts(e.value);
+                        this.UpdateCCMPopup(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_T_evo_chart.axisX[0].crosshair.hide();
                         this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
                     }.bind(this)
                 },
@@ -776,6 +836,18 @@
                     text += '<p style="color: #000000;">Plasma volume = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.vol.toFixed(3) + ' [m<sup>3</sup>]</p>';
                     text += '<p style="color: #000000;">Separatrix area = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.area.toFixed(3) + ' [m<sup>2</sup>]</p>';
                     return text;
+                }.bind(this),
+                updated: function(e){
+                    this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
                 }.bind(this)
             },
             data: []
@@ -1208,6 +1280,89 @@
         });
         this.m_chord_profile_chart.render();
 
+        //ccm popup
+        this.m_ccm_surf_chart = new CanvasJS.Chart("ccm_surf_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
+            title: {
+                text: "CCM reconstruction",
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                fontFamily: 'arial',
+                titleFontSize: 12,
+                includeZero: true,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true
+                },
+            },
+            axisX: {
+                title: "R, cm",
+                titleFontSize: 12,
+                interval: 20,
+                fontFamily: 'arial',
+                minimum: 0, //12
+                maximum: 65, //62
+                crosshair: {
+                    enabled: true
+                }
+            },
+            data: []
+        });
+        this.m_ccm_surf_chart.render();
+        this.m_ccm_chord_chart = new CanvasJS.Chart("ccm_chord_chart", {
+            zoomEnabled: true,
+            title: {
+                text: 'Electron density along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                includeZero: true,
+                title: 'nₑ, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                titleFontSize: 12,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+
+                    }.bind(this),
+                    hidden: function (){
+
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>Z = ' + e.entries[0].dataPoint.y.toFixed(1) + ' cm</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">, n<sub>e</sub> = ' + e.entries[0].dataPoint.x.toExponential(1) + ' [m<sup>-3</sup>]';
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_ccm_chord_chart.render();
+
         this.RangeChanged = function(e){
             this.m_T_evo_chart.options.axisX.minimum = e.minimum;
             this.m_T_evo_chart.options.axisX.maximum = e.maximum;
@@ -1430,8 +1585,11 @@
                     }
                     this.m_radius_chart.render();
                     this.m_poloidal_chart.options.data = [];
-                    Object.assign(this.m_poloidal_chart.options.data, this.m_poloidal_poly);
-                    this.m_poloidal_chart.render();
+                    //Object.assign(this.m_poloidal_chart.options.data, this.m_poloidal_poly);
+                    //this.m_poloidal_chart.render();
+                    this.m_ccm_surf_chart.options.data = [];
+                    //Object.assign(this.m_ccm_surf_chart.options.data, this.m_poloidal_poly);
+                    //this.m_ccm_surf_chart.render();
 
                     //console.log(resp);
                     for(let event_ind = 0; event_ind < resp.events.length; event_ind++){
@@ -1503,6 +1661,8 @@
                         minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
                         maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                     });
+                    this.DrawCCM();
+                    this.UpdateCCMPopup();
                 }.bind(this)
             );
         };
@@ -1960,6 +2120,11 @@
             }
         };
 
+        this.DrawSurf = function(){
+            this.selectors.ccmPopup.removeAttribute('hidden');
+            this.UpdateCCMPopup();
+        };
+
         this.Dump = function(targetAttr){
             let res = {};
             if(targetAttr.getNamedItem('evo') !== null || targetAttr.getNamedItem('prof') !== null){
@@ -2152,6 +2317,168 @@
                 }
             ];
             this.m_nl_evo_chart.render();
+        };
+
+        this.UpdateCCMPopup = function(time=0){
+            this.m_ccm_surf_chart.options.data = [];
+            if(this.selectors.ccmPopup.hasAttribute("hidden")){
+                return;
+            }
+            Object.assign(this.m_ccm_surf_chart.options.data, this.m_poloidal_poly);
+            //console.log(this.m_ccm_surf_chart.options.data);
+            let index = 0;
+            //console.log(this.m_current_ccm);
+            //console.log(this.m_currentShot);
+            let eps = 0.05;
+            let found = false;
+            for(; index < this.m_current_ccm.data.length; index++){
+                if(time - eps <= this.m_currentShot.events[this.m_current_ccm.data[index].event_index].timestamp &&
+                    time + eps >= this.m_currentShot.events[this.m_current_ccm.data[index].event_index].timestamp){
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                console.log('requested time not found! ' + time);
+                console.log(this.m_current_ccm);
+                console.log(this.m_currentShot);
+                return;
+            }
+            for(let poly_ind = 0; poly_ind < this.m_current_ccm.data[index].data.surfaces.length - 1; poly_ind++){
+                let points = [];
+                for(let param = 0; param < this.m_current_ccm.data[index].data.surfaces[poly_ind].r.length; param++){
+                    points.push({
+                        x: this.m_current_ccm.data[index].data.surfaces[poly_ind].r[param],
+                        y: this.m_current_ccm.data[index].data.surfaces[poly_ind].z[param]
+                    })
+                }
+                let color = '#000000';
+                if(poly_ind !== 0){
+                    color = this.palette[this.m_current_ccm.data[index].data.surfaces[poly_ind].ind];
+                }
+                this.m_ccm_surf_chart.options.data.push({
+                    color: color,
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    dataPoints: points
+                });
+            }
+            this.m_ccm_surf_chart.render();
+            /*
+            this.m_poloidal_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.r,
+                    color: '#0000FF',
+                    label : "Geom",
+                    labelFontColor: "#0000FF"
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.r,
+                    color: '#FF0000',
+                    label : "Magn",
+                    labelFontColor: "#FF0000",
+                    labelPlacement:"outside",
+                },
+                {
+                    value:12,
+                    color:'#000000'
+                },
+                {
+                    value:62,
+                    color:'#000000'
+                },
+                {
+                    value:42,
+                    color:'#00FF00'
+                }
+
+            ]
+            this.m_poloidal_chart.options.axisY.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.z,
+                    color: '#0000FF'
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.z,
+                    color: '#FF0000'
+                }
+            ]
+            this.m_poloidal_chart.render();
+
+            let points = [];
+            errors = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].profile.z.length; arr_ind++){
+                points.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: this.m_current_chord.data[index].profile.val[arr_ind]
+                });
+                errors.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: [this.m_current_chord.data[index].profile.val[arr_ind] - this.m_current_chord.data[index].profile.err[arr_ind],
+                        this.m_current_chord.data[index].profile.val[arr_ind] + this.m_current_chord.data[index].profile.err[arr_ind]
+                    ]
+                })
+            }
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                dataPoints: points
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "error",
+                //markerType: "none",
+                dataPoints: errors
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_down,
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].z_down +
+                            this.m_current_chord.data[index].edge.down.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[0],
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].profile.z[0] +
+                            this.m_current_chord.data[index].edge.down.b
+                    }
+                ]
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_up,
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].z_up +
+                            this.m_current_chord.data[index].edge.up.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1],
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1] +
+                            this.m_current_chord.data[index].edge.up.b
+                    }
+                ]
+            });
+
+            this.m_chord_profile_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].z_down,
+                    color: '#00FF00'
+                },
+                {
+                    value: this.m_current_chord.data[index].z_up,
+                    color: '#00FF00'
+                }
+            ]
+            this.m_chord_profile_chart.render();
+             */
         };
 
         this.RequestChord = function(){
@@ -2916,12 +3243,10 @@
     </li>
                     `;
 
-                    if((taskItemInContext.attributes.getNamedItem('evo') !== null ||
-                        taskItemInContext.attributes.getNamedItem('prof') !== null) &&
-                        taskItemInContext.attributes.getNamedItem('las') === null){
+                    if(taskItemInContext.attributes.getNamedItem('ccm') != null){
                         html += `
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="3d">3D map(not implemented yet)</a>
+        <a href="#" class="context-menu__link" data-action="surf">Show CCM reconstruction & Surfaces</a>
     </li>
                         `;
                     }
@@ -2981,8 +3306,8 @@
                     this.SavePNG(taskItemInContext.id);
                 }else if(link.getAttribute("data-action") === 'ccm'){
                     this.LoadCCM();
-                }else if(link.getAttribute("data-action") === '3d'){
-                    this.Plot3D(taskItemInContext.attributes);
+                }else if(link.getAttribute("data-action") === 'surf'){
+                        this.DrawSurf();
                 }else if(link.getAttribute("data-action") === 'nl42'){
                     this.RequestChord();
                 }else{

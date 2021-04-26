@@ -1,6 +1,7 @@
 import math
 import phys_const as const
 import python.utils.reconstruction.CurrentCoils as ccm
+import copy
 
 r_step = 0.5  # cm
 
@@ -12,8 +13,10 @@ def interpol(x_prev, x, x_next, y_prev, y_next):
 class StoredCalculator:
     def __init__(self, shotn, ts_data):
         self.ccm_data = ccm.CCM(shotn)
-        self.ts_data = ts_data
         self.error = self.ccm_data.error
+        if self.error is not None:
+            return
+        self.ts_data = ts_data
         self.polys = []
         for poly in ts_data['polys']:
             self.polys.append({
@@ -96,7 +99,7 @@ class StoredCalculator:
                             math.tau * left
             left += r_step
             #fuck
-        return area * 1e-4, area_w * 1e-4 * const.q_e, volume * 1e-6, volume_w * 1e-6 * const.q_e, nl_prof, nl_val
+        return area * 1e-4, area_w * 1e-4 * const.q_e, volume * 1e-6, volume_w * 1e-6 * const.q_e, nl_prof, nl_val * 1e-2
 
     def calc_laser_shot(self, requested_time, nl_r):
         t_ind = 0
@@ -105,7 +108,6 @@ class StoredCalculator:
                 if (requested_time - self.ccm_data.timestamps[t_ind]) >= (self.ccm_data.timestamps[t_ind + 1] - requested_time):
                     t_ind += 1
                 break
-
         poly_a = self.ccm_data.find_poly(self.polys, t_ind)
         #for poly in poly_a:
         #    print(poly['a'], poly['Te'], poly['ne'])
@@ -148,7 +150,7 @@ class StoredCalculator:
                     poly['ne'] = event['T_e'][poly['ind']]['n']
                 result.append({
                     'event_index': event_ind,
-                    'data': self.calc_laser_shot(event['timestamp'] * 0.001, nl_r)
+                    'data': copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
                 })
         return {
             'ok': True,

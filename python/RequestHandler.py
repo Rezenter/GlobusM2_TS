@@ -406,6 +406,11 @@ class Handler:
                                  float(req['start']),
                                  float(req['stop']))"""
         stored_calc = ccm_energy.StoredCalculator(int(req['shotn']), self.fine_processor.get_data())
+        if stored_calc.error is not None:
+            return {
+                'ok': False,
+                'description': 'Stored_calc error "%s"' % stored_calc.error
+             }
         result = stored_calc.calc_dynamics(float(req['start']), float(req['stop']), float(req['r']))
         if stored_calc.error is None:
             return result

@@ -1,5 +1,6 @@
 import json
 import math
+import os.path
 
 CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/'  # y = \\172.16.12.127
 
@@ -397,11 +398,15 @@ class CCM:
         self.error = err
 
     def __init__(self, shotn):
-        with open('%smcc_%d.json' % (CCM_DB, shotn), 'r') as mcc_file:
+        filename = '%smcc_%d.json' % (CCM_DB, shotn)
+        if not os.path.isfile(filename):
+            self.set_error('No mcc file!')
+            return
+        with open(filename, 'r') as mcc_file:
             self.data = json.load(mcc_file)
         if self.data is None:
             self.set_error('No mcc file!')
-            fuck
+            return
         self.timestamps = self.data['time']['variable']
 
     def counterclock(self, r, z, t_ind):
