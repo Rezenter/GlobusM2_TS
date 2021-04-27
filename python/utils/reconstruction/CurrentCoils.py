@@ -499,6 +499,7 @@ class CCM:
         sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
                                          self.data['boundary']['zbdy']['variable'][t_ind],
                                          t_ind)
+        equator_r = -1
         if sep_z[0] < 0:
             for index in range(len(sep_r) - 1, -1, -1):
                 if sep_z[index] > 0:
@@ -509,17 +510,22 @@ class CCM:
                 if sep_z[index] <= 0:
                     equator_r = sep_r[index]
                     break
-
+        if equator_r < 0:
+            return []
         center_r = self.data['R']['variable'][t_ind] + self.shaf_shift
         lfs_poly = []
         hfs_poly = []
         for poly_ind in range(len(polys)):
             poly = polys[poly_ind]
+            if poly['skip']:
+                continue
             if poly['R'] >= center_r:
                 lfs_poly.append(poly)
             else:
                 hfs_poly.insert(0, poly)
 
+        if len(lfs_poly) == 0 and len(hfs_poly) == 0:
+            return []
         result = [{
             'a': 1,
             'r': sep_r,

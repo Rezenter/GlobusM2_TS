@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import python.process.rawToSignals as raw_proc
@@ -22,6 +23,7 @@ ABS_CAL = 'calibration/abs/processed/'
 RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
+GUI_CONFIG = 'config/'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'
 
@@ -54,7 +56,9 @@ class Handler:
                 'save_shot': self.save_shot,
                 'export_shot': self.export_shot,
                 'chord_int': self.get_chord_integrals,
-                'load_ccm': self.load_ccm
+                'load_ccm': self.load_ccm,
+                'get_config': self.get_config,
+                'set_config': self.set_config
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -418,6 +422,24 @@ class Handler:
             'ok': False,
             'description': 'Stored_calc error "%s"' % stored_calc.error,
             'result': result
+        }
+
+    def get_config(self, req):
+        if os.path.isdir(GUI_CONFIG) and \
+                os.path.isfile(GUI_CONFIG + 'viewer.json'):
+            with open(GUI_CONFIG + 'viewer.json', 'r') as conf_f:
+                return {
+                    'ok': True,
+                    'data': json.load(conf_f)
+                }
+        return {
+            'ok': False
+        }
+
+    def set_config(self, req):
+        # create folder and file if missing
+        return {
+            'ok': False
         }
 
     def fast_status(self, req):

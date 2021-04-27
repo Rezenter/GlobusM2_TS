@@ -29,7 +29,16 @@ class StoredCalculator:
         not_used_surfaces = []
         for surf_ind in range(len(surfaces)):
             surf = surfaces[surf_ind]
-            if surf['r_min'] <= r <= surf['r_max']:
+            if surf['r_min'] == r == surf['r_max']:
+                profile.append({
+                    'z': surf['z'],
+                    'surf_ind': surf_ind,
+                    'Te': surf['Te'],
+                    'ne': surf['ne']
+                })
+            elif surf['r_min'] <= r <= surf['r_max']:
+                #print('\n\n----------------')
+                #print(surf)
                 for index in range(len(surf['r']) - 1):
                     if (surf['r'][index] - r) * (surf['r'][index + 1] - r) <= 0:
                         profile.append({
@@ -77,28 +86,29 @@ class StoredCalculator:
         area_w = 0
         volume = 0
         volume_w = 0
-        left = surfaces[0]['r_min']
         nl_prof = []
         nl_val = 0
-        while left < surfaces[0]['r_max']:
-            l_prof = self.get_profile(surfaces, left)
-            if 0 <= left - nl_r < r_step:
-                nl_prof = l_prof
+        if len(surfaces) != 0:
+            left = surfaces[0]['r_min']
+            while left < surfaces[0]['r_max']:
+                l_prof = self.get_profile(surfaces, left)
+                if 0 <= left - nl_r < r_step:
+                    nl_prof = l_prof
+                    for point_ind in range(len(l_prof) - 1):
+                        nl_val += (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
+                                  (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5
                 for point_ind in range(len(l_prof) - 1):
-                    nl_val += (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                              (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5
-            for point_ind in range(len(l_prof) - 1):
-                area += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z'])  # dr*dz
-                area_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                          (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
-                          (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5
-                volume += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * math.tau * left
-                volume_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                            (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
-                            (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5 * \
-                            math.tau * left
-            left += r_step
-            #fuck
+                    area += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z'])  # dr*dz
+                    area_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
+                              (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
+                              (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5
+                    volume += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * math.tau * left
+                    volume_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
+                                (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
+                                (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5 * \
+                                math.tau * left
+                left += r_step
+                #fuck
         return area * 1e-4, area_w * 1e-4 * const.q_e, volume * 1e-6, volume_w * 1e-6 * const.q_e, nl_prof, nl_val * 1e-2
 
     def calc_laser_shot(self, requested_time, nl_r):
@@ -146,6 +156,12 @@ class StoredCalculator:
                     continue
                 #print('Process event laser shot %d = %.1fs' % (event_ind, event['timestamp']))
                 for poly in self.polys:
+                    if event['T_e'][poly['ind']]['error']:
+                        poly['skip'] = True
+                        poly['Te'] = None
+                        poly['ne'] = None
+                        continue
+                    poly['skip'] = False
                     poly['Te'] = event['T_e'][poly['ind']]['T']
                     poly['ne'] = event['T_e'][poly['ind']]['n']
                 result.append({
