@@ -363,7 +363,7 @@ class Processor:
             print('Warning! chi2 filter disabled!')
         return res
 
-    def to_csv(self, x_from, x_to, correction):
+    def to_csv(self, x_from, x_to, correction, aux_data):
         temp_evo = ''
         line = 't, '
         for poly in self.result['polys']:
@@ -442,11 +442,24 @@ class Processor:
                         line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
                                                   event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
+        aux = ''
+        aux += 'index, time, nl42, l42, <n>, We\n'
+        aux += ', ms, m-2, m, m-3, J\n'
+        for event in aux_data:
+            event_ind = event['event_index']
+            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                if len(event['data']['nl_profile']) != 0:
+                    length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
+                    aux += '%d, %.1f, %.2e, %.2f, %.2e, %d\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'],
+                            event['data']['nl'] * correction, length,
+                            event['data']['nl'] * correction / length, event['data']['vol_w'] * correction)
 
         return {
             'ok': True,
             'Tt': temp_evo,
             'TR': temp_prof,
             'nt': dens_evo,
-            'nR': dens_prof
+            'nR': dens_prof,
+            'aux': aux
         }

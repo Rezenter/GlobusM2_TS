@@ -771,10 +771,16 @@
                     text += '<p style="color: #000000;">Chord length = ' +
                         (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
                             this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z)).toFixed(2) + ' [m]</p>';
-                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';"> &ltn<sub>e</sub>&gt = ' +
+                    text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt = ' +
                         (e.entries[0].dataPoint.y / (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
                         this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z))).toExponential(2) +
                         ' [m<sup>-3</sup>]</p>';
+                    text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt<sub>V</sub> = ' +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol.toExponential(2) +
+                        ' [m<sup>-3</sup>]</p>';
+                    text += '<p style="color: #000000;"> &ltT<sub>e</sub>&gt<sub>V</sub> = ' +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol.toFixed(1) +
+                        ' [eV]</p>';
                     return text;
                 }.bind(this),
                 updated: function(e){
@@ -1608,7 +1614,7 @@
                     type: "rangeArea",
                     markerType: "none",
                     color: this.palette[poly_ind],
-                    showInLegend: true,
+                    showInLegend: false,
                     name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
                     dataPoints: [{
                         x: (this.m_currentShot.polys[poly_ind].R - this.m_currentShot.polys[poly_ind].l05) * 0.1,
@@ -1650,17 +1656,7 @@
                     config: $('#config_select').val(),
                     calibr: $('#abs_select').val()
                 }, function (resp) {
-                    console.log(resp);
-                    Object.assign(this.m_currentShot, resp);
-                    this.m_currentShot.shotn = shotn;
-                    this.m_currentShot.is_plasma = is_plasma;
-                    this.selectors.polyInputs.attr('max', this.m_currentShot.polys.length - 1);
-                    $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
-
-                    this.DrawTimeline();
-                    this.DrawMain();
-                    this.DrawPoloidal();
-
+                    //console.log(resp);
                     this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
                         shotn + this.m_defaults.timestamp_title;
                     this.m_radius_chart.options.title.text = 'Globus-M2 #' +
@@ -1673,10 +1669,18 @@
                         shotn + this.m_defaults.n_evo_title;
                     this.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
                         shotn + this.m_defaults.n_prof_title;
-                    this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.nl_evo_title;
-                    this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.w_evo_title;
+
+                    Object.assign(this.m_currentShot, resp);
+                    this.m_currentShot.shotn = shotn;
+                    this.m_currentShot.is_plasma = is_plasma;
+                    this.selectors.polyInputs.attr('max', this.m_currentShot.polys.length - 1);
+                    $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
+
+                    this.DrawTimeline();
+                    this.DrawMain();
+                    this.DrawPoloidal();
+
+
 
                     this.m_ccm_surf_chart.options.data = [];
 
@@ -2057,12 +2061,14 @@
                     shotn: this.m_currentShot.shotn,
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
-                    correction: this.selectors.abs_mult.val()
+                    correction: this.selectors.abs_mult.val(),
+                    aux: this.m_current_ccm.data
                 }, function (resp) {
                     this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
                     this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
                     this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
                     this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
+                    this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
                 }.bind(this)
             );
         };
@@ -2290,6 +2296,11 @@
                 , function (resp) {
                     Object.assign(this.m_current_ccm, resp);
                     console.log(this.m_current_ccm);
+                    console.log(this.m_currentShot);
+                    this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
+                        this.m_currentShot.shotn + this.m_defaults.nl_evo_title;
+                    this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
+                        this.m_currentShot.shotn + this.m_defaults.w_evo_title;
                     if(this.m_current_ccm.ok){
                         this.DrawCCM();
                     }else{

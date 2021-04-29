@@ -34,18 +34,23 @@ class StoredCalculator:
                     'z': surf['z'],
                     'surf_ind': surf_ind,
                     'Te': surf['Te'],
-                    'ne': surf['ne']
+                    'ne': surf['ne'],
+                    'Te_err': surf['Te_err'],
+                    'ne_err': surf['ne_err']
                 })
             elif surf['r_min'] <= r <= surf['r_max']:
                 #print('\n\n----------------')
                 #print(surf)
+
                 for index in range(len(surf['r']) - 1):
                     if (surf['r'][index] - r) * (surf['r'][index + 1] - r) <= 0:
                         profile.append({
                             'z': surf['z'][index],
                             'surf_ind': surf_ind,
                             'Te': surf['Te'],
-                            'ne': surf['ne']
+                            'ne': surf['ne'],
+                            'Te_err': surf['Te_err'],
+                            'ne_err': surf['ne_err']
                         })
             else:
                 not_used_surfaces.append(surf_ind)
@@ -83,33 +88,62 @@ class StoredCalculator:
 
     def integrate(self, surfaces, nl_r):
         area = 0
-        area_w = 0
         volume = 0
-        volume_w = 0
+        w = 0
+        w_err = 0
         nl_prof = []
         nl_val = 0
+        nl_err = 0
+        t_ave = 0
+        t_ave_err = 0
+        n_ave = 0
+        n_ave_err = 0
         if len(surfaces) != 0:
-            left = surfaces[0]['r_min']
-            while left < surfaces[0]['r_max']:
-                l_prof = self.get_profile(surfaces, left)
-                if 0 <= left - nl_r < r_step:
+            radius = surfaces[0]['r_min']
+            while radius < surfaces[0]['r_max']:
+                l_prof = self.get_profile(surfaces, radius)
+                if 0 <= radius - nl_r < r_step:
                     nl_prof = l_prof
                     for point_ind in range(len(l_prof) - 1):
-                        nl_val += (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                                  (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5
+                        dz = l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']
+                        n_curr = (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5
+                        nl_val += dz * n_curr
+                        nl_err += dz * (l_prof[point_ind]['ne_err'] + l_prof[point_ind + 1]['ne_err']) * 0.5
                 for point_ind in range(len(l_prof) - 1):
-                    area += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z'])  # dr*dz
-                    area_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                              (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
-                              (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5
-                    volume += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * math.tau * left
-                    volume_w += r_step * (l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']) * \
-                                (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5 * \
-                                (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5 * \
-                                math.tau * left
-                left += r_step
+                    dz = l_prof[point_ind]['z'] - l_prof[point_ind + 1]['z']
+                    n_curr = (l_prof[point_ind]['ne'] + l_prof[point_ind + 1]['ne']) * 0.5
+                    t_curr = (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5
+                    n_curr_err = (l_prof[point_ind]['ne_err'] + l_prof[point_ind + 1]['ne_err']) * 0.5
+                    t_curr_err = (l_prof[point_ind]['Te_err'] + l_prof[point_ind + 1]['Te_err']) * 0.5
+                    area += dz
+                    volume += dz * radius
+                    w += dz * n_curr * t_curr * radius
+                    w_err += dz * n_curr_err * t_curr_err * radius
+                    t_ave += dz * t_curr * radius
+                    t_ave_err += dz * t_curr_err * radius
+                    n_ave += dz * n_curr * radius
+                    n_ave_err += dz * n_curr_err * radius
+                radius += r_step
                 #fuck
-        return area * 1e-4, area_w * 1e-4 * const.q_e, volume * 1e-6, volume_w * 1e-6 * const.q_e, nl_prof, nl_val * 1e-2
+        final_vol = volume * 1e-6 * r_step * math.tau
+        if final_vol != 0:
+            t_ave /= final_vol
+            n_ave /= final_vol
+            t_ave_err /= final_vol
+            n_ave_err /= final_vol
+        return {
+            'area': r_step * area * 1e-4,
+            'volume': final_vol,
+            'vol_w': w * 1e-6 * const.q_e * r_step * math.tau * 1.5,
+            'w_err': w_err * 1e-6 * const.q_e * r_step * math.tau * 1.5,
+            'nl_prof': nl_prof,
+            'nl_val': nl_val * 1e-2,
+            'nl_err': nl_err * 1e-2,
+            't_vol': t_ave * r_step * 1e-6 * math.tau,
+            't_vol_err': t_ave_err * r_step * 1e-6 * math.tau,
+            'n_vol': n_ave * r_step * 1e-6 * math.tau,
+            'n_vol_err': n_ave_err * r_step * 1e-6 * math.tau
+        }
 
     def calc_laser_shot(self, requested_time, nl_r):
         t_ind = 0
@@ -129,16 +163,20 @@ class StoredCalculator:
             for point in poly['r']:
                 poly['r_min'] = min(poly['r_min'], point)
                 poly['r_max'] = max(poly['r_max'], point)
-
-        area, area_w, volume, volume_w, nl_profile, nl_val = self.integrate(poly_a, nl_r)
+        integration = self.integrate(poly_a, nl_r)
         return {
-            'area': area,
-            'area_w': area_w,
-            'vol': volume,
-            'vol_w': volume_w,
+            'area': integration['area'],
+            'vol': integration['volume'],
+            'vol_w': integration['vol_w'],
+            'w_err': integration['w_err'],
             'surfaces': poly_a,
-            'nl_profile': nl_profile,
-            'nl': nl_val
+            'nl_profile': integration['nl_prof'],
+            'nl': integration['nl_val'],
+            'nl_err': integration['nl_err'],
+            't_vol': integration['t_vol'],
+            't_vol_err': integration['t_vol_err'],
+            'n_vol': integration['n_vol'],
+            'n_vol_err': integration['n_vol_err']
         }
 
     def calc_dynamics(self, t_from, t_to, nl_r):
@@ -164,6 +202,8 @@ class StoredCalculator:
                     poly['skip'] = False
                     poly['Te'] = event['T_e'][poly['ind']]['T']
                     poly['ne'] = event['T_e'][poly['ind']]['n']
+                    poly['Te_err'] = event['T_e'][poly['ind']]['Terr']
+                    poly['ne_err'] = event['T_e'][poly['ind']]['n_err']
                 result.append({
                     'event_index': event_ind,
                     'data': copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))

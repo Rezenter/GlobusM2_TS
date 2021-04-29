@@ -429,6 +429,8 @@ class CCM:
                     res_z = z[start_ind:]
                     res_z.extend(z[:start_ind])
                     return res_r, res_z
+        print('WTF? FIX THIS SHIT')
+        return [], []
 
     def get_surface(self, t_ind, ra=1, theta_count=360):
         sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
@@ -499,6 +501,8 @@ class CCM:
         sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
                                          self.data['boundary']['zbdy']['variable'][t_ind],
                                          t_ind)
+        if len(sep_r) == 0 or len(sep_z) == 0:
+            return []
         equator_r = -1
         if sep_z[0] < 0:
             for index in range(len(sep_r) - 1, -1, -1):
@@ -558,27 +562,39 @@ class CCM:
         r_arr = []
         T_arr = []
         n_arr = []
+        Te_err = 0
+        ne_err = 0
         for i in range(3):
             poly = result[i + 1]
             r_arr.append(poly['a'])
             T_arr.append(poly['Te'])
             n_arr.append(poly['ne'])
+            Te_err = max(Te_err, poly['Te_err'])
+            ne_err = max(ne_err, poly['ne_err'])
         a, b = linearization(r_arr, T_arr)
-        result[0]['Te'] = a * result[0]['a'] + b
+        result[0]['Te'] = max(0, a * result[0]['a'] + b)
         a, b = linearization(r_arr, n_arr)
-        result[0]['ne'] = a * result[0]['a'] + b
+        result[0]['ne'] = max(0, a * result[0]['a'] + b)
+        result[0]['Te_err'] = Te_err * math.sqrt(3)
+        result[0]['ne_err'] = ne_err * math.sqrt(3)
 
         r_arr = []
         T_arr = []
         n_arr = []
+        Te_err = 0
+        ne_err = 0
         for i in range(3):
             poly = result[-(i + 2)]
             r_arr.append(poly['a'])
             T_arr.append(poly['Te'])
             n_arr.append(poly['ne'])
+            Te_err = max(Te_err, poly['Te_err'])
+            ne_err = max(ne_err, poly['ne_err'])
         a, b = linearization(r_arr, T_arr)
         result[-1]['Te'] = a * result[-1]['a'] + b
         a, b = linearization(r_arr, n_arr)
         result[-1]['ne'] = a * result[-1]['a'] + b
+        result[-1]['Te_err'] = Te_err * math.sqrt(3)
+        result[-1]['ne_err'] = ne_err * math.sqrt(3)
         return result
 
