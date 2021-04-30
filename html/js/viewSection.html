@@ -766,20 +766,25 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
+                    let mult = this.selectors.abs_mult.val();
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
-                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">nl<sub>42</sub> = ' + e.entries[0].dataPoint.y.toExponential(2) + ' [m<sup>-2</sup>]</p>';
+                    let chord_length = (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z));
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">nl<sub>42</sub> = ' + e.entries[0].dataPoint.y.toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_err * mult).toExponential(2) + ' [m<sup>-2</sup>]</p>';
                     text += '<p style="color: #000000;">Chord length = ' +
-                        (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
-                            this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z)).toFixed(2) + ' [m]</p>';
+                        chord_length.toFixed(2) + ' [m]</p>';
                     text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt = ' +
-                        (e.entries[0].dataPoint.y / (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
-                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z))).toExponential(2) +
+                        (e.entries[0].dataPoint.y / chord_length).toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_err * mult / chord_length).toExponential(2) +
                         ' [m<sup>-3</sup>]</p>';
                     text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt<sub>V</sub> = ' +
-                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol.toExponential(2) +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol * mult).toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol_err * mult).toExponential(2) +
                         ' [m<sup>-3</sup>]</p>';
                     text += '<p style="color: #000000;"> &ltT<sub>e</sub>&gt<sub>V</sub> = ' +
-                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol.toFixed(1) +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol.toFixed(1) + ' ± ' +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol_err.toFixed(1) +
                         ' [eV]</p>';
                     return text;
                 }.bind(this),
@@ -843,7 +848,8 @@
                 shared: true,
                 contentFormatter: function(e){
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
-                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' [J]</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.selectors.abs_mult.val()).toFixed(0) + ' [J]</p>';
                     text += '<p style="color: #000000;">Plasma volume = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.vol.toFixed(3) + ' [m<sup>3</sup>]</p>';
                     text += '<p style="color: #000000;">Separatrix area = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.area.toFixed(3) + ' [m<sup>2</sup>]</p>';
                     return text;
@@ -2311,25 +2317,59 @@
         };
 
         this.DrawCCM = function(){
-            let w_points = [];
             let nl_points = [];
+            let nl_errors = [];
+            let w_points = [];
+            let w_errors = [];
             if(this.m_current_ccm.ok){
                 let mult = this.selectors.abs_mult.val();
                 for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
-                    w_points.push({
-                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                        y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
-                        global_ind: this.m_current_ccm.data[arr_ind].event_index,
-                        ccm_ind: arr_ind
-                    });
                     nl_points.push({
                         x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
                         y: this.m_current_ccm.data[arr_ind].data.nl * mult,
                         global_ind: this.m_current_ccm.data[arr_ind].event_index,
                         ccm_ind: arr_ind
                     });
+                    nl_errors.push({
+                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                        y: [
+                            (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
+                            mult,
+                            (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
+                            mult
+                        ]
+                    });
+
+                    w_points.push({
+                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                        y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                        global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                        ccm_ind: arr_ind
+                    });
+                    w_errors.push({
+                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                        y: [
+                            (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
+                            mult,
+                            (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
+                            mult
+                        ]
+                    });
                 }
             }
+            this.m_nl_evo_chart.options.data = [
+                {
+                    color: this.palette[0],
+                    type: "line",
+                    markerType: "none",
+                    dataPoints: nl_points
+                }, {
+                    color: this.palette[0],
+                    type: "error",
+                    dataPoints: nl_errors
+                }
+            ];
+            this.m_nl_evo_chart.render();
 
             this.m_w_evo_chart.options.data = [
                 {
@@ -2337,18 +2377,13 @@
                     type: "line",
                     markerType: "none",
                     dataPoints: w_points
+                }, {
+                    color: this.palette[0],
+                    type: "error",
+                    dataPoints: w_errors
                 }
             ];
             this.m_w_evo_chart.render();
-            this.m_nl_evo_chart.options.data = [
-                {
-                    color: this.palette[0],
-                    type: "line",
-                    markerType: "none",
-                    dataPoints: nl_points
-                }
-            ];
-            this.m_nl_evo_chart.render();
         };
 
         this.UpdateCCMPopup = function(time=0){
@@ -2440,6 +2475,19 @@
                 dataPoints: points
             });
             this.m_ccm_chord_chart.render();
+        };
+
+        this.LoadSHT = function (){
+            this.Request(
+                {
+                    reqtype: 'load_sht',
+                    shotn: this.m_currentShot.shotn,
+                }
+                , function (resp) {
+                    console.log(resp);
+                    Object.assign(this.m_current_sht, resp);
+                }.bind(this)
+            );
         };
 
         this.RequestChord = function(){
@@ -3216,6 +3264,9 @@
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="surf">Show CCM reconstruction & Surfaces</a>
     </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="sht">Load sht file</a>
+    </li>
                         `;
                     }
 
@@ -3274,8 +3325,10 @@
                     this.SavePNG(taskItemInContext.id);
                 }else if(link.getAttribute("data-action") === 'ccm'){
                     this.LoadCCM();
-                }else if(link.getAttribute("data-action") === 'surf'){
-                        this.DrawSurf();
+                }else if(link.getAttribute("data-action") === 'surf') {
+                    this.DrawSurf();
+                }else if(link.getAttribute("data-action") === 'sht'){
+                    this.LoadSHT();
                 }else if(link.getAttribute("data-action") === 'nl42'){
                     this.RequestChord();
                 }else{

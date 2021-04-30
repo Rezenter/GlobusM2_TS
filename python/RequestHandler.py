@@ -7,6 +7,7 @@ import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
+import python.utils.sht.ShtRipper_local as shtRipper
 
 
 def __init__():
@@ -57,8 +58,7 @@ class Handler:
                 'export_shot': self.export_shot,
                 'chord_int': self.get_chord_integrals,
                 'load_ccm': self.load_ccm,
-                'get_config': self.get_config,
-                'set_config': self.set_config
+                'load_sht': self.combiscope,
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -429,23 +429,16 @@ class Handler:
             'result': result
         }
 
-    def get_config(self, req):
-        if os.path.isdir(GUI_CONFIG) and \
-                os.path.isfile(GUI_CONFIG + 'viewer.json'):
-            with open(GUI_CONFIG + 'viewer.json', 'r') as conf_f:
-                return {
-                    'ok': True,
-                    'data': json.load(conf_f)
-                }
-        return {
-            'ok': False
-        }
-
-    def set_config(self, req):
-        # create folder and file if missing
-        return {
-            'ok': False
-        }
+    def combiscope(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        data_all = shtRipper.extract_sht('', int(req['shotn']))
+        resp['data'] = data_all
+        resp['ok'] = True
+        return resp
 
     def fast_status(self, req):
         print('status...')

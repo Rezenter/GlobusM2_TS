@@ -115,10 +115,18 @@ class StoredCalculator:
                     t_curr = (l_prof[point_ind]['Te'] + l_prof[point_ind + 1]['Te']) * 0.5
                     n_curr_err = (l_prof[point_ind]['ne_err'] + l_prof[point_ind + 1]['ne_err']) * 0.5
                     t_curr_err = (l_prof[point_ind]['Te_err'] + l_prof[point_ind + 1]['Te_err']) * 0.5
+                    if t_curr == 0:
+                        rel_t = 1
+                    else:
+                        rel_t = t_curr_err / t_curr
+                    if n_curr == 0:
+                        rel_n = 1
+                    else:
+                        rel_n = n_curr_err / n_curr
                     area += dz
                     volume += dz * radius
                     w += dz * n_curr * t_curr * radius
-                    w_err += dz * n_curr_err * t_curr_err * radius
+                    w_err += dz * n_curr * t_curr * radius * math.sqrt(math.pow(rel_t, 2) + math.pow(rel_n, 2))
                     t_ave += dz * t_curr * radius
                     t_ave_err += dz * t_curr_err * radius
                     n_ave += dz * n_curr * radius

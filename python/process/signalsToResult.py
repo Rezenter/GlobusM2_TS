@@ -443,17 +443,22 @@ class Processor:
                                                   event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
         aux = ''
-        aux += 'index, time, nl42, l42, <n>, We\n'
-        aux += ', ms, m-2, m, m-3, J\n'
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol\n'
+        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3\n'
         for event in aux_data:
             event_ind = event['event_index']
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 if len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
-                    aux += '%d, %.1f, %.2e, %.2f, %.2e, %d\n' % \
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
-                            event['data']['nl'] * correction, length,
-                            event['data']['nl'] * correction / length, event['data']['vol_w'] * correction)
+                            event['data']['nl'] * correction, event['data']['nl_err'] * correction,
+                            length,
+                            event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
+                            event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
+                            event['data']['t_vol'], event['data']['t_vol_err'],
+                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
+                            event['data']['vol'])
 
         return {
             'ok': True,
@@ -461,5 +466,5 @@ class Processor:
             'TR': temp_prof,
             'nt': dens_evo,
             'nR': dens_prof,
-            'aux': aux
+            'aux': aux[:-1]
         }
