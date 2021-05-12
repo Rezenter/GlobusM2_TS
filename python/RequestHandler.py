@@ -436,7 +436,7 @@ class Handler:
             resp['description'] = '"shotn" field is missing from request.'
             return resp
         data_all = shtRipper.extract_sht('', int(req['shotn']))
-        resp['data'] = data_all
+        resp['data'] = data_all[0]
         resp['ok'] = True
         return resp
 

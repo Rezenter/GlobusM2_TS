@@ -443,14 +443,14 @@ class Processor:
                                                   event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
         aux = ''
-        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol\n'
-        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3\n'
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
+        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
         for event in aux_data:
             event_ind = event['event_index']
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 if len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
-                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f\n' % \
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
                             event['data']['nl'] * correction, event['data']['nl_err'] * correction,
                             length,
@@ -458,7 +458,10 @@ class Processor:
                             event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
                             event['data']['t_vol'], event['data']['t_vol_err'],
                             event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
-                            event['data']['vol'])
+                            event['data']['vol'],
+                            event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
+                            event['data']['surfaces'][-1]['ne'] * correction,
+                            event['data']['surfaces'][-1]['ne_err'] * correction)
 
         return {
             'ok': True,

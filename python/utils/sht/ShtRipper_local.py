@@ -1,9 +1,6 @@
 import struct
 import re
 
-import urllib
-from smb.SMBHandler import SMBHandler
-
 # to-do:
 # - add error handling
 # - support old versions
@@ -233,9 +230,8 @@ def decompress_name(compressed):
 
 def extract_sht(path, shotn, requested=None):
     if path is None or type(path) != str or len(path) == 0:
-        opener = urllib.request.build_opener(SMBHandler)
         print('Connecting to remote...')
-        file = opener.open('smb://guest:Globus-M@172.16.12.127/Data/sht%d.SHT' % shotn)
+        file = open('z:/sht%d.SHT' % shotn)
     else:
         file = open('%s/sht%d.SHT' % (path, shotn), 'rb')
     version_str = file.read(version_length).decode('ascii')
