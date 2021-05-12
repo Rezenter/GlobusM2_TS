@@ -327,6 +327,7 @@ class Processor:
                 A = self.absolute['A']['%d' % poly] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
+                #print('%.2e, %.2e, %.2f' % (A, n_e, E))
 
                 mult = nf_sum / f2_sum
 
@@ -362,7 +363,7 @@ class Processor:
             print('Warning! chi2 filter disabled!')
         return res
 
-    def to_csv(self, x_from, x_to):
+    def to_csv(self, x_from, x_to, correction, aux_data):
         temp_evo = ''
         line = 't, '
         for poly in self.result['polys']:
@@ -418,7 +419,7 @@ class Processor:
                     if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                         line += '--, --, '
                     else:
-                        line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
+                        line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
                 dens_evo += line[:-2] + '\n'
 
         dens_prof = ''
@@ -438,13 +439,35 @@ class Processor:
                             ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
                         line += '--, --, '
                     else:
-                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'], event['T_e'][poly_ind]['n_err'])
+                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
+                                                  event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
+        aux = ''
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
+        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
+        for event in aux_data:
+            event_ind = event['event_index']
+            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                if len(event['data']['nl_profile']) != 0:
+                    length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'],
+                            event['data']['nl'] * correction, event['data']['nl_err'] * correction,
+                            length,
+                            event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
+                            event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
+                            event['data']['t_vol'], event['data']['t_vol_err'],
+                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
+                            event['data']['vol'],
+                            event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
+                            event['data']['surfaces'][-1]['ne'] * correction,
+                            event['data']['surfaces'][-1]['ne_err'] * correction)
 
         return {
             'ok': True,
             'Tt': temp_evo,
             'TR': temp_prof,
             'nt': dens_evo,
-            'nR': dens_prof
+            'nR': dens_prof,
+            'aux': aux[:-1]
         }

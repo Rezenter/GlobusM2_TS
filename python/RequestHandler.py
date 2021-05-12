@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import python.process.rawToSignals as raw_proc
@@ -5,6 +6,8 @@ import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.utils.reconstruction.CurrentCoils as ccm
+import python.utils.reconstruction.stored_energy as ccm_energy
+import python.utils.sht.ShtRipper_local as shtRipper
 
 
 def __init__():
@@ -21,6 +24,7 @@ ABS_CAL = 'calibration/abs/processed/'
 RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
+GUI_CONFIG = 'config/'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'
 
@@ -52,7 +56,9 @@ class Handler:
                 'get_expected': self.get_expected,
                 'save_shot': self.save_shot,
                 'export_shot': self.export_shot,
-                'chord_int': self.get_chord_integrals
+                'chord_int': self.get_chord_integrals,
+                'load_ccm': self.load_ccm,
+                'load_sht': self.combiscope,
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -199,6 +205,17 @@ class Handler:
                 'ok': False,
                 'description': '"to" field is missing from request.'
             }
+        if 'correction' not in req:
+            return {
+                'ok': False,
+                'description': '"correction" field is missing from request.'
+            }
+        if 'aux' not in req:
+            return {
+                'ok': False,
+                'description': '"aux" field is missing from request.'
+            }
+        print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
                                                       '2021.02.03')
@@ -208,7 +225,7 @@ class Handler:
                     'ok': False,
                     'description': err
                 }
-        return self.fine_processor.to_csv(req['from'], req['to'])
+        return self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']), req['aux'])
 
     def get_chord_integrals(self, req):
         resp = {}
@@ -360,6 +377,67 @@ class Handler:
             'laser_start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'],
             'ok': True
         }
+        return resp
+
+    def load_ccm(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, req['shotn'])
+        if not os.path.isdir(shot_path):
+            resp['ok'] = False
+            print(shot_path)
+            resp['description'] = 'Requested shotn is missing.'
+            return resp
+        if 'start' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'stop' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'r' not in req:
+            resp['ok'] = False
+            resp['description'] = '"r" field is missing from request.'
+            return resp
+        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.02.01',
+                                                      '2021.02.03')
+            if self.fine_processor.get_error() is not None:
+                self.get_integrals_shot(req)
+                self.fine_processor.load()
+        """return ccm.get_integrals(int(req['shotn']),
+                                 self.fine_processor.get_data(),
+                                 float(req['r']),
+                                 float(req['start']),
+                                 float(req['stop']))"""
+        stored_calc = ccm_energy.StoredCalculator(int(req['shotn']), self.fine_processor.get_data())
+        if stored_calc.error is not None:
+            return {
+                'ok': False,
+                'description': 'Stored_calc error "%s"' % stored_calc.error
+             }
+        result = stored_calc.calc_dynamics(float(req['start']), float(req['stop']), float(req['r']))
+        if stored_calc.error is None:
+            return result
+        return {
+            'ok': False,
+            'description': 'Stored_calc error "%s"' % stored_calc.error,
+            'result': result
+        }
+
+    def combiscope(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        data_all = shtRipper.extract_sht('', int(req['shotn']))
+        resp['data'] = data_all[0]
+        resp['ok'] = True
         return resp
 
     def fast_status(self, req):

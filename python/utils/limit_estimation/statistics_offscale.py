@@ -1,6 +1,8 @@
 import json
 
-db_path = 'd:/data/db/plasma/result/'
+db_path = 'd:/data/db/plasma/'
+result_path = 'result/'
+signal_path = 'signal/'
 
 shots = [
     {
@@ -90,49 +92,48 @@ shots = [
     },
 ]
 
-poly_list = [0, 1]
-
-with open('error.csv', 'w') as out_fp:
-    header = 'n_e, T_e, Te_Err_<20, Te_err_all\n'
+with open('offscale.csv', 'w') as out_fp:
+    header = 'n_e, T_e, err\n'
     out_fp.write(header)
-    header = 'm^-3, eV, %, %\n'
+    header = 'm^-3, eV, %\n'
     out_fp.write(header)
     passed = 0
-    filtered = 0
+    total = 0
     for shot in shots:
         shotn = shot['shotn']
         res = None
-
-        with open('%s%05d/%05d.json' % (db_path, shotn, shotn), 'r') as result_file:
+        with open('%s%s%05d/%05d.json' % (db_path, result_path, shotn, shotn), 'r') as result_file:
             res = json.load(result_file)
-        for event in res['events']:
+        sig = None
+        with open('%s%s/%05d.json' % (db_path, signal_path, shotn), 'r') as signal_file:
+            sig = json.load(signal_file)
+        for event_ind in range(len(sig['data'])):
+            event = sig['data'][event_ind]
             if event['error']:
                 continue
-            #if event['timestamp'] < time[0]:
             if event['timestamp'] < shot['from']:
                 continue
             if event['timestamp'] > shot['to']:
                 break
 
-            for poly_ind in poly_list:
-                poly = event['T_e'][poly_ind]
-                if poly['error'] and poly['error'] != 'high Te error' and poly['error'] != 'high ne error':
-                    continue
-                elif poly['n'] < 1e17 or poly['T'] < 0:
-                    continue
-                else:
-                    err = poly['Terr'] * 100 / poly['T']
-                    if err > 20:
-                        filtered += 1
-                        out_fp.write('%.2f, %.1d, --, %.1d\n' % (poly['n'], poly['T'], err))
-                    else:
-                        out_fp.write('%.2f, %.1d, %.1d, %.1d\n' % (poly['n'], poly['T'], err, err))
+            for poly_ind in event['poly']:
+                poly = event['poly'][poly_ind]
+                for ch_ind in range(len(poly['ch'])):
+                    if ch_ind > 4:
+                        continue
+                    ch = poly['ch'][ch_ind]
+                    total += 1
+                    if ch['error'] and ch['error'].startswith('maximum'):
+                        res_event = res['events'][event_ind]['T_e'][int(poly_ind)]
+                        te = res_event['T']
+                        ne = res_event['n']
+                        terr = res_event['Terr']
+                        if ne < 4.7e19:
+                            print(shotn, event_ind, event['timestamp'], poly_ind, ch_ind, ne)
+                        out_fp.write('%.2e, %.1f, %.2f\n' % (ne, te, terr * 100 / te))
                         passed += 1
-                    if poly['n'] < 1e18 and poly['T'] < 50:
-                        pass
-                        #print('???', shotn, event['timestamp'], poly_ind)
         print(shotn)
 print('')
 print('passed: %d' % passed)
-print('rejected: %d' % filtered)
+print('total: %d' % total)
 print('OK')
