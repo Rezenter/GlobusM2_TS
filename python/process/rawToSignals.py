@@ -248,7 +248,7 @@ class Integrator:
                 break
         else:
             print('Warning! Energy integration failed to stop.')
-            exit()
+            return res, -integration_stop
         return res, integration_stop
 
     def process_laser_event(self, event_ind):
@@ -287,6 +287,9 @@ class Integrator:
                     maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
                 error = 'sync offscale'
             integral, stop_ind = self.integrate_energy(signal[integration_limit:], zero)
+            if stop_ind < 0:
+                error = 'integration failed to stop'
+                stop_ind = -stop_ind
             laser['boards'].append({
                 'sync_ind': front_ind,
                 'sync_ns': front_ind * self.time_step,
