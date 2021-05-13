@@ -502,22 +502,15 @@ class Handler:
             }
         shotn = int(req['shotn'])
 
-        if isPlasma:
-            shot_filename = SHOTN_FILE
-
-        """if not os.path.isfile(shot_filename):
-            return {
-                'ok': False,
-                'description': 'Shotn file "%s" not found.' %shot_filename
-            }"""
-
-        """shotn = 0
-        with open(shot_filename, 'r') as shotn_file:
-            line = shotn_file.readline()
-            shotn = int(line)"""
-
-
-
+        if not isPlasma:
+            if not os.path.isfile(shot_filename):
+                return {
+                    'ok': False,
+                    'description': 'Shotn file "%s" not found.' % shot_filename
+                }
+            with open(shot_filename, 'r') as shotn_file:
+                line = shotn_file.readline()
+                shotn = int(line)
         try:
             caen.connect()
         except ConnectionError as err:
