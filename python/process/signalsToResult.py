@@ -173,19 +173,22 @@ class Processor:
         if len(self.signal['data']) == 0:
             print('No events!')
             return
-        current_index = 0
-        #if 'timestamp' not in self.signal['data'][current_index]:
 
-        while self.signal['data'][current_index]['timestamp'] <= 100:
-            event = self.signal['data'][current_index]
-            if event['error'] is None:
-                for poly_ind in range(len(event['poly'])):
-                    for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
-                        if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
-                            continue
-                        count[poly_ind][ch_ind] += 1
-                        stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
-            current_index += 1
+        for event_index in range(len(self.signal['data'])):
+            if 'error' in self.signal['data'][event_index]:
+                print('woops', event_index)
+            else:
+                if self.signal['data'][event_index]['timestamp'] <= 100:
+                    break
+                event = self.signal['data'][event_index]
+                if event['error'] is None:
+                    for poly_ind in range(len(event['poly'])):
+                        for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
+                            if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
+                                continue
+                            count[poly_ind][ch_ind] += 1
+                            stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
+
         for poly_ind in range(len(stray)):
             for ch_ind in range(len(stray[poly_ind])):
                 if count[poly_ind][ch_ind] > 0:

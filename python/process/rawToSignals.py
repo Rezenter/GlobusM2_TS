@@ -135,10 +135,10 @@ class Integrator:
 
         self.load_raw()
         self.process_shot()
+        self.identify_lasers()
         return True
 
     def load_raw(self):
-
         self.loaded = False
         freq = float(self.header['frequency'])  # GS/s
         self.time_step = 1 / freq  # nanoseconds
@@ -237,6 +237,23 @@ class Integrator:
             file.write(']\n}')
         print('completed.')
 
+    def identify_lasers(self):
+        eps = 0.01  # ms period error
+        per_1064 = 1000 / 330
+        per_1047 = 1000 / 50
+        if len(self.processed) < 2:
+            print('rawProcessor: WTF? not enough events')
+            return
+        self.processed[0]['las'] = '1047'
+        for event_ind in range(1, len(self.processed)):
+
+            pass
+        #first is 1047.
+        #find all with 20ms step
+        #first of rest is dummy
+        # all rest should be 1064
+        print('lasers identified')
+
     def ch_to_gr(self, ch):
         return ch // self.ch_per_group, ch % self.ch_per_group
 
@@ -325,7 +342,8 @@ class Integrator:
                     self.laser_length_residual_ind:
                 error = 'integral length differ'
         if error is not None:
-            print(error)
+            print(error, event_ind)
+            print('\n\n HERE \n\n')
         return laser, error
 
     def process_poly_event(self, event_ind, poly, laser):

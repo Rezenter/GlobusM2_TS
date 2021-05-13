@@ -9,7 +9,7 @@ adc_chs = [
         'ch': 0
     }
 ]
-event_ind = 100
+event_ind = 140
 
 print('Loading raw...')
 #with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
@@ -22,14 +22,11 @@ with open('d:/data/db/debug/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board
         if skip:
             skip = False
         else:
-            timestamps.append(event['groups'][0]['timestamp'])
-            plt.plot(range(1024), event['groups'][0]['data'][0])
-            plt.show()
-            if curr == event_ind:
-                print(curr)
-                for ch_ind in range(len(adc_chs)):
-                    raw[ch_ind] = event['groups'][adc_chs[ch_ind]['gr']]['data'][adc_chs[ch_ind]['ch']]
-                break
+            if curr < event_ind:
+                timestamps.append(event['groups'][0]['timestamp'])
+                print(timestamps[-1], event['groups'][0]['data'][0][0])
+                plt.plot(range(1024), event['groups'][0]['data'][0])
+                plt.show()
             else:
                 curr += 1
     print('Raw loaded.\n')
@@ -37,8 +34,3 @@ with open('d:/data/db/debug/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board
 plt.plot(range(1024), raw[0])
 plt.show()
 
-for cell in range(1024):
-    line = ''
-    for ch in range(len(adc_chs)):
-        line += '%.2f, ' % raw[ch][cell]
-    print(line[:-2])
