@@ -1,6 +1,7 @@
 import json
 import os
 import time
+
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
@@ -292,8 +293,12 @@ class Handler:
         }
         for event_ind in range(len(self.raw_processor.processed)):
             event = self.raw_processor.processed[event_ind]
-            resp['timestamps'].append(event['timestamp'])
-            resp['energies'].append(event['laser']['ave']['int'])
+            if 'timestamp' in event:
+                resp['timestamps'].append(event['timestamp'])
+                resp['energies'].append(event['laser']['ave']['int'])
+            else:
+                resp['timestamps'].append(0)
+                resp['energies'].append(9999)
         resp['ok'] = True
         return resp
 
@@ -442,11 +447,14 @@ class Handler:
 
     def fast_status(self, req):
         print('status...')
+
+        '''
         if not os.path.isfile(SHOTN_FILE):
             return {
                 'ok': False,
                 'description': 'Shotn file not found.'
             }
+        '''
         try:
             caen.connect()
         except ConnectionError as err:
@@ -460,15 +468,20 @@ class Handler:
         resp = caen.read()
         print(resp)
         caen.disconnect()
+
         if resp['status']:
             shotn = 0
+
+            '''
             with open(SHOTN_FILE, 'r') as shotn_file:
                 line = shotn_file.readline()
                 shotn = int(line)
+            '''
+
             return {
                 'ok': True,
                 'resp': resp,
-                'shotn': shotn
+                'shotn': 90000
             }
         else:
             return resp
@@ -482,17 +495,28 @@ class Handler:
 
         shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
         isPlasma = req['isPlasma']
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+        shotn = int(req['shotn'])
+
         if isPlasma:
             shot_filename = SHOTN_FILE
-        if not os.path.isfile(shot_filename):
+
+        """if not os.path.isfile(shot_filename):
             return {
                 'ok': False,
                 'description': 'Shotn file "%s" not found.' %shot_filename
-            }
-        shotn = 0
+            }"""
+
+        """shotn = 0
         with open(shot_filename, 'r') as shotn_file:
             line = shotn_file.readline()
-            shotn = int(line)
+            shotn = int(line)"""
+
+
 
         try:
             caen.connect()

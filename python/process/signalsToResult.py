@@ -174,6 +174,8 @@ class Processor:
             print('No events!')
             return
         current_index = 0
+        #if 'timestamp' not in self.signal['data'][current_index]:
+
         while self.signal['data'][current_index]['timestamp'] <= 100:
             event = self.signal['data'][current_index]
             if event['error'] is None:

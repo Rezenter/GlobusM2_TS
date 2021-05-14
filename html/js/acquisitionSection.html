@@ -13,6 +13,7 @@
         </div>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <label for="next_shot_number">Next shot №:</label><output id="next_shot_number"></output>
+            <label for="shotn_man">manual shotn</label><input id="shotn_man" type="number" value="1" min="30000" step="1">
             <label for="is_plasma">Is plasma?</label><input type="checkbox" id="is_plasma" checked>
         </div>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
@@ -79,9 +80,11 @@
             let state = $('#ADC_state');
             state.css('background-color','grey');
             state.html('Requesting...');
+            let shotn = $('#shotn_man').val();
             let req = {
                 reqtype: 'arm',
-                isPlasma: $('#is_plasma')[0].checked
+                isPlasma: $('#is_plasma')[0].checked,
+                shotn: shotn
             }
             this.RequestADC(
                 req, function (resp) {
