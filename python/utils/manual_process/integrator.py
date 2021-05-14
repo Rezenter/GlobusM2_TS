@@ -18,8 +18,6 @@ def find_front_findex(signal, threshold, rising=True):
 
 
 class Integrator:
-    PLASMA_FOLDER = 'plasma/'
-    DEBUG_FOLDER = 'debug/'
     RAW_FOLDER = 'raw/'
     SIGNAL_FOLDER = 'signal/'
     CONFIG_FOLDER = 'config/'
@@ -38,18 +36,21 @@ class Integrator:
     left_limit = 100  # ind
     right_limit = 20  # ind
 
-    def __init__(self, db_path, shotn, is_plasma, config_name):
+    def __init__(self, db_path, shotn, is_plasma, config_name, global_db):
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.config_name = config_name
         if not os.path.isdir(db_path):
-            self.error = 'Database path not found.'
+            self.error = 'Local database path not found.'
+            return
+        if not os.path.isdir(global_db):
+            self.error = 'Global database path not found.'
             return
         self.db_path = db_path
-        if not os.path.isdir('%s%s' % (self.db_path, self.CONFIG_FOLDER)):
+        if not os.path.isdir('%s%s' % (global_db, self.CONFIG_FOLDER)):
             self.error = 'Configuration path not found.'
             return
-        config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.FILE_EXT)
+        config_full_name = '%s%s%s%s' % (global_db, self.CONFIG_FOLDER, self.config_name, self.FILE_EXT)
         if not os.path.isfile(config_full_name):
             self.error = 'Configuration file not found.'
             return
@@ -59,27 +60,12 @@ class Integrator:
             for k, v in obj:
                 self.config[k] = v
 
-        missing = [[] for board in range(len(self.config['adc']['sync']))]
-        '''
-        missing = [
-            [78],
-            [],
-            [],
-            []
-        ]
-        '''
-        self.missing = missing
-
         self.header = {}
         self.data = []
         self.laser_count = 0
         self.time_step = 0
         self.loaded = False
         self.processed = []
-        if self.is_plasma:
-            self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
-        else:
-            self.prefix = '%s%s' % (self.db_path, self.DEBUG_FOLDER)
         if not self.load():
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             fuck
@@ -105,9 +91,10 @@ class Integrator:
 
     def load(self):
         self.processed = []
-        shot_folder = '%s%s%05d/' % (self.prefix, self.RAW_FOLDER, self.shotn)
+        shot_folder = '%s%s%05d/' % (self.db_path, self.RAW_FOLDER, self.shotn)
         if not os.path.isdir(shot_folder):
             print('Requested shotn is missing.')
+            print(shot_folder)
             return False
         header_path = '%s%s%s' % (shot_folder, self.HEADER_FILE, self.FILE_EXT)
         if not os.path.isfile(header_path):
@@ -118,24 +105,8 @@ class Integrator:
             for k, v in obj:
                 self.header[k] = v
 
-        signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
-        if os.path.isfile(signal_path):
-            print('Loading existing processed signals.')
-            with open(signal_path, 'rb') as signal_file:
-                obj = ijson.items(signal_file, 'common.config_name', use_float=True)
-                for val in obj:
-                    if val == self.config_name:
-                        signal_file.seek(0)
-                        obj = ijson.items(signal_file, 'data.item', use_float=True)
-                        for event in obj:
-                            self.processed.append(event)
-                        return True
-                    else:
-                        print('existing file has different config')
-
         self.load_raw()
         self.process_shot()
-        self.identify_lasers()
         return True
 
     def load_raw(self):
@@ -145,30 +116,17 @@ class Integrator:
         self.time_step = 1 / freq  # nanoseconds
         print('loading raw shot...')
         if self.is_plasma:
-            shot_folder = '%s%s%s%05d/' % (self.db_path, self.PLASMA_FOLDER, self.RAW_FOLDER, self.shotn)
+            shot_folder = '%s%s%05d/' % (self.db_path, self.RAW_FOLDER, self.shotn)
         else:
-            shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
+            shot_folder = '%s%s%05d/' % (self.db_path,  self.RAW_FOLDER, self.shotn)
         for board_ind in range(len(self.header['boards'])):
             if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT)):
                 print('Requested shot is missing requested board file.')
                 return False
             with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
-                event_ind = 0
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
-                    while event_ind in self.missing[board_ind]:
-                        self.data[board_ind].append({
-                            'captured_bad': True
-                        })
-                        event_ind += 1
-                    if event_ind != 0:
-                        self.data[board_ind].append(event['groups'])
-                    event_ind += 1
-                while event_ind in self.missing[board_ind]:
-                    self.data[board_ind].append({
-                        'captured_bad': True
-                    })
-                    event_ind += 1
+                    self.data[board_ind].append(event['groups'])
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
         return self.check_raw_integrity()
@@ -217,7 +175,7 @@ class Integrator:
 
     def save_processed(self):
         print('Saving processed data...')
-        filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        filepath = '%s%s%05d%s' % (self.db_path, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
         with open(filepath, 'w') as file:
             file.write('{\n "common": ')
             common = {
@@ -237,23 +195,6 @@ class Integrator:
                 json.dump(self.processed[-1], file)
             file.write(']\n}')
         print('completed.')
-
-    def identify_lasers(self):
-        eps = 0.01  # ms period error
-        per_1064 = 1000 / 330
-        per_1047 = 1000 / 50
-        if len(self.processed) < 2:
-            print('rawProcessor: WTF? not enough events')
-            return
-        self.processed[0]['las'] = '1047'
-        for event_ind in range(1, len(self.processed)):
-
-            pass
-        #first is 1047.
-        #find all with 20ms step
-        #first of rest is dummy
-        # all rest should be 1064
-        print('lasers identified')
 
     def ch_to_gr(self, ch):
         return ch // self.ch_per_group, ch % self.ch_per_group
