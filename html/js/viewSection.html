@@ -2098,6 +2098,7 @@
             }
 
             newLink.click();
+            newLink.remove();
         };
 
         this.DrawChi = function(){
@@ -2240,6 +2241,22 @@
             }else{
                 console.log('Wtf? Unknown target: ', targetId);
             }
+        };
+
+        this.SaveOsc = function(){
+            let fileName = this.m_currentShot.shotn + '_osc_' + this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' + this.selectors.polyInputs.val() + '.csv';
+            let data = 'time, las, ch1, ch2, ch3, ch4, ch5\n';
+            data += 'ns, mv, mv, mv, mv, mv, mv\n'
+            //console.log(this.m_current_event_raw);
+            for(let cell_ind = 0; cell_ind < 1024; cell_ind++){
+                let line = ((cell_ind - this.m_current_event_raw.laser_start) * 0.3125).toFixed(1) + ', ';
+                line += this.m_current_event_raw.laser[cell_ind].toFixed(2);
+                for(let ch_ind = 0; ch_ind < 5; ch_ind++){
+                    line += ', ' + this.m_current_event_raw.data[ch_ind][cell_ind].toFixed(2);
+                }
+                data += line + '\n';
+            }
+            this.DownloadFile(data, (fileName))
         };
 
         this.Draw3D = function(){
@@ -3361,6 +3378,14 @@
     </li>
                         `;
                     }
+
+                    if(taskItemInContext.attributes.getNamedItem('raw') !== null){
+                        html += `
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="osc">Save oscillogram.</a>
+    </li>
+                        `;
+                    }
                     menu.innerHTML = html + '\n</ul>';
                     menuState = true;
                     menu.classList.add( contextMenuActive );
@@ -3413,8 +3438,10 @@
                     this.DrawSurf();
                 }else if(link.getAttribute("data-action") === 'sht'){
                     this.LoadSHT();
-                }else if(link.getAttribute("data-action") === 'nl42'){
+                }else if(link.getAttribute("data-action") === 'nl42') {
                     this.RequestChord();
+                }else if(link.getAttribute("data-action") === 'osc'){
+                        this.SaveOsc();
                 }else{
                     console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
                 }
