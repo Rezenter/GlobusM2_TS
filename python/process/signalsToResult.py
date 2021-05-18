@@ -415,7 +415,7 @@ class Processor:
         dens_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in self.result['polys']:
-            line += 'a.u., a.u.,'
+            line += 'm-3, m-3,'
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
@@ -433,7 +433,7 @@ class Processor:
         for event in self.result['events']:
             if x_from <= event['timestamp'] <= x_to:
                 names += '%.1f, err, ' % event['timestamp']
-                units += 'a.u., a.u., '
+                units += 'm-3, m-3, '
         dens_prof += names[:-2] + '\n'
         dens_prof += units[:-2] + '\n'
         for poly_ind in range(len(self.result['polys'])):

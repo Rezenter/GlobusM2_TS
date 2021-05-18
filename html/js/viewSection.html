@@ -2087,7 +2087,7 @@
                         process_timestamp: this.m_currentShot.timestamp,
                         absolute_correction: this.selectors.abs_mult.val()
                     };
-                    this.DownloadFile(header, (this.m_currentShot.shotn + '_info.json'));
+                    this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
                 }.bind(this)
             );
         };
