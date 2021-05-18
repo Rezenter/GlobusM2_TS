@@ -7,8 +7,8 @@ FIBER_FOLDER = 'fibers/'
 
 
 class Selden:
-    def __init__(self, fiber_ind, config):
-        self.lambda_0 = 1064  # [nm], laser wavelength
+    def __init__(self, fiber_ind, config, lambda0=1064):
+        self.lambda_0 = lambda0  # [nm], laser wavelength
         with open('%s%s%s.json' % (db_path, FIBER_FOLDER, config), 'r') as fiber_file:
             fibers = json.load(fiber_file)
             self.fiber = fibers[fiber_ind]

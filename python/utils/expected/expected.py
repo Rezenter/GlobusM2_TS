@@ -3,13 +3,17 @@ import sp_cal
 import matplotlib.pyplot as plt
 import json
 
+lambda0 = 1064
+lambda0 = 1047
+
 wl_start = 700
 wl_stop = 1100
 wl_step = 1
 
 T_start = 1
-T_stop = 10000
+T_stop = 2500
 T_mult = 1.02
+T_mult = 1.1
 
 print('Calculating kappa...')
 kappa = sp_cal.SpCal('2020.11.11', '2020.11.12', wl_start, wl_stop, wl_step)
@@ -39,6 +43,7 @@ while current_wl <= wl_stop:
 
 
 result = {
+    'lambda_0': lambda0,
     'wl_start': wl_start,
     'wl_stop': wl_stop,
     'wl_step': wl_step,
@@ -65,7 +70,7 @@ def dump_kappa(poly):
 
 
 def dump_spectrum(poly, config, T):
-    cross = selden.Selden(poly, config)
+    cross = selden.Selden(poly, config, lambda0)
     for wl in wl_arr:
         print('%.5f' % (cross.scat_power_dens(T, wl)))
 
@@ -83,8 +88,9 @@ def dump_expected(expected):
 #fuck
 
 for poly in range(10):
-    poly = 8
-    cross = selden.Selden(poly, '2020.11.20')
+    print('processing poly %d...' % poly)
+    #poly = 8
+    cross = selden.Selden(poly, '2020.11.20', lambda0)
     expected = [[] for ch in range(5)]
     for ch in range(5):
         for T in temp:

@@ -35,7 +35,7 @@ class Processor:
     cross_section = (8.0 * math.pi / 3.0) * \
                     math.pow((math.pow(const.q_e, 2) / (4 * math.pi * const.eps_0 * const.m_e * math.pow(const.c, 2))), 2)
 
-    def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id):
+    def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id, global_db, expected_aux):
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.expected_id = expected_id
@@ -46,27 +46,34 @@ class Processor:
             print(self.error)
             return
         self.db_path = db_path
-        if not os.path.isdir('%s%s' % (self.db_path, self.EXPECTED_FOLDER)):
+        if not os.path.isdir(global_db):
+            self.error = 'Global database path not found.'
+            return
+        if not os.path.isdir('%s%s' % (global_db, self.EXPECTED_FOLDER)):
             self.error = 'Spectral calibration path not found.'
             print(self.error)
             return
-        expected_full_name = '%s%s%s%s' % (self.db_path, self.EXPECTED_FOLDER, self.expected_id, self.FILE_EXT)
+        expected_full_name = '%s%s%s%s' % (global_db, self.EXPECTED_FOLDER, self.expected_id, self.FILE_EXT)
         if not os.path.isfile(expected_full_name):
             self.error = 'Calibration file not found.'
             print(self.error)
             return
-        self.expected = {}
+        self.expected = [{}, {}]
         with open(expected_full_name, 'r') as expected_file:
             obj = ijson.kvitems(expected_file, '', use_float=True)
             for k, v in obj:
-                self.expected[k] = v
-        self.expected['modification'] = os.path.getmtime(expected_full_name)
+                self.expected[0][k] = v
+        with open('%s%s%s%s' % (global_db, self.EXPECTED_FOLDER, expected_aux, self.FILE_EXT), 'r') as expected_file:
+            obj = ijson.kvitems(expected_file, '', use_float=True)
+            for k, v in obj:
+                self.expected[1][k] = v
+        self.expected[0]['modification'] = os.path.getmtime(expected_full_name)
 
-        if not os.path.isdir('%s%s' % (self.db_path, self.ABSOLUTE_FOLDER)):
+        if not os.path.isdir('%s%s' % (global_db, self.ABSOLUTE_FOLDER)):
             self.error = 'Spectral calibration path not found.'
             print(self.error)
             return
-        absolute_full_name = '%s%s%s%s' % (self.db_path, self.ABSOLUTE_FOLDER, self.absolute_id, self.FILE_EXT)
+        absolute_full_name = '%s%s%s%s' % (global_db, self.ABSOLUTE_FOLDER, self.absolute_id, self.FILE_EXT)
         if not os.path.isfile(absolute_full_name):
             self.error = 'Calibration file not found.'
             print(self.error)
@@ -78,10 +85,6 @@ class Processor:
                 self.absolute[k] = v
         self.absolute['modification'] = os.path.getmtime(absolute_full_name)
 
-        if self.is_plasma:
-            self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
-        else:
-            self.prefix = '%s%s' % (self.db_path, self.DEBUG_FOLDER)
         self.signal = {}
         self.result = {}
         self.load()
@@ -110,7 +113,7 @@ class Processor:
 
     def load(self):
         self.result = {}
-        result_path = '%s%s%05d/%05d%s' % (self.prefix, self.RESULT_FOLDER, self.shotn, self.shotn, self.FILE_EXT)
+        result_path = '%s%s%05d/%05d%s' % (self.db_path, self.RESULT_FOLDER, self.shotn, self.shotn, self.FILE_EXT)
         if os.path.isfile(result_path):
             print('Loading existing processed result.')
             with open(result_path, 'rb') as signal_file:
@@ -120,7 +123,7 @@ class Processor:
                         print('Warning! existing result was obtained for different spectral calibration! Recalculating...')
                         break
                     if key == 'spectral_mod' and \
-                            val != datetime.fromtimestamp(self.expected['modification']).strftime('%Y.%m.%d %H:%M:%S'):
+                            val != datetime.fromtimestamp(self.expected[0]['modification']).strftime('%Y.%m.%d %H:%M:%S'):
                         print('Warning! Existing result uses outdated spectral calibration! Recalculating...')
                         break
 
@@ -140,7 +143,7 @@ class Processor:
 
     def load_signal(self):
         print('loading signal...')
-        signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        signal_path = '%s%s%05d%s' % (self.db_path, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
         if not os.path.isfile(signal_path):
             self.error = 'No signal file.'
             return
@@ -153,11 +156,11 @@ class Processor:
         self.result = {
             'timestamp': datetime.now().strftime('%Y.%m.%d %H:%M:%S'),
             'spectral_name': self.expected_id,
-            'spectral_mod': datetime.fromtimestamp(self.expected['modification']).strftime('%Y.%m.%d %H:%M:%S'),
+            'spectral_mod': datetime.fromtimestamp(self.expected[0]['modification']).strftime('%Y.%m.%d %H:%M:%S'),
             'absolute_name': self.absolute_id,
             'absolute_mod': datetime.fromtimestamp(self.absolute['modification']).strftime('%Y.%m.%d %H:%M:%S'),
             'signal_mod': datetime.fromtimestamp(
-                os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
+                os.path.getmtime('%s%s%05d%s' % (self.db_path, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
             'config_name': self.signal['common']['config_name'],
             'polys': [],
@@ -165,85 +168,87 @@ class Processor:
         }
         print('Processing shot...')
 
-        stray = [
-            [0.0 for ch in range(5)] for poly in range(10)
-        ]
-        count = [
-            [0 for ch in range(5)] for poly in range(10)
-        ]
-        if len(self.signal['data']) == 0:
-            print('No events!')
-            return
+        laser_wl = ['1064']
+        for wl in laser_wl:
+            stray = [
+                [0.0 for ch in range(5)] for poly in range(10)
+            ]
+            count = [
+                [0 for ch in range(5)] for poly in range(10)
+            ]
+            if len(self.signal['data']) == 0:
+                print('No events!')
+                return
 
-        for event_index in range(len(self.signal['data'])):
-            if 'error' in self.signal['data'][event_index] and self.signal['data'][event_index]['error'] is not None:
-                print('woops: %s, event #' % self.signal['data'][event_index]['error'], event_index)
-            else:
-                if self.signal['data'][event_index]['timestamp'] <= 100:
-                    break
-                event = self.signal['data'][event_index]
-                if event['error'] is None:
-                    for poly_ind in range(len(event['poly'])):
-                        for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
-                            if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
-                                continue
-                            count[poly_ind][ch_ind] += 1
-                            stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
+            for event_index in range(len(self.signal['data'])):
+                if 'error' in self.signal['data'][event_index] and self.signal['data'][event_index]['error'] is not None:
+                    print('woops: %s, event #' % self.signal['data'][event_index]['error'], event_index)
+                else:
+                    if self.signal['data'][event_index]['timestamp'] <= 100:
+                        break
+                    event = self.signal['data'][event_index]
+                    if event['error'] is None:
+                        for poly_ind in range(len(event[wl])):
+                            for ch_ind in range(len(event[wl][poly_ind])):
+                                if event[wl][poly_ind][ch_ind]['error'] is not None:
+                                    continue
+                                count[poly_ind][ch_ind] += 1
+                                stray[poly_ind][ch_ind] += event[wl][poly_ind][ch_ind]['ph_el']
 
-        for poly_ind in range(len(stray)):
-            for ch_ind in range(len(stray[poly_ind])):
-                if count[poly_ind][ch_ind] > 0:
-                    stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
-            self.result['polys'].append({
-                'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
-                'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
-                'R': self.signal['common']['config']['poly'][poly_ind]['R'],
-                'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
-                'h': self.signal['common']['config']['poly'][poly_ind]['h'],
-                'stray': stray[poly_ind]
-            })
-
-        for event_ind in range(len(self.signal['data'])):
-            error = None
-            if self.signal['data'][event_ind]['error'] is not None:
-                self.result['events'].append({
-                    'error': self.signal['data'][event_ind]['error']
+            for poly_ind in range(len(stray)):
+                for ch_ind in range(len(stray[poly_ind])):
+                    if count[poly_ind][ch_ind] > 0:
+                        stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
+                self.result['polys'].append({
+                    'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
+                    'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
+                    'R': self.signal['common']['config']['poly'][poly_ind]['R'],
+                    'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
+                    'h': self.signal['common']['config']['poly'][poly_ind]['h'],
+                    'stray': stray[poly_ind]
                 })
-                continue
-            proc_event = {
-                'timestamp': self.signal['data'][event_ind]['timestamp'],
-                'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected['J_from_int']
-            }
-            if self.signal['data'][event_ind]['error'] is not None:
-                error = self.signal['data'][event_ind]['error']
-            else:
-                poly = []
-                energy = self.expected['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
 
-                for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
-                    temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
-                                          stray[poly_ind], energy)
-                    poly.append(temp)
-                proc_event['T_e'] = poly
-            proc_event['error'] = error
-            self.result['events'].append(proc_event)
+            for event_ind in range(len(self.signal['data'])):
+                error = None
+                if self.signal['data'][event_ind]['error'] is not None:
+                    self.result['events'].append({
+                        'error': self.signal['data'][event_ind]['error']
+                    })
+                    continue
+                proc_event = {
+                    'timestamp': self.signal['data'][event_ind]['timestamp'],
+                    'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected[0]['J_from_int']
+                }
+                if self.signal['data'][event_ind]['error'] is not None:
+                    error = self.signal['data'][event_ind]['error']
+                else:
+                    poly = []
+                    energy = self.expected[0]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
+
+                    for poly_ind in range(len(self.signal['data'][event_ind][wl])):
+                        temp = self.calc_temp(self.signal['data'][event_ind][wl][poly_ind], poly_ind,
+                                              stray[poly_ind], energy, 0)
+                        poly.append(temp)
+                    proc_event['T_e'] = poly
+                proc_event['error'] = error
+                self.result['events'].append(proc_event)
         self.save_result()
 
     def save_result(self):
-        result_folder = '%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn)
+        result_folder = '%s%s%05d/' % (self.db_path, self.RESULT_FOLDER, self.shotn)
         if not os.path.isdir(result_folder):
             os.mkdir(result_folder)
         with open('%s%05d%s' % (result_folder, self.shotn, self.FILE_EXT), 'w') as out_file:
             json.dump(self.result, out_file)
         #self.to_csv()
 
-    def calc_temp(self, event, poly, stray, E):
+    def calc_temp(self, event, poly, stray, E, wl_ind):
         channels = []
 
         E *= self.absolute['E_mult']
 
         for ch_ind in range(5):
-            if event['ch'][ch_ind]['error'] is None:
+            if event[ch_ind]['error'] is None:
                 channels.append(ch_ind)
             else:
                 print('Warning! skipped ch%d' % ch_ind)
@@ -253,31 +258,31 @@ class Processor:
             sigm2_i = []
 
             for ch in channels:
-                N_i.append(event['ch'][ch]['ph_el'])
+                N_i.append(event[ch]['ph_el'])
                 if stray[ch] > 100:
                     N_i[-1] -= stray[ch]
-                sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
+                sigm2_i.append(math.pow(event[ch]['err'], 2))
             min_index = -1
-            for i in range(len(self.expected['T_arr'])):
-                f_i = [self.expected['poly'][poly]['expected'][ch][i] for ch in channels]
+            for i in range(len(self.expected[wl_ind]['T_arr'])):
+                f_i = [self.expected[wl_ind]['poly'][poly]['expected'][ch][i] for ch in channels]
                 current_chi = calc_chi2(N_i, sigm2_i, f_i)
                 if current_chi < chi2:
                     min_index = i
                     chi2 = current_chi
-            if min_index >= len(self.expected['T_arr']) - 2 or min_index == 0:
+            if min_index >= len(self.expected[wl_ind]['T_arr']) - 2 or min_index == 0:
                 res = {
                     'error': 'minimized on edge'
                 }
             else:
                 left = {
-                    't': self.expected['T_arr'][min_index - 1],
-                    'f': [self.expected['poly'][poly]['expected'][ch][min_index - 1] for ch in channels]
+                    't': self.expected[wl_ind]['T_arr'][min_index - 1],
+                    'f': [self.expected[wl_ind]['poly'][poly]['expected'][ch][min_index - 1] for ch in channels]
                 }
                 left['chi'] = calc_chi2(N_i, sigm2_i, left['f'])
 
                 right = {
-                    't': self.expected['T_arr'][min_index + 1],
-                    'f': [self.expected['poly'][poly]['expected'][ch][min_index + 1] for ch in channels]
+                    't': self.expected[wl_ind]['T_arr'][min_index + 1],
+                    'f': [self.expected[wl_ind]['poly'][poly]['expected'][ch][min_index + 1] for ch in channels]
                 }
                 right['chi'] = calc_chi2(N_i, sigm2_i, right['f'])
 
@@ -341,7 +346,7 @@ class Processor:
 
                 res = self.filter({
                     'index': min_index,
-                    'min': self.expected['T_arr'][min_index],
+                    'min': self.expected[wl_ind]['T_arr'][min_index],
                     'ch': channels,
                     'chi2': (left['chi'] + right['chi']) * 0.5,
                     'T': (left['t'] + right['t']) * 0.5,

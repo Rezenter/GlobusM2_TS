@@ -2,6 +2,7 @@ import json
 
 import integrator
 import integration_viewer
+import calculator
 
 '''shotn = 40109
 events = [42, 48, 54, 60, 66]
@@ -21,6 +22,7 @@ delays = [148.9 , 183.1 , 160.7 , 186.5 , 171.1 , 200.3]  # position in ns of 10
 
 shotn = 40108
 events = [43    , 49    , 55    , 61    , 67]
+sync_event = 1
 delays = [170.0 , 193.2 , 164.9 , 189.9 , 167.5]  # position in ns of 1047 ch3 peak in poly_ind=9
 
 polys = [1, 6]
@@ -33,10 +35,20 @@ LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
 
 raw_processor = integrator.Integrator(LOCAL_DB_PATH, shotn, is_plasma, config_name, GLOBAL_DB_PATH)
-raw_processor.process_shot(events, delays)
+raw_processor.process_shot(events, delays, sync_event)
+
+print('\nintegrated.\n')
+
+fine_processor = calculator.Processor(LOCAL_DB_PATH, shotn, is_plasma, '2021.02.01', '2021.02.03',
+                                      GLOBAL_DB_PATH, '2021.05.18_1047')
+if fine_processor.get_error() is not None:
+    fine_processor.load()
+resp = fine_processor.get_data()
+
+print('\ncalculated.\n')
 
 for poly_ind in polys:
-    integration_viewer.draw(shotn, events, poly_ind)
+    #integration_viewer.draw(shotn, events, poly_ind)
     with open('%s/plasma/result/%05d/%05d.json' % (GLOBAL_DB_PATH, shotn, shotn), 'r') as res_file:
         result = json.load(res_file)
     with open('local_db/csv/%05d_poly#%d.csv' % (shotn, poly_ind), 'w') as file:
