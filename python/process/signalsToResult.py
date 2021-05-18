@@ -159,6 +159,7 @@ class Processor:
             'signal_mod': datetime.fromtimestamp(
                 os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
+            'config_name': self.signal['common']['config_name'],
             'polys': [],
             'events': []
         }
@@ -452,7 +453,7 @@ class Processor:
         for event in aux_data:
             event_ind = event['event_index']
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                if len(event['data']['nl_profile']) != 0:
+                if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
                     aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
@@ -466,7 +467,9 @@ class Processor:
                             event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
                             event['data']['surfaces'][-1]['ne'] * correction,
                             event['data']['surfaces'][-1]['ne_err'] * correction)
-
+                else:
+                    aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'])
         return {
             'ok': True,
             'Tt': temp_evo,

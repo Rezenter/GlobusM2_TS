@@ -2080,6 +2080,14 @@
                     this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
                     this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
                     this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
+                    let info = {
+                        config_name: this.m_currentShot.config_name,
+                        spectral_name: this.m_currentShot.spectral_name,
+                        absolute_name: this.m_currentShot.absolute_name,
+                        process_timestamp: this.m_currentShot.timestamp,
+                        absolute_correction: this.selectors.abs_mult.val()
+                    };
+                    this.DownloadFile(header, (this.m_currentShot.shotn + '_info.json'));
                 }.bind(this)
             );
         };
