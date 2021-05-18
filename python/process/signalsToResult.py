@@ -315,8 +315,7 @@ class Processor:
                                    for ch in range(len(channels))]
                         mr['chi'] = calc_chi2(N_i, sigm2_i, mr['f'])
                 f = [(left['f'][ch] + right['f'][ch]) * 0.5 for ch in range(len(channels))]
-                df = [(left['f'][ch] - right['f'][ch]) / (left['t'] - right['t'])
-                      for ch in range(len(channels))]
+                df = [(left['f'][ch] - right['f'][ch]) / (left['t'] - right['t']) for ch in range(len(channels))]
 
                 f2_sum = 0
                 df_sum = 0
