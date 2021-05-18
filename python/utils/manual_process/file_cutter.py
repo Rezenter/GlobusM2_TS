@@ -1,11 +1,12 @@
 import ijson
 import json
 import os
+import shutil
 
 is_plasma = True
-shotn = 40105
-start_ind = 648
-stop_ind = 723
+shotn = 40103
+start_ind = 364
+stop_ind = start_ind + 116
 
 DB_PATH = 'd:/data/db/'
 PLASMA_FOLDER = 'plasma/'
@@ -53,18 +54,32 @@ def check_raw_integrity(data):
     return True
 
 
-dest_folder = '%s%05d/' % (OUT_FOLDER, shotn)
-if os.path.isdir(dest_folder):
-    print('Output folder exists')
-    exit()
-os.mkdir(dest_folder)
-
 data = load_raw()
-with open('%s%s.%s' % (dest_folder, HEADER_FILE, FILE_EXT), 'w') as file:
+
+if os.path.isdir('%s' % shot_folder):
+    shutil.rmtree('%s' % shot_folder)
+    os.mkdir('%s' % shot_folder)
+    print('Removed original raw')
+if is_plasma:
+    prefix = '%s%s' % (DB_PATH, PLASMA_FOLDER)
+else:
+    prefix = '%s%s' % (DB_PATH, DEBUG_FOLDER)
+signal_file = prefix + 'signal/%05d.json' % shotn
+if os.path.isfile(signal_file):
+    os.remove(signal_file)
+    print('Removed signal file')
+result_folder = prefix + 'result/%05d' % shotn
+if os.path.isdir(result_folder):
+    shutil.rmtree(result_folder)
+    print('Removed result folder')
+
+
+with open('%s%s.%s' % (shot_folder, HEADER_FILE, FILE_EXT), 'w') as file:
     json.dump(header, file)
-print('dumping...')
+print('dumping %d events...' % (stop_ind - start_ind + 1))
 for board_ind in range(len(data)):
-    with open('%s%d.%s' % (dest_folder, board_ind, FILE_EXT), 'w') as file:
-        json.dump(data[board_ind][start_ind: stop_ind], file)
+    with open('%s%d.%s' % (shot_folder, board_ind, FILE_EXT), 'w') as file:
+        json.dump(data[board_ind][start_ind: stop_ind + 1], file)
     print(' Board %d dumped.' % board_ind)
+
 print('OK')

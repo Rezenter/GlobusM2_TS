@@ -106,7 +106,6 @@ class Integrator:
                 self.header[k] = v
 
         self.load_raw()
-        self.process_shot()
         return True
 
     def load_raw(self):
@@ -123,9 +122,13 @@ class Integrator:
             if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT)):
                 print('Requested shot is missing requested board file.')
                 return False
+            skip = True
             with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
+                    if skip:
+                        skip = False
+                        continue
                     self.data[board_ind].append(event['groups'])
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
@@ -145,9 +148,10 @@ class Integrator:
         self.loaded = True
         return True
 
-    def process_shot(self):
+    def process_shot(self, event_indexes, delays):
         print('Processing shot...')
-        for event_ind in range(self.laser_count):
+        for event_ind_ind in range(len(event_indexes)):
+            event_ind = event_indexes[event_ind_ind]
             # print('Event %d' % event_ind)
             laser, error = self.process_laser_event(event_ind)
             if self.laser_count > 1:
@@ -155,23 +159,38 @@ class Integrator:
             else:
                 timestamp = -999
             proc_event = {
-                'timestamp_dummy': self.config['adc']['first_shot'] + event_ind * 3.0303,
                 'timestamp': timestamp,
                 'laser': laser,
-                'poly': {},
                 'error': error
             }
             if error is None:
+                proc_event['1064'] = []
+                proc_event['1047'] = []
                 for poly in self.config['poly']:
-                    proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
-
+                    proc_event['1064'].append(self.process_poly_event(event_ind, poly, laser))
+                    proc_event['1047'].append(self.process_poly_event(event_ind, poly, laser, delays[event_ind_ind]))
                 self.processed.append(proc_event)
             else:
                 self.processed.append({
                     'error': 'laser'
                 })
 
-        self.save_processed()
+        #self.save_processed()
+        self.export_processed()
+
+    def export_processed(self):
+        print('Saving processed data...')
+        filepath = '%s%s%05d.json' % (self.db_path, 'export/', self.shotn)
+        with open(filepath, 'w') as file:
+            file.write('[')
+            for event in self.processed[:-1]:
+                json.dump(event, file)
+                file.write(',')
+
+            if len(self.processed) > 0:
+                json.dump(self.processed[-1], file)
+            file.write(']')
+        print('completed.')
 
     def save_processed(self):
         print('Saving processed data...')
@@ -288,21 +307,19 @@ class Integrator:
             print('\n HERE \n')
         return laser, error
 
-    def process_poly_event(self, event_ind, poly, laser):
-        res = {
-            'ch': []
-        }
+    def process_poly_event(self, event_ind, poly, laser, delay=None):
+        res = []
         for ch_ind in range(len(poly['channels'])):
             error = None
             sp_ch = poly['channels'][ch_ind]
             board_ind = sp_ch['adc']
             if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
-                res['ch'].append({
+                res.append({
                     'error': 'bad captured'
                 })
                 continue
             if 'skip' in sp_ch and sp_ch['skip']:
-                res['ch'].append({
+                res.append({
                     'error': 'skip'
                 })
                 continue
@@ -310,12 +327,10 @@ class Integrator:
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
                                           (poly['delay'] + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
-            integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
             if integration_from < self.left_limit:
                 error = 'left boundary'
-            if integration_to > self.header['eventLength'] - self.right_limit:
-                error = 'right boundary'
             zero = statistics.fmean(signal[:integration_from])
+            pre_std = statistics.stdev(signal[:integration_from], zero)
             maximum = float('-inf')
             minimum = float('inf')
             for cell in signal:
@@ -325,6 +340,14 @@ class Integrator:
                 error = 'minimum %.1f' % minimum
             elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
                 error = 'maximum %.1f' % maximum
+            if delay is not None:
+                integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
+                                          (delay + 2 - self.config['common']['integrationTime'] * 0.5 + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
+            integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
+            if delay is not None:
+                integration_to = integration_from + math.ceil((self.config['common']['integrationTime'] - 12) / self.time_step)
+            if integration_to > self.header['eventLength'] - self.right_limit:
+                error = 'right boundary'
             integral = 0
             if error is None:
                 for cell in range(integration_from, integration_to - 1):
@@ -337,9 +360,9 @@ class Integrator:
                                                        sp_ch['fast_gain'])
             if self.config['preamp']['voltageDivider']:
                 photoelectrons *= 2
-            pre_std = statistics.stdev(signal[:integration_from], zero)
+
             err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
-            res['ch'].append({
+            res.append({
                 'from': integration_from,
                 'to': integration_to,
                 'zero_lvl': zero,
@@ -349,6 +372,7 @@ class Integrator:
                 'int': integral,
                 'ph_el': photoelectrons,
                 'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
-                'error': error
+                'error': error,
+                'raw': signal
             })
         return res

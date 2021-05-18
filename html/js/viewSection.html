@@ -414,7 +414,8 @@
                 toolTip: {
                     contentFormatter: function(e){
                         return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms, E = ' +
-                            e.entries[0].dataPoint.y.toFixed(2) + 'mV*ns');
+                            e.entries[0].dataPoint.y.toFixed(2) + 'mV*ns, index=' +
+                            e.entries[0].index);
                     },
                     updated: function(e){
                         this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
@@ -1037,6 +1038,8 @@
                     let poly_ind = this.selectors.polyInputs.val();
                     let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns; cell = ' + e.entries[0].index + '</p>';
                     let ch = 0;
+                    console.log(e);
+                    /*
                     for(; ch < this.m_current_event_raw.data.length; ch++){
                         if(this.m_current_channels[ch]) {
                             text += '<p style="color:' + this.palette[ch] + ';">' +
@@ -1053,6 +1056,8 @@
                         }
 
                     }
+
+
                     if(this.m_current_channels[ch]) {
                         text += '<p style="color:#B0D0B0;">' +
                             'laser ' + ', U = ' + e.entries[ch].dataPoint.y.toFixed(1) + ' mV,' +
@@ -1060,6 +1065,7 @@
                             '<p style="color:#B0D0B0;">' +
                             'int = ' + this.m_current_event_sig.laser.ave.int.toFixed(1) + ' mV*ns</p>';
                     }
+                    */
                     return text;
                 }.bind(this),
             },

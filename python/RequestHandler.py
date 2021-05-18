@@ -295,10 +295,13 @@ class Handler:
             event = self.raw_processor.processed[event_ind]
             if 'timestamp' in event:
                 resp['timestamps'].append(event['timestamp'])
-                resp['energies'].append(event['laser']['ave']['int'])
+                if 'energies' is resp:
+                    resp['energies'].append(event['laser']['ave']['int'])
+                else:
+                    resp['energies'].append(0)
             else:
                 resp['timestamps'].append(0)
-                resp['energies'].append(9999)
+                resp['energies'].append(0)
         resp['ok'] = True
         return resp
 

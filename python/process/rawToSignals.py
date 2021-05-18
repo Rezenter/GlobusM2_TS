@@ -189,11 +189,17 @@ class Integrator:
 
     def process_shot(self):
         print('Processing shot...')
+        combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
         for event_ind in range(self.laser_count):
             # print('Event %d' % event_ind)
             laser, error = self.process_laser_event(event_ind)
+            if 'sync' in laser and laser['sync']:
+                combiscope_zero = self.data[0][event_ind][0]['timestamp']
+                for correction_ind in range(event_ind):
+                    self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][0]['timestamp'] - combiscope_zero
             if self.laser_count > 1:
-                timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
+                #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
+                timestamp = self.data[0][event_ind][0]['timestamp'] - combiscope_zero
             else:
                 timestamp = -999
             proc_event = {
@@ -239,7 +245,7 @@ class Integrator:
         print('completed.')
 
     def identify_lasers(self):
-        eps = 0.01  # ms period error
+        """        eps = 0.01  # ms period error
         per_1064 = 1000 / 330
         per_1047 = 1000 / 50
         if len(self.processed) < 2:
@@ -252,7 +258,7 @@ class Integrator:
         #first is 1047.
         #find all with 20ms step
         #first of rest is dummy
-        # all rest should be 1064
+        # all rest should be 1064"""
         print('lasers identified')
 
     def ch_to_gr(self, ch):
@@ -285,6 +291,7 @@ class Integrator:
             }
         }
         board_count = 0
+        sync_event = []
         for board_ind in range(len(self.data)):
             # print('Board %d' % board_ind)
             if 'captured_bad' in self.data[board_ind][event_ind] and \
@@ -298,6 +305,10 @@ class Integrator:
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             front_ind = find_front_findex(signal, self.header['triggerThreshold'])
             integration_limit = math.floor(front_ind) - self.config['adc']['prehistorySep']
+            if front_ind == -1:
+                sync_event.append(True)
+            else:
+                sync_event.append(False)
             if integration_limit < self.left_limit:
                 error = 'Sync left'
             zero = statistics.fmean(signal[:integration_limit])
@@ -330,9 +341,12 @@ class Integrator:
         laser['ave']['pre_std'] /= board_count
         laser['ave']['int'] /= board_count
         laser['ave']['int_len'] /= board_count
+        sync = True
         for board_ind in range(len(self.data)):
             if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                 continue
+            if not sync_event[board_ind]:
+                sync = False
             if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
                     laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
                 error = 'prehistory differ'
@@ -342,6 +356,9 @@ class Integrator:
             if math.fabs(laser['ave']['int_len'] - laser['boards'][board_ind]['int_len']) > \
                     self.laser_length_residual_ind:
                 error = 'integral length differ'
+        if sync:
+            laser['sync'] = True
+            print('Globus synchronization found.\n', event_ind)
         if error is not None:
             print(error, event_ind)
             print('\n HERE \n')
