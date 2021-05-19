@@ -3,8 +3,8 @@ import sp_cal
 import matplotlib.pyplot as plt
 import json
 
-lambda0 = 1064
-lambda0 = 1047
+lambda0 = 1064.4
+#lambda0 = 1047.6
 
 wl_start = 700
 wl_stop = 1100

@@ -98,14 +98,6 @@ class Processor:
                 'error': err
             }
 
-    def update_events(self, events):
-        if len(self.result['events']) != len(events):
-            self.error = "New events have different length"
-            return False
-        self.result['events'] = events
-        self.save_result()
-        return True
-
     def get_error(self):
         tmp = self.error
         self.error = None
@@ -113,30 +105,6 @@ class Processor:
 
     def load(self):
         self.result = {}
-        result_path = '%s%s%05d/%05d%s' % (self.db_path, self.RESULT_FOLDER, self.shotn, self.shotn, self.FILE_EXT)
-        if os.path.isfile(result_path):
-            print('Loading existing processed result.')
-            with open(result_path, 'rb') as signal_file:
-                obj = ijson.kvitems(signal_file, '', use_float=True)
-                for key, val in obj:
-                    if key == 'spectral_name' and val != self.expected_id:
-                        print('Warning! existing result was obtained for different spectral calibration! Recalculating...')
-                        break
-                    if key == 'spectral_mod' and \
-                            val != datetime.fromtimestamp(self.expected[0]['modification']).strftime('%Y.%m.%d %H:%M:%S'):
-                        print('Warning! Existing result uses outdated spectral calibration! Recalculating...')
-                        break
-
-                    if key == 'absolute_name' and val != self.absolute_id:
-                        print('Warning! existing result was obtained for different absolute calibration! Recalculating...')
-                        break
-                    if key == 'absolute_mod' and \
-                            val != datetime.fromtimestamp(self.absolute['modification']).strftime('%Y.%m.%d %H:%M:%S'):
-                        print('Warning! Existing result uses outdated absolute calibration! Recalculating...')
-                        break
-                    self.result[key] = val
-                else:
-                    return
         self.load_signal()
         if self.error is None:
             self.process_shot()
@@ -163,13 +131,15 @@ class Processor:
                 os.path.getmtime('%s%s%05d%s' % (self.db_path, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
             'config_name': self.signal['common']['config_name'],
-            'polys': [],
-            'events': []
+            'polys': []
         }
         print('Processing shot...')
 
-        laser_wl = ['1064']
-        for wl in laser_wl:
+        laser_wl = ['1064', '1047']
+        for wl_ind in range(len(laser_wl)):
+            wl = laser_wl[wl_ind]
+            print('calculating wl = %s...' % wl)
+            self.result[wl] = []
             stray = [
                 [0.0 for ch in range(5)] for poly in range(10)
             ]
@@ -184,7 +154,7 @@ class Processor:
                 if 'error' in self.signal['data'][event_index] and self.signal['data'][event_index]['error'] is not None:
                     print('woops: %s, event #' % self.signal['data'][event_index]['error'], event_index)
                 else:
-                    if self.signal['data'][event_index]['timestamp'] <= 100:
+                    if self.signal['data'][event_index]['timestamp'] >= 100:
                         break
                     event = self.signal['data'][event_index]
                     if event['error'] is None:
@@ -211,7 +181,7 @@ class Processor:
             for event_ind in range(len(self.signal['data'])):
                 error = None
                 if self.signal['data'][event_ind]['error'] is not None:
-                    self.result['events'].append({
+                    self.result[wl].append({
                         'error': self.signal['data'][event_ind]['error']
                     })
                     continue
@@ -227,11 +197,12 @@ class Processor:
 
                     for poly_ind in range(len(self.signal['data'][event_ind][wl])):
                         temp = self.calc_temp(self.signal['data'][event_ind][wl][poly_ind], poly_ind,
-                                              stray[poly_ind], energy, 0)
+                                              stray[poly_ind], energy, wl_ind)
                         poly.append(temp)
                     proc_event['T_e'] = poly
                 proc_event['error'] = error
-                self.result['events'].append(proc_event)
+                self.result[wl].append(proc_event)
+            print('done\n\n')
         self.save_result()
 
     def save_result(self):
@@ -372,114 +343,3 @@ class Processor:
             #res['error'] = 'high chi'
             print('Warning! chi2 filter disabled!')
         return res
-
-    def to_csv(self, x_from, x_to, correction, aux_data):
-        temp_evo = ''
-        line = 't, '
-        for poly in self.result['polys']:
-            line += '%.1f, err, ' % poly['R']
-        temp_evo += line[:-2] + '\n'
-        line = 'ms, '
-        for poly in self.result['polys']:
-            line += 'eV, eV,'
-        temp_evo += line[:-2] + '\n'
-        for event_ind in range(len(self.result['events'])):
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
-                for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
-                temp_evo += line[:-2] + '\n'
-
-        temp_prof = ''
-        names = 'R, '
-        units = 'mm, '
-        for event in self.result['events']:
-            if x_from <= event['timestamp'] <= x_to:
-                names += '%.1f, err, ' % event['timestamp']
-                units += 'eV, eV, '
-        temp_prof += names[:-2] + '\n'
-        temp_prof += units[:-2] + '\n'
-        for poly_ind in range(len(self.result['polys'])):
-            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
-            for event in self.result['events']:
-                if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['error'] is not None or \
-                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
-            temp_prof += line[:-2] + '\n'
-
-        dens_evo = ''
-        line = 't, '
-        for poly in self.result['polys']:
-            line += '%.1f, err, ' % poly['R']
-        dens_evo += line[:-2] + '\n'
-        line = 'ms, '
-        for poly in self.result['polys']:
-            line += 'm-3, m-3,'
-        dens_evo += line[:-2] + '\n'
-        for event_ind in range(len(self.result['events'])):
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
-                for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
-                dens_evo += line[:-2] + '\n'
-
-        dens_prof = ''
-        names = 'R, '
-        units = 'mm, '
-        for event in self.result['events']:
-            if x_from <= event['timestamp'] <= x_to:
-                names += '%.1f, err, ' % event['timestamp']
-                units += 'm-3, m-3, '
-        dens_prof += names[:-2] + '\n'
-        dens_prof += units[:-2] + '\n'
-        for poly_ind in range(len(self.result['polys'])):
-            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
-            for event in self.result['events']:
-                if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['error'] is not None or \
-                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
-                                                  event['T_e'][poly_ind]['n_err'] * correction)
-            dens_prof += line[:-2] + '\n'
-        aux = ''
-        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
-        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
-        for event in aux_data:
-            event_ind = event['event_index']
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
-                    length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
-                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
-                           (event_ind, self.result['events'][event_ind]['timestamp'],
-                            event['data']['nl'] * correction, event['data']['nl_err'] * correction,
-                            length,
-                            event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
-                            event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
-                            event['data']['t_vol'], event['data']['t_vol_err'],
-                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
-                            event['data']['vol'],
-                            event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
-                            event['data']['surfaces'][-1]['ne'] * correction,
-                            event['data']['surfaces'][-1]['ne_err'] * correction)
-                else:
-                    aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
-                           (event_ind, self.result['events'][event_ind]['timestamp'])
-        return {
-            'ok': True,
-            'Tt': temp_evo,
-            'TR': temp_prof,
-            'nt': dens_evo,
-            'nR': dens_prof,
-            'aux': aux[:-1]
-        }
