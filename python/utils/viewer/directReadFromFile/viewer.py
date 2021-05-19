@@ -1,19 +1,19 @@
 import ijson
 import matplotlib.pyplot as plt
 
-shotn = 406
+shotn = 40103
 adc_ind = 0
 adc_chs = [
     {
         'gr': 0,
-        'ch': 0
+        'ch': 1
     }
 ]
-event_ind = 140
+event_ind = 00
 
 print('Loading raw...')
-#with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
-with open('d:/data/db/debug/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
+with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
+#with open('d:/data/db/debug/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
     raw = [[] for ch in range(len(adc_chs))]
     skip = True
     curr = 0
