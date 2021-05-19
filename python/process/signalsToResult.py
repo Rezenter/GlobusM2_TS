@@ -159,6 +159,7 @@ class Processor:
             'signal_mod': datetime.fromtimestamp(
                 os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
+            'config_name': self.signal['common']['config_name'],
             'polys': [],
             'events': []
         }
@@ -315,8 +316,7 @@ class Processor:
                                    for ch in range(len(channels))]
                         mr['chi'] = calc_chi2(N_i, sigm2_i, mr['f'])
                 f = [(left['f'][ch] + right['f'][ch]) * 0.5 for ch in range(len(channels))]
-                df = [(left['f'][ch] - right['f'][ch]) / (left['t'] - right['t'])
-                      for ch in range(len(channels))]
+                df = [(left['f'][ch] - right['f'][ch]) / (left['t'] - right['t']) for ch in range(len(channels))]
 
                 f2_sum = 0
                 df_sum = 0
@@ -415,7 +415,7 @@ class Processor:
         dens_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in self.result['polys']:
-            line += 'a.u., a.u.,'
+            line += 'm-3, m-3,'
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
@@ -433,7 +433,7 @@ class Processor:
         for event in self.result['events']:
             if x_from <= event['timestamp'] <= x_to:
                 names += '%.1f, err, ' % event['timestamp']
-                units += 'a.u., a.u., '
+                units += 'm-3, m-3, '
         dens_prof += names[:-2] + '\n'
         dens_prof += units[:-2] + '\n'
         for poly_ind in range(len(self.result['polys'])):
@@ -453,7 +453,7 @@ class Processor:
         for event in aux_data:
             event_ind = event['event_index']
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                if len(event['data']['nl_profile']) != 0:
+                if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
                     aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
@@ -467,7 +467,9 @@ class Processor:
                             event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
                             event['data']['surfaces'][-1]['ne'] * correction,
                             event['data']['surfaces'][-1]['ne_err'] * correction)
-
+                else:
+                    aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'])
         return {
             'ok': True,
             'Tt': temp_evo,

@@ -414,7 +414,8 @@
                 toolTip: {
                     contentFormatter: function(e){
                         return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms, E = ' +
-                            e.entries[0].dataPoint.y.toFixed(2) + 'mV*ns');
+                            e.entries[0].dataPoint.y.toFixed(2) + 'mV*ns, index=' +
+                            e.entries[0].index);
                     },
                     updated: function(e){
                         this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
@@ -1040,7 +1041,7 @@
                     for(; ch < this.m_current_event_raw.data.length; ch++){
                         if(this.m_current_channels[ch]) {
                             text += '<p style="color:' + this.palette[ch] + ';">' +
-                                'ch ' + (ch + 1) + ', U = ' + e.entries[ch].dataPoint.y.toFixed(1) + ' mV,';
+                                'ch ' + (ch + 1) + ', ';
                             if ('pre_std' in this.m_current_event_sig.poly[poly_ind].ch[ch]) {
                                 text += 'std = ' + this.m_current_event_sig.poly[poly_ind].ch[ch].pre_std.toFixed(1) + ' mV' +
                                     '<p style="color:' + this.palette[ch] + ';">' +
@@ -1055,11 +1056,12 @@
                     }
                     if(this.m_current_channels[ch]) {
                         text += '<p style="color:#B0D0B0;">' +
-                            'laser ' + ', U = ' + e.entries[ch].dataPoint.y.toFixed(1) + ' mV,' +
+                            'laser ' + ', ' +
                             'std = ' + this.m_current_event_sig.laser.ave.pre_std.toFixed(1) + ' mV</p>' +
                             '<p style="color:#B0D0B0;">' +
                             'int = ' + this.m_current_event_sig.laser.ave.int.toFixed(1) + ' mV*ns</p>';
                     }
+
                     return text;
                 }.bind(this),
             },
@@ -2078,6 +2080,14 @@
                     this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
                     this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
                     this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
+                    let info = {
+                        config_name: this.m_currentShot.config_name,
+                        spectral_name: this.m_currentShot.spectral_name,
+                        absolute_name: this.m_currentShot.absolute_name,
+                        process_timestamp: this.m_currentShot.timestamp,
+                        absolute_correction: this.selectors.abs_mult.val()
+                    };
+                    this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
                 }.bind(this)
             );
         };

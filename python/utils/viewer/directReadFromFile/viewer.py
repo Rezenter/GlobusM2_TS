@@ -1,15 +1,15 @@
 import ijson
 import matplotlib.pyplot as plt
 
-shotn = 40103
+shotn = 40112
 adc_ind = 0
 adc_chs = [
     {
         'gr': 0,
-        'ch': 1
+        'ch': 0
     }
 ]
-event_ind = 00
+event_ind = 470
 
 print('Loading raw...')
 with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
@@ -22,9 +22,9 @@ with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as boar
         if skip:
             skip = False
         else:
-            if curr < event_ind:
+            if curr >= event_ind:
                 timestamps.append(event['groups'][0]['timestamp'])
-                print(timestamps[-1], event['groups'][0]['data'][0][0])
+                print(event_ind, timestamps[-1], event['groups'][0]['data'][0][0])
                 plt.plot(range(1024), event['groups'][0]['data'][0])
                 plt.show()
             else:

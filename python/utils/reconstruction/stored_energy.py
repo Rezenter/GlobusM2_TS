@@ -161,6 +161,10 @@ class StoredCalculator:
                     t_ind += 1
                 break
         poly_a = self.ccm_data.find_poly(self.polys, t_ind)
+        if 'error' in poly_a:
+            return {
+                'error': poly_a['error']
+            }
         #for poly in poly_a:
         #    print(poly['a'], poly['Te'], poly['ne'])
         for poly in poly_a:

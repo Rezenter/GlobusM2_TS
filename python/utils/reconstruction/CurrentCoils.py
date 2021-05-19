@@ -10,19 +10,10 @@ elong_0 = 1.5
 shaf_shift = 3
 linear_count = 3
 
+
 def angle(x1, y1, cx, cy):
-    val = math.atan2((y1-cy), (x1 - cx))
-    if val < 0:
-        val += math.tau
-    return val
+    return math.atan2((y1-cy), (x1 - cx))
 
-
-def counterclock(r, z, g_r, g_z):
-    count = len(r) // 10
-    dir = angle(r[0], z[0], g_r, g_z) - angle(r[count], z[count], g_r, g_z)
-    if dir < 0:
-        return [v for v in reversed(r)], [v for v in reversed(z)]
-    return r, z
 
 def get_integrals(shotn, ts, radius, start, stop):
     with open('%smcc_%d.json' % (CCM_DB, shotn), 'r') as mcc_file:
@@ -408,19 +399,28 @@ class CCM:
             self.set_error('No mcc file!')
             return
         self.timestamps = self.data['time']['variable']
+        self.calculated = [{'calculated': False} for t in self.timestamps]
 
-    def counterclock(self, r, z, t_ind):
-        g_r = self.data['R']['variable'][t_ind]
-        g_z = self.data['Z']['variable'][t_ind]
+    def clockwise(self, r, z, t_ind):
+        params = self.get_surface_parameters(t_ind)
+
         count = len(r) // 10
-        dir = angle(r[0], z[0], g_r, g_z) - angle(r[count], z[count], g_r, g_z)
-        if dir < 0:
+        a1 = angle(r[0], z[0], params['R'], params['Z'])
+        a0 = angle(r[count], z[count], params['R'], params['Z'])
+        if a1 * a0 >= 0 or r[0] > params['R']:
+            direction = a1 - a0
+        else:
+            if a1 < 0:
+                direction = 1
+            else:
+                direction = -1
+        if direction < 0:
             r = [v for v in reversed(r)]
             z = [v for v in reversed(z)]
 
         for i in range(0, len(r)):
-            if r[i] > g_r:
-                if z[i - 1] >= g_z > z[i]:
+            if r[i] > params['R']:
+                if z[i - 1] >= params['Z'] > z[i]:
                     if i == 0:
                         return r, z
                     start_ind = i - 1
@@ -429,13 +429,13 @@ class CCM:
                     res_z = z[start_ind:]
                     res_z.extend(z[:start_ind])
                     return res_r, res_z
-        print('WTF? FIX THIS SHIT')
+        print('WTF? FIX THIS SHIT\n\n')
         return [], []
 
     def get_surface(self, t_ind, ra=1, theta_count=360):
-        sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
-                            self.data['boundary']['zbdy']['variable'][t_ind],
-                            t_ind)
+        sep_r, sep_z = self.clockwise(self.data['boundary']['rbdy']['variable'][t_ind],
+                                      self.data['boundary']['zbdy']['variable'][t_ind],
+                                      t_ind)
         if ra == 1:
             return sep_r, sep_z
         if ra > 1 or ra < 0:
@@ -444,19 +444,20 @@ class CCM:
 
         theta_step = (math.tau / theta_count)
 
-        a = ra * (sep_r[0] - self.data['R']['variable'][t_ind])
-        triang = a * self.data['de']['variable'][t_ind] / self.data['a']['variable'][t_ind]
+        params = self.get_surface_parameters(t_ind)
+        a = ra * (sep_r[0] - params['R'])
+        triang = a * params['triag'] / params['a']
         elong = self.elong_0 + \
-                a * (self.data['kx']['variable'][t_ind] - self.elong_0) / self.data['a']['variable'][t_ind]
-        shift = self.shaf_shift * math.pow((1 - math.pow(a / self.data['a']['variable'][t_ind], 2)), self.gamma_shift)
+                a * (params['elong'] - self.elong_0) / params['a']
+        shift = self.shaf_shift * math.pow((1 - math.pow(a / params['a'], 2)), self.gamma_shift)
 
         r = []
         z = []
         for theta_ind in range(theta_count + 1):
             theta = theta_step * theta_ind
-            r.append(self.data['R']['variable'][t_ind] + shift +
+            r.append(params['R'] + shift +
                      a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
-            z.append(self.data['Z']['variable'][t_ind] + a * elong * math.sin(theta))
+            z.append(params['Z'] + a * elong * math.sin(theta))
         return r, z
 
     def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):
@@ -498,9 +499,14 @@ class CCM:
             iteration += 1
 
     def find_poly(self, polys, t_ind):
-        sep_r, sep_z = self.counterclock(self.data['boundary']['rbdy']['variable'][t_ind],
-                                         self.data['boundary']['zbdy']['variable'][t_ind],
-                                         t_ind)
+        params = self.get_surface_parameters(t_ind)
+        if 'error' in params:
+            return {
+                'error': params['error']
+            }
+        sep_r, sep_z = self.clockwise(self.data['boundary']['rbdy']['variable'][t_ind],
+                                      self.data['boundary']['zbdy']['variable'][t_ind],
+                                      t_ind)
         if len(sep_r) == 0 or len(sep_z) == 0:
             return []
         equator_r = -1
@@ -516,7 +522,8 @@ class CCM:
                     break
         if equator_r < 0:
             return []
-        center_r = self.data['R']['variable'][t_ind] + self.shaf_shift
+
+        center_r = params['R'] + self.shaf_shift
         lfs_poly = []
         hfs_poly = []
         for poly_ind in range(len(polys)):
@@ -557,7 +564,7 @@ class CCM:
             'a': 0,
             'r_min': center_r,
             'r_max': center_r,
-            'z': self.data['Z']['variable'][t_ind]
+            'z': params['Z']
         })
         r_arr = []
         T_arr = []
@@ -598,3 +605,60 @@ class CCM:
         result[-1]['ne_err'] = ne_err * math.sqrt(3)
         return result
 
+    def get_surface_parameters(self, t_ind):
+        if not self.calculated[t_ind]['calculated']:
+            left = 0
+            right = 0
+            top = 0
+            bot = 0
+            if len(self.data['boundary']['rbdy']['variable'][t_ind]) != len(self.data['boundary']['zbdy']['variable'][t_ind]):
+                print('Bad CCM data for t_ind = %d.' % t_ind)
+                fuck_off
+            if len(self.data['boundary']['rbdy']['variable'][t_ind]) == 0:
+                self.calculated[t_ind] = {
+                    'calculated': True,
+                    'error': 'No data.'
+                }
+            else:
+                for i in range(len(self.data['boundary']['rbdy']['variable'][t_ind])):
+                    if self.data['boundary']['rbdy']['variable'][t_ind][left] > self.data['boundary']['rbdy']['variable'][t_ind][i]:
+                        left = i
+                    elif self.data['boundary']['rbdy']['variable'][t_ind][right] < self.data['boundary']['rbdy']['variable'][t_ind][i]:
+                        right = i
+                    if self.data['boundary']['zbdy']['variable'][t_ind][top] < self.data['boundary']['zbdy']['variable'][t_ind][i]:
+                        top = i
+                    elif self.data['boundary']['zbdy']['variable'][t_ind][bot] > self.data['boundary']['zbdy']['variable'][t_ind][i]:
+                        bot = i
+
+                self.calculated[t_ind] = {
+                    'calculated': True,
+                    'left': {
+                        'index': left,
+                        'r': self.data['boundary']['rbdy']['variable'][t_ind][left],
+                        'z': self.data['boundary']['zbdy']['variable'][t_ind][left]
+                    },
+                    'right': {
+                        'index': right,
+                        'r': self.data['boundary']['rbdy']['variable'][t_ind][right],
+                        'z': self.data['boundary']['zbdy']['variable'][t_ind][right]
+                    },
+                    'top': {
+                        'index': top,
+                        'r': self.data['boundary']['rbdy']['variable'][t_ind][top],
+                        'z': self.data['boundary']['zbdy']['variable'][t_ind][top]
+                    },
+                    'bot': {
+                        'index': bot,
+                        'r': self.data['boundary']['rbdy']['variable'][t_ind][bot],
+                        'z': self.data['boundary']['zbdy']['variable'][t_ind][bot]
+                    },
+                    'R': (self.data['boundary']['rbdy']['variable'][t_ind][left] + self.data['boundary']['rbdy']['variable'][t_ind][right]) * 0.5,
+                    'Z': (self.data['boundary']['zbdy']['variable'][t_ind][top] + self.data['boundary']['zbdy']['variable'][t_ind][bot]) * 0.5,
+                    'triag': (self.data['boundary']['rbdy']['variable'][t_ind][left] + self.data['boundary']['rbdy']['variable'][t_ind][right] -
+                              self.data['boundary']['rbdy']['variable'][t_ind][top] - self.data['boundary']['rbdy']['variable'][t_ind][bot]) /
+                             (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]),
+                    'elong': (self.data['boundary']['zbdy']['variable'][t_ind][top] - self.data['boundary']['zbdy']['variable'][t_ind][bot]) /
+                             (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]),
+                    'a': (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]) * 0.5
+                }
+        return self.calculated[t_ind]

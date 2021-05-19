@@ -32,7 +32,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
 
         resp = handler.handle_request(parsedBody)
 
-        print('Sending response: ')
+        #print('Sending response: ')
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -55,7 +55,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             #this part handles the mimetypes for you.
             mimetype, _ = mimetypes.guess_type(filepath)
-            print(mimetype)
+            #print(mimetype)
             self.send_header('Content-type', mimetype)
             self.end_headers()
             for s in f:
