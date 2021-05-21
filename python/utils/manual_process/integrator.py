@@ -122,13 +122,9 @@ class Integrator:
             if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT)):
                 print('Requested shot is missing requested board file.')
                 return False
-            skip = True
             with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
-                    if skip:
-                        skip = False
-                        continue
                     self.data[board_ind].append(event['groups'])
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
@@ -148,21 +144,57 @@ class Integrator:
         self.loaded = True
         return True
 
-    def process_shot(self, event_indexes, delays, sync_event):
+    def find_sync(self):
+        for event_ind in range(self.laser_count):
+            for board_ind in range(len(self.data)):
+                if 'captured_bad' in self.data[board_ind][event_ind] and \
+                        self.data[board_ind][event_ind]['captured_bad']:
+                    continue
+                adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
+                signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+
+                maximum = float('-inf')
+                zero = 0
+                for v in signal:
+                    maximum = max(maximum, v)
+                    zero += v
+                zero /= len(signal)
+
+                if maximum - zero > 10:
+                    continue
+                else:
+                    break
+            else:
+                continue
+            return event_ind
+        return 0
+
+    def process_shot(self,  settings):
         print('Processing shot...')
+        if settings['is_new']:
+            event_indexes = range(self.laser_count)
+            timestamp_0 = self.data[0][self.find_sync()][0]['timestamp']
+            print('sync is %d' % self.find_sync())
+        else:
+            event_indexes = settings['events']
+            delays = settings['delays']
+            timestamp_0 = self.data[0][settings['sync_event']][0]['timestamp']
         for event_ind_ind in range(len(event_indexes)):
             event_ind = event_indexes[event_ind_ind]
-            # print('Event %d' % event_ind)
-            laser, error = self.process_laser_event(event_ind)
-            if self.laser_count > 1:
-                timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][sync_event][0]['timestamp']
+            if settings['is_new']:
+                laser, error = self.process_laser_event_new(event_ind)
             else:
-                timestamp = -999
+                laser, error = self.process_laser_event_old(event_ind)
+
+            timestamp = self.data[0][event_ind][0]['timestamp'] - timestamp_0
+
             proc_event = {
                 'timestamp': timestamp,
                 'laser': laser,
                 'error': error
             }
+            continue  # debud
+
             if error is None:
                 proc_event['1064'] = []
                 proc_event['1047'] = []
@@ -240,7 +272,7 @@ class Integrator:
         print('integration ok.')
         return res, integration_stop
 
-    def process_laser_event(self, event_ind):
+    def process_laser_event_old(self, event_ind):
         error = None
         laser = {
             'boards': [],
@@ -311,6 +343,108 @@ class Integrator:
         if error is not None:
             print(error, event_ind)
             print('\n HERE \n')
+        return laser, error
+
+    def process_laser_event_new(self, event_ind):
+        error = None
+        laser = {
+            'boards': [],
+            'ave': {
+                'pre_std': 0,
+                'int': 0,
+                'int_len': 0
+            }
+        }
+        board_count = 0
+        sync_event = []
+        for board_ind in range(len(self.data)):
+            # print('Board %d' % board_ind)
+            if 'captured_bad' in self.data[board_ind][event_ind] and \
+                    self.data[board_ind][event_ind]['captured_bad']:
+                laser['boards'].append({
+                    'captured_bad': True
+                })
+                error = 'bad captured'
+                continue
+            adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
+            signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            maximum = float('-inf')
+            minimum = float('inf')
+            for cell in signal:
+                maximum = max(maximum, cell)
+                minimum = min(minimum, cell)
+            front_ind = find_front_findex(signal, self.header['triggerThreshold'])
+            if front_ind == -1:
+                sync_event.append(True)
+                error = 'Laser signal does not reach threshold.'
+                laser['boards'].append({
+                    'min': minimum,
+                    'max': maximum
+                })
+                continue
+            else:
+                sync_event.append(False)
+            integration_limit = math.floor(front_ind) - self.config['adc']['prehistorySep']
+            if integration_limit < self.left_limit:
+                error = 'Sync left'
+            zero = statistics.fmean(signal[:integration_limit])
+            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
+                    maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
+                error = 'sync offscale'
+            # integral, stop_ind = self.integrate_energy(signal[integration_limit:], zero)
+            stop_ind = integration_limit + math.ceil(self.config['common']['integrationTime'] / self.time_step)
+
+            integral = sum(sig - zero for sig in signal[integration_limit: stop_ind]) * self.time_step
+
+            '''if stop_ind < 0:
+                error = 'integration failed to stop'
+                stop_ind = -stop_ind'''
+            laser['boards'].append({
+                'sync_ind': front_ind,
+                'sync_ns': front_ind * self.time_step,
+                'zero_lvl': zero,
+                'pre_std': statistics.stdev(signal[:integration_limit], zero),
+                'min': minimum,
+                'max': maximum,
+                'int': integral
+                # 'int_len': stop_ind
+            })
+            laser['ave']['pre_std'] += laser['boards'][-1]['pre_std']
+            laser['ave']['int'] += integral
+            # laser['ave']['int_len'] += stop_ind
+            board_count += 1
+        sync = True
+        for board_ind in range(len(self.data)):
+            if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
+                continue
+            if not sync_event[board_ind]:
+                sync = False
+        if sync:
+            laser['sync'] = True
+            print('Globus synchronization found.%d' % event_ind)
+            return laser, error
+
+        if board_count < len(self.data):
+            error = 'boards failed to get laser signal'
+        else:
+            laser['ave']['pre_std'] /= board_count
+            laser['ave']['int'] /= board_count
+            # laser['ave']['int_len'] /= board_count
+            laser['ave']['int_len'] = math.ceil(self.config['common']['integrationTime'] / self.time_step)
+            for board_ind in range(len(self.data)):
+                if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
+                    continue
+                if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
+                        laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
+                    error = 'prehistory differ'
+                if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
+                        laser['ave']['int'] > self.laser_integral_residual_pc:
+                    error = 'integrals differ'
+                """if math.fabs(laser['ave']['int_len'] - laser['boards'][board_ind]['int_len']) > \
+                        self.laser_length_residual_ind:
+                    error = 'integral length differ'"""
+        if error is not None:
+            print(error, event_ind)
         return laser, error
 
     def process_poly_event(self, event_ind, poly, laser, delay=None):

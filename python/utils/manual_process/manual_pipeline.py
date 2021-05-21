@@ -10,27 +10,39 @@ shots = [
         'shotn': 40103,
         'events': [38    , 44    , 50    , 56    , 62    , 68],
         'sync_event': 0,
-        'delays': [176.2 , 198.6 , 169.3 , 193.5 , 157.2 , 178.0]
+        'delays': [176.2 , 198.6 , 169.3 , 193.5 , 157.2 , 178.0],
+        'is_new': False
     }, {
         'shotn': 40105,
         'events': [39    , 45    , 51    , 57    , 63    , 69   , 75],
         'sync_event': 1,
-        'delays': [159.5 , 186.9 , 166.2 , 189.9 , 164.7 , 196.8, 172.9]
+        'delays': [159.5 , 186.9 , 166.2 , 189.9 , 164.7 , 196.8, 172.9],
+        'is_new': False
     }, {
         'shotn': 40106,
         'events': [38    , 44    , 50    , 56    , 62    , 68],
         'sync_event': 1,
-        'delays': [148.9 , 183.1 , 160.7 , 186.5 , 171.1 , 200.3]
+        'delays': [148.9 , 183.1 , 160.7 , 186.5 , 171.1 , 200.3],
+        'is_new': False
     }, {
         'shotn': 40108,
         'events': [43    , 49    , 55    , 61    , 67],
         'sync_event': 1,
-        'delays': [170.0 , 193.2 , 164.9 , 189.9 , 167.5]
+        'delays': [170.0 , 193.2 , 164.9 , 189.9 , 167.5],
+        'is_new': False
     }, {
         'shotn': 40109,
         'events': [42, 48, 54, 60, 66],
         'sync_event': 1,
-        'delays': [181.2, 160.3, 188.5, 169.8, 191.4]
+        'delays': [181.2, 160.3, 188.5, 169.8, 191.4],
+        'is_new': False
+    }
+]
+
+shots = [
+    {
+        'shotn': 40176,
+        'is_new': True
     }
 ]
 
@@ -65,14 +77,11 @@ for poly_ind in range(len(polys)):
 
 for shot in shots:
     shotn = shot['shotn']
-    events = shot['events']
-    sync_event = shot['sync_event']
-    delays = shot['delays']
 
     print('processing shot %d' % shotn)
 
     raw_processor = integrator.Integrator(LOCAL_DB_PATH, shotn, is_plasma, config_name, GLOBAL_DB_PATH)
-    raw_processor.process_shot(events, delays, sync_event)
+    raw_processor.process_shot(shot)
 
     print('\nintegrated.\n')
 

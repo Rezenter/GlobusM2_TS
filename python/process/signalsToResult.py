@@ -22,6 +22,16 @@ def interpolate(x1, x, x2, y1, y2):
     return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
 
 
+def filter(res):
+    if res['Terr'] / res['T'] > 0.3:
+        res['error'] = 'high Te error'
+    elif res['n_err'] / res['n'] > 0.1:
+        res['error'] = 'high ne error'
+    elif res['chi2'] > 20:
+        res['error'] = 'high chi'
+    return res
+
+
 class Processor:
     PLASMA_FOLDER = 'plasma/'
     DEBUG_FOLDER = 'debug/'
@@ -223,7 +233,7 @@ class Processor:
 
                 for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
                     temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
-                                          stray[poly_ind], energy)
+                                          stray[poly_ind], energy, event_ind)
                     poly.append(temp)
                 proc_event['T_e'] = poly
             proc_event['error'] = error
@@ -238,7 +248,7 @@ class Processor:
             json.dump(self.result, out_file)
         #self.to_csv()
 
-    def calc_temp(self, event, poly, stray, E):
+    def calc_temp(self, event, poly, stray, E, event_ind):
         channels = []
 
         E *= self.absolute['E_mult']
@@ -341,7 +351,7 @@ class Processor:
                 Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
                 nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
 
-                res = self.filter({
+                res = filter({
                     'index': min_index,
                     'min': self.expected['T_arr'][min_index],
                     'ch': channels,
@@ -353,21 +363,15 @@ class Processor:
                     'mult': mult,
                     'error': None
                 })
+
+                if res['error'] == 'high chi':
+                    print('Warning, chi2 filter disabled, but triggered for event %d, poly = %d' % (event_ind, poly))
+                    res['error'] = None
         else:
             print('Less than 2 signals!')
             res = {
                 'error': '< 2 channels'
             }
-        return res
-
-    def filter(self, res):
-        if res['Terr'] / res['T'] > 0.3:
-            res['error'] = 'high Te error'
-        elif res['n_err'] / res['n'] > 0.1:
-            res['error'] = 'high ne error'
-        elif res['chi2'] > 20:
-            #res['error'] = 'high chi'
-            print('Warning! chi2 filter disabled!')
         return res
 
     def to_csv(self, x_from, x_to, correction, aux_data=None):

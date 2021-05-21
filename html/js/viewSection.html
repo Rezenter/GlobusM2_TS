@@ -1085,7 +1085,7 @@
                         this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
                         if(e.dataSeriesIndex !== 5) {
                             this.m_raw_chart.options.axisX.stripLines = [{
-                                startValue: 0,
+                                startValue: -5,
                                 endValue: (this.m_current_event_sig.laser.ave.int_len) * dt,
                                 color: "#B0D0B0",
                                 opacity: .2
