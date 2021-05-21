@@ -4,8 +4,10 @@ import os
 import shutil
 
 is_plasma = True
-shotn = 40082
-start_ind = 66
+shotn = 40176
+start_ind = 531
+
+
 stop_ind = start_ind + 116
 
 DB_PATH = 'd:/data/db/'

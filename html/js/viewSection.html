@@ -348,7 +348,7 @@
             true,
             true,
             true,
-            true,
+            false,
             true
         ];
         this.m_poloidal_poly = [];
@@ -886,7 +886,13 @@
                 title: 'Signal, a.u.',
                 titleFontSize: 12,
                 minimum: 0,
-                fontFamily: 'arial'
+                fontFamily: 'arial',
+                crosshair: {
+                    enabled: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(2);
+                    }
+                }
             },
             axisX: {
                 title: "Electron temperature, eV",
@@ -1017,7 +1023,13 @@
                 title: 'Signal, mv',
                 titleFontSize: 12,
                 //minimum: 0,
-                fontFamily: 'arial'
+                fontFamily: 'arial',
+                crosshair: {
+                    enabled: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                }
             },
             axisX: {
                 title: "time, ns",
@@ -1959,7 +1971,7 @@
                     for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
                         let data = [];
                         for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
-                            if(ch !== 5) {
+                            if(this.m_current_event_sig.poly[poly_ind]['ch'][ch].error !== 'skip') {
                                 data.push(
                                     {
                                         x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
@@ -1990,7 +2002,8 @@
                         data.push(
                             {
                                 x: (time_ind - this.m_current_event_raw.laser_start) * dt,
-                                y: this.m_current_event_raw.laser[time_ind]
+                                y: this.m_current_event_raw.laser[time_ind] -
+                                    this.m_current_event_sig.laser.boards[0].zero_lvl
                             });
                     }
                     this.m_raw_chart.options.data.push({

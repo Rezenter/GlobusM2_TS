@@ -360,10 +360,9 @@ class Integrator:
                 error = 'integral length differ'
         if sync:
             laser['sync'] = True
-            print('Globus synchronization found.\n', event_ind)
+            print('Globus synchronization found.%d' % event_ind)
         if error is not None:
             print(error, event_ind)
-            print('\n HERE \n')
         return laser, error
 
     def process_poly_event(self, event_ind, poly, laser):
@@ -400,9 +399,9 @@ class Integrator:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
             if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline:
-                error = 'minimum %.1f' % minimum
+                error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
             elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                error = 'maximum %.1f' % maximum
+                error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
             integral = 0
             if error is None:
                 for cell in range(integration_from, integration_to - 1):

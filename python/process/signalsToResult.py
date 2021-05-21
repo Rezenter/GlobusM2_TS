@@ -247,7 +247,8 @@ class Processor:
             if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
             else:
-                print('Warning! skipped ch%d' % ch_ind)
+                if event['ch'][ch_ind]['error'] != 'skip':
+                    print('Warning! skipped ch%d' % ch_ind)
         if len(channels) > 1:
             chi2 = float('inf')
             N_i = []
