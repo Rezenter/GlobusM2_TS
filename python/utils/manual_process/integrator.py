@@ -222,16 +222,22 @@ class Integrator:
         res = 0.0
         flag = False
         integration_stop = -1
+        print('\n\n')
+        print(zero)
         for i in range(len(signal) - 1):
-            if signal[i] - zero >= self.header['triggerThreshold']:
+            if signal[i] - zero >= 20:#self.header['triggerThreshold']:
                 flag = True
+                start = i
             res += self.time_step * (signal[i] + signal[i + 1] - 2 * zero) * 0.5  # ns*mV
-            if flag and signal[i + 1] - zero < 0:
+            #if flag and signal[i + 1] - zero < 0:
+            if flag and i - start > 100:
                 integration_stop = i
                 break
         else:
             print('Warning! Energy integration failed to stop.')
+            print('WTF???', zero)
             return res, -integration_stop
+        print('integration ok.')
         return res, integration_stop
 
     def process_laser_event(self, event_ind):
