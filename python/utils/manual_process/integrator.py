@@ -148,14 +148,14 @@ class Integrator:
         self.loaded = True
         return True
 
-    def process_shot(self, event_indexes, delays):
+    def process_shot(self, event_indexes, delays, sync_event):
         print('Processing shot...')
         for event_ind_ind in range(len(event_indexes)):
             event_ind = event_indexes[event_ind_ind]
             # print('Event %d' % event_ind)
             laser, error = self.process_laser_event(event_ind)
             if self.laser_count > 1:
-                timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
+                timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][sync_event][0]['timestamp']
             else:
                 timestamp = -999
             proc_event = {
@@ -175,7 +175,7 @@ class Integrator:
                     'error': 'laser'
                 })
 
-        #self.save_processed()
+        self.save_processed()
         self.export_processed()
 
     def export_processed(self):

@@ -176,10 +176,11 @@ class Processor:
             return
 
         for event_index in range(len(self.signal['data'])):
-            if 'error' in self.signal['data'][event_index]:
-                print('woops', event_index)
+            if 'error' in self.signal['data'][event_index] and self.signal['data'][event_index]['error'] is not None:
+                print('woops: %s, event #' % self.signal['data'][event_index]['error'], event_index)
             else:
-                if self.signal['data'][event_index]['timestamp'] <= 100:
+                if self.signal['data'][event_index]['timestamp'] >= 100:
+                    print('stray calculation stopped at index = %d\n\n' % event_index)
                     break
                 event = self.signal['data'][event_index]
                 if event['error'] is None:
@@ -368,7 +369,7 @@ class Processor:
             print('Warning! chi2 filter disabled!')
         return res
 
-    def to_csv(self, x_from, x_to, correction, aux_data):
+    def to_csv(self, x_from, x_to, correction, aux_data=None):
         temp_evo = ''
         line = 't, '
         for poly in self.result['polys']:
@@ -379,33 +380,35 @@ class Processor:
             line += 'eV, eV,'
         temp_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
-                for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
-                temp_evo += line[:-2] + '\n'
-
+            if 'timestamp' in self.result['events'][event_ind]:
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
+                    for poly in self.result['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
+                    temp_evo += line[:-2] + '\n'
         temp_prof = ''
         names = 'R, '
         units = 'mm, '
         for event in self.result['events']:
-            if x_from <= event['timestamp'] <= x_to:
-                names += '%.1f, err, ' % event['timestamp']
-                units += 'eV, eV, '
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, err, ' % event['timestamp']
+                    units += 'eV, eV, '
         temp_prof += names[:-2] + '\n'
         temp_prof += units[:-2] + '\n'
         for poly_ind in range(len(self.result['polys'])):
             line = '%.1f, ' % self.result['polys'][poly_ind]['R']
             for event in self.result['events']:
-                if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['error'] is not None or \
-                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
             temp_prof += line[:-2] + '\n'
 
         dens_evo = ''
@@ -418,38 +421,50 @@ class Processor:
             line += 'm-3, m-3,'
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
-                for poly in self.result['events'][event_ind]['T_e']:
-                    if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
-                dens_evo += line[:-2] + '\n'
+            if 'timestamp' in self.result['events'][event_ind]:
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.1f, ' % self.result['events'][event_ind]['timestamp']
+                    for poly in self.result['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.2e, %.2e, ' % (poly['n'] * correction, poly['n_err'] * correction)
+                    dens_evo += line[:-2] + '\n'
 
         dens_prof = ''
         names = 'R, '
         units = 'mm, '
         for event in self.result['events']:
-            if x_from <= event['timestamp'] <= x_to:
-                names += '%.1f, err, ' % event['timestamp']
-                units += 'm-3, m-3, '
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, err, ' % event['timestamp']
+                    units += 'm-3, m-3, '
         dens_prof += names[:-2] + '\n'
         dens_prof += units[:-2] + '\n'
         for poly_ind in range(len(self.result['polys'])):
             line = '%.1f, ' % self.result['polys'][poly_ind]['R']
             for event in self.result['events']:
-                if x_from <= event['timestamp'] <= x_to:
-                    if event['T_e'][poly_ind]['error'] is not None or \
-                            ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
-                        line += '--, --, '
-                    else:
-                        line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
-                                                  event['T_e'][poly_ind]['n_err'] * correction)
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction,
+                                                      event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
         aux = ''
         aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
         aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
+        if aux_data is None:
+            return {
+                'ok': True,
+                'Tt': temp_evo,
+                'TR': temp_prof,
+                'nt': dens_evo,
+                'nR': dens_prof,
+                'aux': ''
+            }
         for event in aux_data:
             event_ind = event['event_index']
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
