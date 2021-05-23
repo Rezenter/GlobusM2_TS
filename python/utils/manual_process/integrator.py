@@ -207,7 +207,7 @@ class Integrator:
                     if laser['ave']['int_47'] != 0.0:
                         proc_event['ts']['1047'] = []
                         for poly in self.config['poly']:
-                            proc_event['ts']['1047'].append(self.process_poly_event(event_ind, poly, laser, is_1047=True))
+                            proc_event['ts']['1047'].append(self.process_poly_event(event_ind, poly, laser, data_1064=proc_event['ts']['1064']))
                 else:
                     proc_event['error'] = 'laser'
             self.processed.append(proc_event)
@@ -458,7 +458,7 @@ class Integrator:
         laser['error'] = error
         return laser
 
-    def process_poly_event(self, event_ind, poly, laser, delay=None, is_1047=False):
+    def process_poly_event(self, event_ind, poly, laser, delay=None, data_1064=None):
         res = []
         for ch_ind in range(len(poly['channels'])):
             error = None
@@ -476,7 +476,7 @@ class Integrator:
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
             signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            if is_1047:
+            if data_1064 is not None:
                 integration_from = math.floor(laser['boards'][board_ind]['sync_ind_47'] +
                                               (poly['delay'] + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
             else:
@@ -485,25 +485,31 @@ class Integrator:
                                                   'ch_delay'] * ch_ind) / self.time_step)
             if integration_from < self.left_limit:
                 error = 'left boundary'
-            zero = statistics.fmean(signal[:integration_from])
-            pre_std = statistics.stdev(signal[:integration_from], zero)
-            maximum = float('-inf')
-            minimum = float('inf')
-            for cell in signal:
-                maximum = max(maximum, cell)
-                minimum = min(minimum, cell)
-            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline:
-                error = 'minimum %.1f' % minimum
-            elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                error = 'maximum %.1f' % maximum
+
+            if data_1064 is not None:
+                zero = data_1064[poly['ind']][ch_ind]['zero_lvl']
+                pre_std = data_1064[poly['ind']][ch_ind]['pre_std']
+                maximum = data_1064[poly['ind']][ch_ind]['min']
+                minimum = data_1064[poly['ind']][ch_ind]['max']
+            else:
+                zero = statistics.fmean(signal[:integration_from])
+                pre_std = statistics.stdev(signal[:integration_from], zero)
+                maximum = float('-inf')
+                minimum = float('inf')
+                for cell in signal:
+                    maximum = max(maximum, cell)
+                    minimum = min(minimum, cell)
+                if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline:
+                    error = 'minimum %.1f' % minimum
+                elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
+                    error = 'maximum %.1f' % maximum
             if delay is not None:
                 integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
                                           (delay + 2 - self.config['common']['integrationTime'] * 0.5 + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
             integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
-            if delay is not None or is_1047:
+            if delay is not None or data_1064 is not None:
                 integration_to = integration_from + math.ceil((self.config['common']['integrationTime'] - 10) / self.time_step)
             if integration_to > self.header['eventLength'] - self.right_limit:
-                print(event_ind, poly['ind'], 'here')
                 error = 'right boundary'
             integral = 0
             if error is None:
