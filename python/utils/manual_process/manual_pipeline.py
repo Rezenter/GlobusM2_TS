@@ -62,7 +62,7 @@ polys = [1, 6]
 channels = [0, 2, 3, 4]
 
 is_plasma = True
-config_name = '2021.05.12_g10'
+config_name = '2021.05.12_g10_desync'
 
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
@@ -100,30 +100,30 @@ for shot in shots:
         with open('%s/result/%05d/%05d.json' % (LOCAL_DB_PATH, shotn, shotn), 'r') as res_file:
             result = json.load(res_file)
         with open('local_db/csv/%05d_poly#%d.csv' % (shotn, poly_ind), 'w') as file:
-            file.write('shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, T_47, err, n_47, err, chi2_47 delay\n')
-            file.write('#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , eV, eV, parr, parr, , ns\n')
+            file.write('shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, T_47, err, n_47, err, chi2_47\n')
+            file.write('#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , eV, eV, parr, parr, \n')
 
-            for event_ind in range(len(events)):
+            for event_ind in range(len(result['events'])):
+                if 'ts' not in raw_processor.processed[event_ind] or len(raw_processor.processed[event_ind]['ts']) == 1:
+                    continue
                 line = '%05d, %.1f, %.1f, ' % (shotn, raw_processor.processed[event_ind]['timestamp'], raw_processor.processed[event_ind]['timestamp'])
                 for ch in channels:
-                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['1047'][poly_ind][ch]['ph_el'],
-                                              raw_processor.processed[event_ind]['1047'][poly_ind][ch]['err'])
+                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['ph_el'],
+                                              raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['err'])
                 for ch in channels:
-                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['1064'][poly_ind][ch]['ph_el'],
-                                              raw_processor.processed[event_ind]['1064'][poly_ind][ch]['err'])
-                res_ev = result['1064'][event_ind]
-                if 'T' in res_ev['T_e'][poly_ind]:
-                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, ' % (res_ev['T_e'][poly_ind]['T'], res_ev['T_e'][poly_ind]['Terr'], res_ev['T_e'][poly_ind]['n'], res_ev['T_e'][poly_ind]['n_err'], res_ev['T_e'][poly_ind]['chi2'])
+                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['ph_el'],
+                                              raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['err'])
+                res_ev = result['events'][event_ind]['ts']['1064']
+                if 'T' in res_ev['poly'][poly_ind]:
+                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'])
                 else:
                     line += '--, --, --, --, --, '
-                res_ev = result['1047'][event_ind]
-                if 'T' in res_ev['T_e'][poly_ind]:
-                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, ' % (
-                    res_ev['T_e'][poly_ind]['T'], res_ev['T_e'][poly_ind]['Terr'], res_ev['T_e'][poly_ind]['n'],
-                    res_ev['T_e'][poly_ind]['n_err'], res_ev['T_e'][poly_ind]['chi2'])
+                res_ev = result['events'][event_ind]['ts']['1047']
+                if 'T' in res_ev['poly'][poly_ind]:
+                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'])
                 else:
                     line += '--, --, --, --, --, '
-                line += '%.1f\n' % delays[event_ind]
+                line += '\n'
                 file.write(line)
                 files[poly_ind_ind].write(line)
     print('shot ok\n\n')
