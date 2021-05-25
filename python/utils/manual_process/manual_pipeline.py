@@ -56,6 +56,21 @@ shots = [
         'is_new': True,
         'start': 120,
         'stop': 226
+    }, {
+        'shotn': 40172,
+        'is_new': True,
+        'start': 126,
+        'stop': 234
+    }, {
+        'shotn': 40171,
+        'is_new': True,
+        'start': 122,
+        'stop': 243
+    }, {
+        'shotn': 40170,
+        'is_new': True,
+        'start': 123,
+        'stop': 248
     }
 ]
 
@@ -71,7 +86,7 @@ events = [52, 60, 67, 75, 82, 90]
 sync_event = 1  # index of ADC event
 delays = [94.3, 94.3, 94.3, 94.3, 94.3, 94.3]  # position in ns of 1047 ch3 peak in poly_ind=9'''
 
-polys = [1, 6]
+#polys = [1, 6]
 polys = range(10)
 
 channels = [0, 2, 3, 4]

@@ -4,8 +4,8 @@ import os
 import shutil
 
 is_plasma = True
-shotn = 40173
-start_ind = 330
+shotn = 40172
+start_ind = 355
 
 
 stop_ind = start_ind + 116
