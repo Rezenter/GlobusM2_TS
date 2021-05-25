@@ -448,13 +448,12 @@ class Handler:
     def fast_status(self, req):
         print('status...')
 
-        '''
         if not os.path.isfile(SHOTN_FILE):
             return {
                 'ok': False,
                 'description': 'Shotn file not found.'
             }
-        '''
+
         try:
             caen.connect()
         except ConnectionError as err:
@@ -472,16 +471,17 @@ class Handler:
         if resp['status']:
             shotn = 0
 
-            '''
+
             with open(SHOTN_FILE, 'r') as shotn_file:
                 line = shotn_file.readline()
                 shotn = int(line)
-            '''
+
 
             return {
                 'ok': True,
                 'resp': resp,
-                'shotn': 90000
+                'shotn': shotn
+                #'shotn': 90000
             }
         else:
             return resp
@@ -495,22 +495,25 @@ class Handler:
 
         shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
         isPlasma = req['isPlasma']
-        if 'shotn' not in req:
+        if isPlasma:
+            shot_filename = SHOTN_FILE
+
+        '''if 'shotn' not in req:
             return {
                 'ok': False,
                 'description': '"shotn" field is missing from request.'
             }
-        shotn = int(req['shotn'])
+        shotn = int(req['shotn'])'''
 
-        if not isPlasma:
-            if not os.path.isfile(shot_filename):
-                return {
-                    'ok': False,
-                    'description': 'Shotn file "%s" not found.' % shot_filename
-                }
-            with open(shot_filename, 'r') as shotn_file:
-                line = shotn_file.readline()
-                shotn = int(line)
+
+        if not os.path.isfile(shot_filename):
+            return {
+                'ok': False,
+                'description': 'Shotn file "%s" not found.' % shot_filename
+            }
+        with open(shot_filename, 'r') as shotn_file:
+            line = shotn_file.readline()
+            shotn = int(line)
         try:
             caen.connect()
         except ConnectionError as err:

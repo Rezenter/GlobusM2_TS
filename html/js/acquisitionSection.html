@@ -13,7 +13,9 @@
         </div>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <label for="next_shot_number">Next shot №:</label><output id="next_shot_number"></output>
+            <!--
             <label for="shotn_man">manual shotn</label><input id="shotn_man" type="number" value="1" min="30000" step="1">
+            -->
             <label for="is_plasma">Is plasma?</label><input type="checkbox" id="is_plasma" checked>
         </div>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
@@ -39,8 +41,10 @@
                 <button class="btn btn-success" id="laser_idle_button">Idle</button>
             </div>
         </div>
+        <!--
         <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
              src="http://192.168.10.46/action/stream?subject=mjpeg" width="500px" height="500px">
+             -->
     </div>
 </body>
 <script>
@@ -287,7 +291,7 @@
 
         this.ConnectControls();
         //this.ADCRefresh(null);
-        this.LasConnect(null);
+        //this.LasConnect(null);
 
     }
 
