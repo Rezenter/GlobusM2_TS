@@ -237,7 +237,7 @@ class Processor:
                 for wl in event['ts'].keys():
                     for poly_ind in range(len(event['ts'][wl])):
                         for ch_ind in range(len(event['ts'][wl][poly_ind])):
-                            if event['ts'][wl][poly_ind][ch_ind]['error'] is not None:
+                            if 'error' in event['ts'][wl][poly_ind][ch_ind] and event['ts'][wl][poly_ind][ch_ind]['error'] != '':
                                 continue
                             result[wl][poly_ind][ch_ind]['count'] += 1
                             result[wl][poly_ind][ch_ind]['stray'] += event['ts'][wl][poly_ind][ch_ind]['ph_el']
@@ -327,10 +327,10 @@ class Processor:
         E *= self.absolute['E_mult']
 
         for ch_ind in range(5):
-            if event[ch_ind]['error'] is None:
-                channels.append(ch_ind)
-            else:
+            if 'error' in event[ch_ind] and event[ch_ind]['error'] != '':
                 print('Warning! skipped ch%d' % ch_ind)
+            else:
+                channels.append(ch_ind)
         if len(channels) > 1:
             chi2 = float('inf')
             N_i = []

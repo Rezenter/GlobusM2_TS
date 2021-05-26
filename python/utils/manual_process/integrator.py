@@ -511,12 +511,22 @@ class Integrator:
                 integration_to = integration_from + math.ceil((self.config['common']['integrationTime'] - 10) / self.time_step)
             if integration_to > self.header['eventLength'] - self.right_limit:
                 error = 'right boundary'
-            integral = 0
             if error is None:
+                integral = 0
                 for cell in range(integration_from, integration_to - 1):
                     integral += self.time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
             else:
                 print(error)
+                res.append({
+                    'from': integration_from,
+                    'to': integration_to,
+                    'zero_lvl': zero,
+                    'pre_std': pre_std,
+                    'min': minimum,
+                    'max': maximum,
+                    'error': error
+                })
+                continue
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
                                                        self.config['preamp']['charge'] *
                                                        self.config['preamp']['feedbackResistance'] *
@@ -534,8 +544,7 @@ class Integrator:
                 'max': maximum,
                 'int': integral,
                 'ph_el': photoelectrons,
-                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
-                'error': error
+                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4)
                 #'raw': signal
             })
         return res
