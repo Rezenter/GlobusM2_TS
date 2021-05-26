@@ -59,6 +59,15 @@ shots = [
     }
 ]
 
+shots = [
+    {
+        'shotn': 40200,
+        'is_new': True,
+        'start': 122,
+        'stop': 253
+    }
+]
+
 '''shotn = 40079  # g2
 shotn = 40080  # g2
 shotn = 40081  # g10
@@ -78,6 +87,7 @@ channels = [0, 2, 3, 4]
 
 is_plasma = True
 config_name = '2021.05.12_g10_desync'
+config_name = '2021.05.26_g10_desync2'
 expected_1064 = '2021.05.23'
 expected_1047 = '2021.05.18_1047'
 

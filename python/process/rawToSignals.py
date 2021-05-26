@@ -310,7 +310,7 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            front_ind = find_front_findex(signal, self.header['triggerThreshold'])
+            front_ind = find_front_findex(signal, 80+40)#self.header['triggerThreshold'])
             if front_ind == -1:
                 sync_event.append(True)
                 error = 'Laser signal does not reach threshold.'
