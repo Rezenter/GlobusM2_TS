@@ -196,6 +196,12 @@ class StoredCalculator:
         result = []
         for event_ind in range(len(self.ts_data['events'])):
             event = self.ts_data['events'][event_ind]
+            if 'error' in event and event['error'] is not None:
+                result.append({
+                    'event_index': event_ind,
+                    'error': event['error']
+                })
+                continue
             if t_from <= event['timestamp'] <= t_to:
                 if event['error'] is not None:
                     print('Laser shot %d = %.1fs skip due to error in ts_data: %s' %

@@ -2448,37 +2448,61 @@
             if(this.m_current_ccm.ok){
                 let mult = this.selectors.abs_mult.val();
                 for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
-                    nl_points.push({
-                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                        y: this.m_current_ccm.data[arr_ind].data.nl * mult,
-                        global_ind: this.m_current_ccm.data[arr_ind].event_index,
-                        ccm_ind: arr_ind
-                    });
-                    nl_errors.push({
-                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                        y: [
-                            (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
-                            mult,
-                            (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
-                            mult
-                        ]
-                    });
+                    if('error' in this.m_current_ccm.data[arr_ind]){
+                        nl_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: null,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [null, null]
+                        });
 
-                    w_points.push({
-                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                        y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
-                        global_ind: this.m_current_ccm.data[arr_ind].event_index,
-                        ccm_ind: arr_ind
-                    });
-                    w_errors.push({
-                        x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                        y: [
-                            (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
-                            mult,
-                            (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
-                            mult
-                        ]
-                    });
+                        w_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: null,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        w_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [null, null]
+                        });
+                    } else {
+                        nl_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: this.m_current_ccm.data[arr_ind].data.nl * mult,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [
+                                (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
+                                mult,
+                                (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
+                                mult
+                            ]
+                        });
+
+                        w_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        w_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [
+                                (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
+                                mult,
+                                (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
+                                mult
+                            ]
+                        });
+                    }
                 }
             }
             this.m_nl_evo_chart.options.data = [

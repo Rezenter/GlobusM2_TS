@@ -472,6 +472,8 @@ class Processor:
             }
         for event in aux_data:
             event_ind = event['event_index']
+            if 'error' in event:
+                continue
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2

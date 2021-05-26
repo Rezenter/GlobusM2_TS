@@ -572,12 +572,16 @@ class CCM:
         Te_err = 0
         ne_err = 0
         for i in range(3):
+            if i >= len(result) - 2:
+                break
             poly = result[i + 1]
+
             r_arr.append(poly['a'])
             T_arr.append(poly['Te'])
             n_arr.append(poly['ne'])
             Te_err = max(Te_err, poly['Te_err'])
             ne_err = max(ne_err, poly['ne_err'])
+        #print(result)
         a, b = linearization(r_arr, T_arr)
         result[0]['Te'] = max(0, a * result[0]['a'] + b)
         a, b = linearization(r_arr, n_arr)
