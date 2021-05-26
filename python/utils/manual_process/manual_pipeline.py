@@ -92,6 +92,15 @@ shots = [
     }
 ]
 
+shots = [
+    {
+        'shotn': 40208,
+        'is_new': True,
+        'start': 122,
+        'stop': 250
+    }
+]
+
 '''shotn = 40079  # g2
 shotn = 40080  # g2
 shotn = 40081  # g10

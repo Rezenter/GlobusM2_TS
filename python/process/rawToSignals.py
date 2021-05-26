@@ -32,7 +32,7 @@ class Integrator:
     ch_per_group = 2
     adc_baseline = 1250
     offscale_threshold = 50
-    laser_prehistory_residual_pc = 20 / 100
+    laser_prehistory_residual_pc = 40 / 100
     laser_integral_residual_pc = 1 / 100
     laser_length_residual_ind = 5
     left_limit = 100  # ind
@@ -310,7 +310,7 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            front_ind = find_front_findex(signal, 80+40)#self.header['triggerThreshold'])
+            front_ind = find_front_findex(signal, 80+300)#self.header['triggerThreshold'])
             if front_ind == -1:
                 sync_event.append(True)
                 error = 'Laser signal does not reach threshold.'
