@@ -74,44 +74,67 @@ shots = [
     }
 ]
 
-shots = [
+shots = [ # no glass
     {
         'shotn': 40200,
         'is_new': True,
         'start': 122,
-        'stop': 253
-    }
-]
-
-shots = [
-    {
-        'shotn': 40200,
+        'stop': 253,
+        'config': '2021.05.26_g10_desync2',
+        'las_threshold': 40,
+        'E1064': 1.5,
+        'E1047': 0.9
+    }, {
+        'shotn': 40201,
         'is_new': True,
         'start': 122,
-        'stop': 253
+        'stop': 246,
+        'config': '2021.05.26_g10_desync2',
+        'las_threshold': 40,
+        'E1064': 1.5,
+        'E1047': 0.9
+    }, {
+        'shotn': 40204,
+        'is_new': True,
+        'start': 125,
+        'stop': 246,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
     }
 ]
 
-shots = [
+shots = [  # glass
     {
-        'shotn': 40208,
+        'shotn': 40205,
+        'is_new': True,
+        'start': 124,
+        'stop': 249,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40206,
         'is_new': True,
         'start': 122,
-        'stop': 250
+        'stop': 243,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40207,
+        'is_new': True,
+        'start': 121,
+        'stop': 249,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
     }
 ]
-
-'''shotn = 40079  # g2
-shotn = 40080  # g2
-shotn = 40081  # g10
-shotn = 40082  # g10
-shotn = 40088  # g10
-shotn = 40090  # g10'''
-
-'''shotn = 40082
-events = [52, 60, 67, 75, 82, 90]
-sync_event = 1  # index of ADC event
-delays = [94.3, 94.3, 94.3, 94.3, 94.3, 94.3]  # position in ns of 1047 ch3 peak in poly_ind=9'''
 
 #polys = [1, 6]
 polys = range(10)
@@ -119,16 +142,15 @@ polys = range(10)
 channels = [0, 2, 3, 4]
 
 is_plasma = True
-config_name = '2021.05.12_g10_desync'
-config_name = '2021.05.26_g10_desync2'
+
 expected_1064 = '2021.05.23'
 expected_1047 = '2021.05.18_1047'
 
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
 
-header = 'shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, E_64, T_47, err, n_47, err, chi2_47, E_47, T_rel, err, gamma, err, chi2_rel\n'
-units = '#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , J, eV, eV, parr, parr, , J, eV, eV, , , \n'
+header = 'shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, E_64, T_47, err, n_47, err, chi2_47, E_47, T_rel, err, gamma, err, chi2_rel, T_ave, err\n'
+units = '#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , J, eV, eV, parr, parr, , J, eV, eV, , , , eV, eV\n'
 
 files = []
 for poly_ind in range(len(polys)):
@@ -141,15 +163,13 @@ for shot in shots:
 
     print('processing shot %d' % shotn)
 
-    raw_processor = integrator.Integrator(LOCAL_DB_PATH, shotn, is_plasma, config_name, GLOBAL_DB_PATH)
+    raw_processor = integrator.Integrator(LOCAL_DB_PATH, shotn, is_plasma, shot['config'], GLOBAL_DB_PATH)
     raw_processor.process_shot(shot)
 
     print('\nintegrated.\n')
 
     fine_processor = calculator.Processor(LOCAL_DB_PATH, shotn, is_plasma, expected_1064, '2021.02.03',
-                                          GLOBAL_DB_PATH, expected_1047)
-    if fine_processor.get_error() is not None:
-        fine_processor.load()
+                                          GLOBAL_DB_PATH, expected_1047, shot['E1064'], shot['E1047'])
 
     resp = fine_processor.get_data()
 
@@ -159,7 +179,6 @@ for shot in shots:
 
     for poly_ind_ind in range(len(polys)):
         poly_ind = polys[poly_ind_ind]
-        #integration_viewer.draw(shotn, events, poly_ind)
         with open('%s/result/%05d/%05d.json' % (LOCAL_DB_PATH, shotn, shotn), 'r') as res_file:
             result = json.load(res_file)
         with open('local_db/csv/%05d_poly#%d.csv' % (shotn, poly_ind), 'w') as file:
@@ -171,30 +190,44 @@ for shot in shots:
                     continue
                 if not (shot['start'] <= raw_processor.processed[event_ind]['timestamp'] <= shot['stop']):
                     continue
+                if 'error' in raw_processor.processed[event_ind] and raw_processor.processed[event_ind]['error'] != '':
+                    continue
+                #integration_viewer.draw(shotn, [event_ind], poly_ind)
                 line = '%05d, %.1f, %.1f, ' % (shotn, raw_processor.processed[event_ind]['timestamp'], raw_processor.processed[event_ind]['timestamp'])
                 for ch in channels:
                     if 'error' in raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch] and raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['error'] != '':
                         line += '--, --, '
                         continue
-                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['ph_el'],
+                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['ph_el'] - result['polys'][poly_ind]['stray']['1047'][ch],
                                               raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['err'])
                 for ch in channels:
-                    if 'error' in raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch] and raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['error'] != '':
+                    if 'error' in raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch] and raw_processor.processed[event_ind]['ts']['1047'][poly_ind][ch]['error'] != '':
                         line += '--, --, '
                         continue
-                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['ph_el'],
+                    line += '%.1f, %.1f, ' % (raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['ph_el'] - result['polys'][poly_ind]['stray']['1064'][ch],
                                               raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['err'])
                 res_ev = result['events'][event_ind]['ts']['1064']
+                t_ave = 0
+                w_ave = 0
+                ave_err = 0
                 if 'T' in res_ev['poly'][poly_ind]:
+                    t_ave += res_ev['poly'][poly_ind]['T'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
+                    ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
+                    w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'])
                 else:
                     line += '--, --, --, --, --, --, '
                 res_ev = result['events'][event_ind]['ts']['1047']
                 if 'T' in res_ev['poly'][poly_ind]:
+                    t_ave += res_ev['poly'][poly_ind]['T'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
+                    ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
+                    w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'])
                 else:
                     line += '--, --, --, --, --, --, '
-
+                if w_ave != 0:
+                    t_ave /= w_ave
+                    ave_err /= (w_ave * math.sqrt(2))
                 relations = []
                 for ch in range(5):
                     if ch not in channels:
@@ -228,12 +261,12 @@ for shot in shots:
                 fitted = fitter.calc_temp(relations, poly_ind)
                 #print('fitted: ', fitted)
                 if 'error' in fitted:
-                    line += '--, --, --, --, --'
+                    line += '--, --, --, --, --, '
                 else:
-                    line += '%.1f, %.1f, %.2f, %.2f, %.2f' % (fitted['T'], fitted['Terr'],
+                    line += '%.1f, %.1f, %.2f, %.2f, %.2f, ' % (fitted['T'], fitted['Terr'],
                                                               fitted['gamma'], fitted['g_err'],
                                                               fitted['chi2'])
-                line += '\n'
+                line += '%.1f, %.1f\n' % (t_ave, ave_err)
                 file.write(line)
                 files[poly_ind_ind].write(line)
     print('shot ok\n\n')

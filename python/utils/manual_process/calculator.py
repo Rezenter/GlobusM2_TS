@@ -35,11 +35,15 @@ class Processor:
     cross_section = (8.0 * math.pi / 3.0) * \
                     math.pow((math.pow(const.q_e, 2) / (4 * math.pi * const.eps_0 * const.m_e * math.pow(const.c, 2))), 2)
 
-    def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id, global_db, expected_aux):
+    def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id, global_db, expected_aux, e64, e47):
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.expected_id = expected_id
         self.absolute_id = absolute_id
+
+        self.e64 = e64
+        self.e47 = e47
+
         self.error = None
         if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
@@ -122,95 +126,6 @@ class Processor:
             obj = ijson.kvitems(signal_file, '', use_float=True)
             for k, v in obj:
                 self.signal[k] = v
-
-    def process_shot_old(self):
-        self.result = {
-            'timestamp': datetime.now().strftime('%Y.%m.%d %H:%M:%S'),
-            'spectral_name': self.expected_id,
-            'spectral_mod': datetime.fromtimestamp(self.expected[0]['modification']).strftime('%Y.%m.%d %H:%M:%S'),
-            'absolute_name': self.absolute_id,
-            'absolute_mod': datetime.fromtimestamp(self.absolute['modification']).strftime('%Y.%m.%d %H:%M:%S'),
-            'signal_mod': datetime.fromtimestamp(
-                os.path.getmtime('%s%s%05d%s' % (self.db_path, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
-                strftime('%Y.%m.%d %H:%M:%S'),
-            'config_name': self.signal['common']['config_name'],
-            'polys': []
-        }
-        print('Processing shot...')
-
-        laser_wl = ['1064', '1047']
-        for wl_ind in range(len(laser_wl)):
-            wl = laser_wl[wl_ind]
-            print('calculating wl = %s...' % wl)
-            self.result[wl] = []
-            stray = [
-                [0.0 for ch in range(5)] for poly in range(10)
-            ]
-            count = [
-                [0 for ch in range(5)] for poly in range(10)
-            ]
-            if len(self.signal['data']) == 0:
-                print('No events!')
-                return
-
-            for event_index in range(len(self.signal['data'])):
-                if 'error' in self.signal['data'][event_index] and self.signal['data'][event_index]['error'] is not None:
-                    print('woops: %s, event #' % self.signal['data'][event_index]['error'], event_index)
-                else:
-                    if self.signal['data'][event_index]['timestamp'] >= 100:
-                        break
-                    event = self.signal['data'][event_index]
-                    if 'error' in event and event['error'] is not None:
-                        continue
-                    if 'sync' in event and event['sync']:
-                        continue
-
-                    for poly_ind in range(len(event[wl])):
-                        for ch_ind in range(len(event[wl][poly_ind])):
-                            if event[wl][poly_ind][ch_ind]['error'] is not None:
-                                continue
-                            count[poly_ind][ch_ind] += 1
-                            stray[poly_ind][ch_ind] += event[wl][poly_ind][ch_ind]['ph_el']
-
-            for poly_ind in range(len(stray)):
-                for ch_ind in range(len(stray[poly_ind])):
-                    if count[poly_ind][ch_ind] > 0:
-                        stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
-                self.result['polys'].append({
-                    'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
-                    'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
-                    'R': self.signal['common']['config']['poly'][poly_ind]['R'],
-                    'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
-                    'h': self.signal['common']['config']['poly'][poly_ind]['h'],
-                    'stray': stray[poly_ind]
-                })
-
-            for event_ind in range(len(self.signal['data'])):
-                error = None
-                if self.signal['data'][event_ind]['error'] is not None:
-                    self.result[wl].append({
-                        'error': self.signal['data'][event_ind]['error']
-                    })
-                    continue
-                proc_event = {
-                    'timestamp': self.signal['data'][event_ind]['timestamp'],
-                    'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.expected[0]['J_from_int']
-                }
-                if self.signal['data'][event_ind]['error'] is not None:
-                    error = self.signal['data'][event_ind]['error']
-                else:
-                    poly = []
-                    energy = self.expected[0]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
-
-                    for poly_ind in range(len(self.signal['data'][event_ind][wl])):
-                        temp = self.calc_temp(self.signal['data'][event_ind][wl][poly_ind], poly_ind,
-                                              stray[poly_ind], energy, wl_ind)
-                        poly.append(temp)
-                    proc_event['T_e'] = poly
-                proc_event['error'] = error
-                self.result[wl].append(proc_event)
-            print('done\n\n')
-        self.save_result()
 
     def calc_stray(self):
         result = {
@@ -296,9 +211,11 @@ class Processor:
             }
             for wl in self.signal['data'][event_ind]['ts']:
                 if wl == '1064':
-                    energy = self.expected[wl]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
+                    #energy = self.expected[wl]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int']
+                    energy = self.e64
                 elif wl == '1047':
-                    energy = self.expected[wl]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int_47']
+                    #energy = self.expected[wl]['J_from_int'] * self.signal['data'][event_ind]['laser']['ave']['int_47']
+                    energy = self.e47
                 else:
                     fuck
                 proc_event['ts'][wl] = {
@@ -328,7 +245,8 @@ class Processor:
 
         for ch_ind in range(5):
             if 'error' in event[ch_ind] and event[ch_ind]['error'] != '':
-                print('Warning! skipped ch%d' % ch_ind)
+                if ch_ind != 1:
+                    print('Warning! skipped ch%d' % ch_ind)
             else:
                 channels.append(ch_ind)
         if len(channels) > 1:

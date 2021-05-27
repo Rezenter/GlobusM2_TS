@@ -16,9 +16,9 @@ RAW_FOLDER = 'raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 
-is_plasma = False
-shotn = 381
-config = '2020.12.08_raman'
+is_plasma = True
+shotn = 40205
+config = '2021.05.26_g10_sync2.json'
 
 integrator = rawToSignals.Integrator(DB_PATH, shotn, is_plasma, config)
 if not integrator.loaded:

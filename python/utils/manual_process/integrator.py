@@ -29,9 +29,9 @@ class Integrator:
     group_per_board = 8
     ch_per_group = 2
     adc_baseline = 1250
-    offscale_threshold = 50
-    laser_prehistory_residual_pc = 40 / 100
-    laser_integral_residual_pc = 1 / 100
+    offscale_threshold = 25
+    laser_prehistory_residual_pc = 20 / 100
+    laser_integral_residual_pc = 5 / 100
     laser_length_residual_ind = 5
     left_limit = 100  # ind
     right_limit = 20  # ind
@@ -191,17 +191,16 @@ class Integrator:
             else:
 
                 if settings['is_new']:
-                    laser = self.process_laser_event_new(event_ind)
+                    laser = self.process_laser_event_new(event_ind, settings['las_threshold'])
                 else:
-                    laser = self.process_laser_event_old(event_ind)
+                    fuck
                 proc_event = {
                     'timestamp': self.data[0][event_ind][0]['timestamp'] - timestamp_0,
                     'laser': laser,
                     'ts': {}
                 }
-                if laser['error'] is None or laser['error'] != '':
+                if laser['error'] is None or laser['error'] == '':
                     proc_event['ts']['1064'] = []
-
                     for poly in self.config['poly']:
                         proc_event['ts']['1064'].append(self.process_poly_event(event_ind, poly, laser))
                     if laser['ave']['int_47'] != 0.0:
@@ -209,7 +208,7 @@ class Integrator:
                         for poly in self.config['poly']:
                             proc_event['ts']['1047'].append(self.process_poly_event(event_ind, poly, laser, data_1064=proc_event['ts']['1064']))
                 else:
-                    proc_event['error'] = 'laser'
+                    proc_event['error'] = laser['error']
             self.processed.append(proc_event)
         self.save_processed()
         self.export_processed()
@@ -276,78 +275,7 @@ class Integrator:
         print('integration ok.')
         return res, integration_stop
 
-    def process_laser_event_old(self, event_ind):
-        error = None
-        laser = {
-            'boards': [],
-            'ave': {
-                'pre_std': 0,
-                'int': 0,
-                'int_len': 0
-            }
-        }
-        board_count = 0
-        for board_ind in range(len(self.data)):
-            # print('Board %d' % board_ind)
-            if 'captured_bad' in self.data[board_ind][event_ind] and \
-                    self.data[board_ind][event_ind]['captured_bad']:
-                laser['boards'].append({
-                    'captured_bad': True
-                })
-                error = 'bad captured'
-                continue
-            adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
-            signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            front_ind = find_front_findex(signal, self.header['triggerThreshold'])
-            integration_limit = math.floor(front_ind) - self.config['adc']['prehistorySep']
-            if integration_limit < self.left_limit:
-                error = 'Sync left'
-            zero = statistics.fmean(signal[:integration_limit])
-            maximum = float('-inf')
-            minimum = float('inf')
-            for cell in signal:
-                maximum = max(maximum, cell)
-                minimum = min(minimum, cell)
-            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
-                    maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
-                error = 'sync offscale'
-            integral, stop_ind = self.integrate_energy(signal[integration_limit:], zero)
-            if stop_ind < 0:
-                error = 'integration failed to stop'
-                stop_ind = -stop_ind
-            laser['boards'].append({
-                'sync_ind': front_ind,
-                'sync_ns': front_ind * self.time_step,
-                'zero_lvl': zero,
-                'pre_std': statistics.stdev(signal[:integration_limit], zero),
-                'min': minimum,
-                'max': maximum,
-                'int': integral,
-                'int_len': stop_ind
-            })
-            laser['ave']['pre_std'] += laser['boards'][-1]['pre_std']
-            laser['ave']['int'] += integral
-            laser['ave']['int_len'] += stop_ind
-            board_count += 1
-        laser['ave']['pre_std'] /= board_count
-        laser['ave']['int'] /= board_count
-        laser['ave']['int_len'] /= board_count
-        for board_ind in range(len(self.data)):
-            if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
-                continue
-            if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
-                    laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
-                error = 'prehistory differ'
-            if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
-                    laser['ave']['int'] > self.laser_integral_residual_pc:
-                error = 'integrals differ'
-            if math.fabs(laser['ave']['int_len'] - laser['boards'][board_ind]['int_len']) > \
-                    self.laser_length_residual_ind:
-                error = 'integral length differ'
-        laser['error'] = error
-        return laser
-
-    def process_laser_event_new(self, event_ind):
+    def process_laser_event_new(self, event_ind, las_threshold):
         error = None
         laser = {
             'boards': [],
@@ -375,7 +303,7 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            front_ind = find_front_findex(signal, 80+300)#self.header['triggerThreshold'])
+            front_ind = find_front_findex(signal, 80 + las_threshold)#self.header['triggerThreshold'])
             if front_ind == -1:
                 error = 'Laser signal does not reach threshold. board %d' % board_ind
                 laser['boards'].append({
@@ -445,14 +373,17 @@ class Integrator:
                 if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
                         laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
                     error = 'prehistory differ'
+                    fuck
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
                     error = 'integrals differ'
-
+                    fuck
                 if laser['ave']['int_47'] != 0.0:
                     if math.fabs(laser['ave']['int_47'] - laser['boards'][board_ind]['int_47']) / \
                             laser['ave']['int'] > self.laser_integral_residual_pc:
                         error = '1047 integrals differ'
+                        print(event_ind, laser)
+                        fuck
         if error is not None:
             print(error, event_ind)
         laser['error'] = error
@@ -508,7 +439,7 @@ class Integrator:
                                           (delay + 2 - self.config['common']['integrationTime'] * 0.5 + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
             integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
             if delay is not None or data_1064 is not None:
-                integration_to = integration_from + math.ceil((self.config['common']['integrationTime'] - 10) / self.time_step)
+                integration_to = integration_from + math.ceil((self.config['common']['integrationTime'] - 7) / self.time_step)
             if integration_to > self.header['eventLength'] - self.right_limit:
                 error = 'right boundary'
             if error is None:
@@ -544,7 +475,7 @@ class Integrator:
                 'max': maximum,
                 'int': integral,
                 'ph_el': photoelectrons,
-                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4)
-                #'raw': signal
+                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
+                #'raw': signal # for check
             })
         return res

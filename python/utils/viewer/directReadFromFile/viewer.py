@@ -1,7 +1,7 @@
 import ijson
 import matplotlib.pyplot as plt
 
-shotn = 40112
+shotn = 40205
 adc_ind = 0
 adc_chs = [
     {
@@ -9,7 +9,7 @@ adc_chs = [
         'ch': 0
     }
 ]
-event_ind = 470
+event_ind = 57
 
 print('Loading raw...')
 with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
