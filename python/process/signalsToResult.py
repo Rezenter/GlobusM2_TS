@@ -198,6 +198,7 @@ class Processor:
                         for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
                             if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
                                 continue
+
                             count[poly_ind][ch_ind] += 1
                             stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
 

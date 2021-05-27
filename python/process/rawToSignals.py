@@ -162,9 +162,8 @@ class Integrator:
                         event_ind += 1
                     #if event_ind != 0:
                     #    self.data[board_ind].append(event['groups'])
+                    #event_ind += 1
                     self.data[board_ind].append(event['groups'])
-
-                    event_ind += 1
                 while event_ind in self.missing[board_ind]:
                     self.data[board_ind].append({
                         'captured_bad': True
@@ -196,13 +195,13 @@ class Integrator:
             # print('Event %d' % event_ind)
             laser, error = self.process_laser_event(event_ind, expect_sync)
             if 'sync' in laser and laser['sync']:
-                expect_sync = False
-                combiscope_zero = self.data[0][event_ind][0]['timestamp']
+                combiscope_zero = self.data[0][event_ind][1]['timestamp']
                 for correction_ind in range(event_ind):
-                    self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][0]['timestamp'] - combiscope_zero
+                    self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
+                expect_sync = False
             if self.laser_count > 1:
                 #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
-                timestamp = self.data[0][event_ind][0]['timestamp'] - combiscope_zero
+                timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
             else:
                 timestamp = -999
             proc_event = {
@@ -268,7 +267,7 @@ class Integrator:
             return res, -integration_stop
         return res, integration_stop
 
-    def process_laser_event(self, event_ind, expect_sync=False):
+    def process_laser_event(self, event_ind, expect_sync=True):
         error = None
         laser = {
             'boards': [],
@@ -296,8 +295,7 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            front_ind = find_front_findex(signal, self.header['triggerThreshold'])
-            #front_ind = find_front_findex(signal, 80+40)#self.header['triggerThreshold'])
+            front_ind = find_front_findex(signal, 80+300)#self.header['triggerThreshold'])
             if front_ind == -1:
                 sync_event.append(True)
                 error = 'Laser signal does not reach threshold.'
