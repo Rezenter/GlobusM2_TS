@@ -19,7 +19,17 @@ def integrate(x, y):
 
 
 class SpCal:
-    def __init__(self, filename, config_filename, wl_start, wl_stop, wl_step):
+    def __init__(self, filename, config_filename, wl_start, wl_stop, wl_step, additional_filter=None):
+        self.aux_filter = []
+        if additional_filter is not None:
+            with open('aux_filters/%s' % additional_filter, 'r') as file:
+                for line in file:
+                    split = line.split(', ')
+                    self.aux_filter.append({
+                        'wl': float(split[0]),
+                        't': float(split[1]) * 0.01
+                    })
+
         with open('%s%s%s.json' % (db_path, CALIBR_FOLDER, filename), 'r') as calibr_file:
             cal_data = json.load(calibr_file)
         self.lamp_wl = []
@@ -48,6 +58,7 @@ class SpCal:
                 kappas.append((cal_data['poly'][poly]['u'][ch] - cal_data['poly'][poly]['dark'][ch]) /
                               (integrate(wl, integrand) * config['poly'][poly]['channels'][ch]['slow_gain']))
             self.kappas.append(kappas)
+        #self.dump_rel_sens()  # debug
 
     def get_spectrum(self, wl):
         if wl <= self.lamp_wl[0] or wl >= self.lamp_wl[-1]:
@@ -63,4 +74,28 @@ class SpCal:
         return self.kappas[poly][ch - 1] / self.kappas[poly][0]
 
     def rel_sens(self, poly, ch, wl):
-        return self.apd.qe(wl) * self.kappa(poly, ch) * self.fil.transmission(ch, wl)
+        return self.apd.qe(wl) * self.kappa(poly, ch) * self.fil.transmission(ch, wl) * self.get_aux_filter(wl)
+
+    def get_aux_filter(self, wl):
+        if len(self.aux_filter) == 0:
+            return 1
+        for i in range(len(self.aux_filter) - 1):
+            if self.aux_filter[i]['wl'] <= wl < self.aux_filter[i + 1]['wl']:
+                return self.aux_filter[i]['t'] + (self.aux_filter[i + 1]['t'] - self.aux_filter[i]['t']) * \
+                       (wl - self.aux_filter[i]['wl']) / (self.aux_filter[i + 1]['wl'] - self.aux_filter[i]['wl'])
+        print(self.aux_filter[0], wl, self.aux_filter[-1])
+        fuck
+
+    def dump_rel_sens(self):
+        for poly_ind in range(10):
+            print('poly %d' % poly_ind)
+            with open('dump/poly_%d.csv' % poly_ind, 'w') as file:
+                file.write('wl, ch1, ch2, ch3, ch4, ch5\n')
+                file.write('nm, , , , , \n')
+                for wl in range(700, 1064):
+                    line = '%d, ' % wl
+                    for ch_ind in range(5):
+                        line += '%.3f, ' % self.rel_sens(poly_ind, ch_ind + 1, wl)
+                    file.write(line[:-2] + '\n')
+        print('ok')
+        fuck

@@ -4,10 +4,13 @@ import matplotlib.pyplot as plt
 import json
 
 lambda0 = 1064.4
-#lambda0 = 1047.6
+lambda0 = 1047.6
+
+aux_filter = 'zs-10.csv'  # WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#aux_filter = None
 
 wl_start = 700
-wl_stop = 1100
+wl_stop = 1099
 wl_step = 1
 
 T_start = 1
@@ -16,7 +19,7 @@ T_mult = 1.02
 T_mult = 1.1
 
 print('Calculating kappa...')
-kappa = sp_cal.SpCal('2020.11.11', '2020.11.12', wl_start, wl_stop, wl_step)
+kappa = sp_cal.SpCal('2020.11.11', '2020.11.12', wl_start, wl_stop, wl_step, additional_filter=aux_filter)
 print('Done.')
 
 
