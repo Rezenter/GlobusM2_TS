@@ -7,7 +7,7 @@ lambda0 = 1064.4
 lambda0 = 1047.6
 
 aux_filter = 'zs-10.csv'  # WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#aux_filter = None
+aux_filter = None
 
 wl_start = 700
 wl_stop = 1099
@@ -44,6 +44,10 @@ while current_wl <= wl_stop:
     wl_arr.append(current_wl)
     current_wl += wl_step
 
+if aux_filter is None:
+    aux_name = "None"
+else:
+    aux_name = aux_filter
 
 result = {
     'lambda_0': lambda0,
@@ -53,9 +57,11 @@ result = {
     'T_start': T_start,
     'T_stop': T_stop,
     'T_mult': T_mult,
+    'aux filter': aux_name,
     'T_arr': temp,
     'poly': []
 }
+
 
 
 def dump_kappa(poly):

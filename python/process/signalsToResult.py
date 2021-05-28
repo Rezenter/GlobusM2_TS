@@ -348,7 +348,6 @@ class Processor:
                 #print('%.2e, %.2e, %.2f' % (A, n_e, E))
 
                 mult = nf_sum / f2_sum
-
                 Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
                 nerr2 = math.pow(A * E, -2) * df_sum / (f2_sum * df_sum - fdf_sum)
 

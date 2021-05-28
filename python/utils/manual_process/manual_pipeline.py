@@ -146,6 +146,9 @@ is_plasma = True
 expected_1064 = '2021.05.23'
 expected_1047 = '2021.05.18_1047'
 
+expected_1064 = '2021.05.27_1064.4_zs10'
+expected_1047 = '2021.05.27_1047.6_zs10'
+
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
 

@@ -22,6 +22,7 @@ class SpCal:
     def __init__(self, filename, config_filename, wl_start, wl_stop, wl_step, additional_filter=None):
         self.aux_filter = []
         if additional_filter is not None:
+            print('WARNING!!!!\n\n USING ADDITIONAL FILTER!!!\n\n___________________________\n\n')
             with open('aux_filters/%s' % additional_filter, 'r') as file:
                 for line in file:
                     split = line.split(', ')
