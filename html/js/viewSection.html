@@ -326,11 +326,12 @@
         this.m_current_ccm = {};
         this.m_selected_event_ind = 0;
         this.palette = [
-            '#00FFFF',
-            '#0000FF',
+            '#181818',
             '#FF0000',
+            '#0000FF',
             '#00FF00',
             '#8A2BE2',
+            '#00FFFF',
             '#006400',
             '#DC143C',
             '#008b8b',
@@ -917,8 +918,8 @@
                     for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
                         text += '<p style="color:' + this.palette[ch] + ';">' +
                             'ch ' + (ch + 1) + ', S = ' +
-                            (this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
-                            '±' + ((this.m_current_event_sig.poly[poly_ind].ch[ch].err) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) + ' a.u.</p>'
+                            ((this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el - this.m_currentShot.polys[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
+                            '±' + (this.m_current_event_sig.poly[poly_ind].ch[ch].err / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) + ' a.u.</p>'
                     }
                     return text;
                 }.bind(this),

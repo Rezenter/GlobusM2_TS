@@ -58,6 +58,7 @@ result = {
     'T_stop': T_stop,
     'T_mult': T_mult,
     'aux filter': aux_name,
+    "J_from_int": 6.7e-05,  # placeholder
     'T_arr': temp,
     'poly': []
 }
@@ -81,7 +82,7 @@ def dump_kappa(poly):
 def dump_spectrum(poly, config, T):
     cross = selden.Selden(poly, config, lambda0)
     for wl in wl_arr:
-        print('%.5f' % (cross.scat_power_dens(T, wl)))
+        print('%.1f %.5f' % (wl, cross.scat_power_dens(T, wl)))
 
 
 def dump_expected(expected):
@@ -93,8 +94,12 @@ def dump_expected(expected):
 
 
 #dump_kappa(8)  # tmp
-#dump_spectrum(8, '2020.11.20', 1000)
-#fuck
+poly = 8
+for ch in range(5):
+    print(kappa.kappa(poly, ch + 1))
+print('\n\n')
+dump_spectrum(poly, '2020.11.20', 800)
+fuck
 
 for poly in range(10):
     print('processing poly %d...' % poly)

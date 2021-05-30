@@ -136,7 +136,7 @@ class Handler:
             resp['description'] = '"config" field is missing from request.'
             return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4', #'2021.02.01',
                                                       '2021.02.03')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)

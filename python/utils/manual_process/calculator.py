@@ -350,8 +350,7 @@ class Processor:
                     'Terr': math.sqrt(Terr2),
                     'n': n_e,
                     'n_err': math.sqrt(nerr2),
-                    'mult': mult,
-                    'error': None
+                    'mult': mult
                 })
         else:
             print('Less than 2 signals!')

@@ -136,6 +136,19 @@ shots = [  # glass
     }
 ]
 
+shots = [ # no glass
+    {
+        'shotn': 40204,
+        'is_new': True,
+        'start': 125,
+        'stop': 246,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }
+]
+
 #polys = [1, 6]
 polys = range(10)
 
@@ -146,14 +159,17 @@ is_plasma = True
 expected_1064 = '2021.05.23'
 expected_1047 = '2021.05.18_1047'
 
-expected_1064 = '2021.05.27_1064.4_zs10'
-expected_1047 = '2021.05.27_1047.6_zs10'
+#expected_1064 = '2021.05.27_1064.4_zs10'
+#expected_1047 = '2021.05.27_1047.6_zs10'
+
+expected_1064 = '2021.05.27_1064.4'
+expected_1047 = '2021.05.27_1047.6'
 
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
 
-header = 'shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, E_64, T_47, err, n_47, err, chi2_47, E_47, T_rel, err, gamma, err, chi2_rel, T_ave, err\n'
-units = '#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , J, eV, eV, parr, parr, , J, eV, eV, , , , eV, eV\n'
+header = 'shotn, time_47, time_64, ch1_47, err, ch3_47, err, ch4_47, err, ch5_47, err, ch1_64, err, ch3_64, err, ch4_64, err, ch5_64, err, T_64, err, n_64, err, chi2_64, E_64, mult, T_47, err, n_47, err, chi2_47, E_47, mult, T_rel, err, gamma, err, chi2_rel, T_ave, err\n'
+units = '#, ms, ms, ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., ph.el., eV, eV, parr, parr, , J, , eV, eV, parr, parr, , J, , eV, eV, , , , eV, eV\n'
 
 files = []
 for poly_ind in range(len(polys)):
@@ -217,17 +233,17 @@ for shot in shots:
                     t_ave += res_ev['poly'][poly_ind]['T'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
-                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'])
+                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, %.2e, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'], res_ev['poly'][poly_ind]['mult'])
                 else:
-                    line += '--, --, --, --, --, --, '
+                    line += '--, --, --, --, --, --, --, '
                 res_ev = result['events'][event_ind]['ts']['1047']
                 if 'T' in res_ev['poly'][poly_ind]:
                     t_ave += res_ev['poly'][poly_ind]['T'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
-                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'])
+                    line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, %.2e, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'], res_ev['poly'][poly_ind]['mult'])
                 else:
-                    line += '--, --, --, --, --, --, '
+                    line += '--, --, --, --, --, --, --, '
                 if w_ave != 0:
                     t_ave /= w_ave
                     ave_err /= (w_ave * math.sqrt(2))
