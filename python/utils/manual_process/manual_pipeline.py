@@ -133,15 +133,60 @@ shots = [  # glass
         'las_threshold': 100,
         'E1064': 0.8,
         'E1047': 0.9
+    }, {
+        'shotn': 40208,
+        'is_new': True,
+        'start': 121,
+        'stop': 248,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40209,
+        'is_new': True,
+        'start': 120,
+        'stop': 251,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40211,
+        'is_new': True,
+        'start': 121,
+        'stop': 249,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
     }
 ]
 
-shots = [ # no glass
+shots = [  # glass
     {
-        'shotn': 40204,
+        'shotn': 40208,
         'is_new': True,
-        'start': 125,
-        'stop': 246,
+        'start': 121,
+        'stop': 248,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40209,
+        'is_new': True,
+        'start': 120,
+        'stop': 251,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }, {
+        'shotn': 40211,
+        'is_new': True,
+        'start': 121,
+        'stop': 249,
         'config': '2021.05.26_g10_sync2',
         'las_threshold': 100,
         'E1064': 0.8,
@@ -159,11 +204,11 @@ is_plasma = True
 expected_1064 = '2021.05.23'
 expected_1047 = '2021.05.18_1047'
 
-#expected_1064 = '2021.05.27_1064.4_zs10'
-#expected_1047 = '2021.05.27_1047.6_zs10'
+expected_1064 = '2021.05.27_1064.4_zs10'
+expected_1047 = '2021.05.27_1047.6_zs10'
 
-expected_1064 = '2021.05.27_1064.4'
-expected_1047 = '2021.05.27_1047.6'
+#expected_1064 = '2021.05.27_1064.4'
+#expected_1047 = '2021.05.27_1047.6'
 
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'

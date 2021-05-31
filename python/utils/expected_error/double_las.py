@@ -9,8 +9,13 @@ expected_name = {
     '64': '2021.05.27_1064.4',
     '47': '2021.05.27_1047.6'
 }
+expected_name = {
+    '64': '2021.05.27_1064.4_zs10',
+    '47': '2021.05.27_1047.6_zs10'
+}
 
 laser_energy = 1  # J
+laser_energy = 0.75  # correction due to zs glass absorption in ch1
 electron_density = 5e19  # local density m-3
 abs_calibration = 460600000000000 * 0.125  # value for poly_ind 4
 poly_ind = 4
