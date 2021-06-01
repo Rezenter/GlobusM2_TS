@@ -169,7 +169,7 @@ class Integrator:
             return event_ind
         return 0
 
-    def process_shot(self,  settings):
+    def process_shot(self,  settings, raw=False):
         print('Processing shot...')
         sync_ind = 0
         if settings['is_new']:
@@ -202,11 +202,11 @@ class Integrator:
                 if laser['error'] is None or laser['error'] == '':
                     proc_event['ts']['1064'] = []
                     for poly in self.config['poly']:
-                        proc_event['ts']['1064'].append(self.process_poly_event(event_ind, poly, laser))
+                        proc_event['ts']['1064'].append(self.process_poly_event(event_ind, poly, laser, raw=raw))
                     if laser['ave']['int_47'] != 0.0:
                         proc_event['ts']['1047'] = []
                         for poly in self.config['poly']:
-                            proc_event['ts']['1047'].append(self.process_poly_event(event_ind, poly, laser, data_1064=proc_event['ts']['1064']))
+                            proc_event['ts']['1047'].append(self.process_poly_event(event_ind, poly, laser, data_1064=proc_event['ts']['1064'], raw=raw))
                 else:
                     proc_event['error'] = laser['error']
             self.processed.append(proc_event)
@@ -389,7 +389,7 @@ class Integrator:
         laser['error'] = error
         return laser
 
-    def process_poly_event(self, event_ind, poly, laser, delay=None, data_1064=None):
+    def process_poly_event(self, event_ind, poly, laser, delay=None, data_1064=None, raw=False):
         res = []
         for ch_ind in range(len(poly['channels'])):
             error = None
@@ -475,7 +475,8 @@ class Integrator:
                 'max': maximum,
                 'int': integral,
                 'ph_el': photoelectrons,
-                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
-                #'raw': signal # for check
+                'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4)
             })
+            if raw:
+                res[-1]['raw'] = signal
         return res

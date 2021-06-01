@@ -194,8 +194,24 @@ shots = [  # glass
     }
 ]
 
+shots = [ # no glass
+   {
+        'shotn': 40204,
+        'is_new': True,
+        'start': 125,
+        'stop': 246,
+        'config': '2021.05.26_g10_sync2',
+        'las_threshold': 100,
+        'E1064': 0.8,
+        'E1047': 0.9
+    }
+]
+
 #polys = [1, 6]
 polys = range(10)
+#polys = [7, 9]
+plot_raw = True
+plot_raw = False
 
 channels = [0, 2, 3, 4]
 
@@ -207,8 +223,8 @@ expected_1047 = '2021.05.18_1047'
 expected_1064 = '2021.05.27_1064.4_zs10'
 expected_1047 = '2021.05.27_1047.6_zs10'
 
-#expected_1064 = '2021.05.27_1064.4'
-#expected_1047 = '2021.05.27_1047.6'
+expected_1064 = '2021.05.27_1064.4'
+expected_1047 = '2021.05.27_1047.6'
 
 LOCAL_DB_PATH = 'local_db/'
 GLOBAL_DB_PATH = 'd:/data/db/'
@@ -228,7 +244,7 @@ for shot in shots:
     print('processing shot %d' % shotn)
 
     raw_processor = integrator.Integrator(LOCAL_DB_PATH, shotn, is_plasma, shot['config'], GLOBAL_DB_PATH)
-    raw_processor.process_shot(shot)
+    raw_processor.process_shot(shot, raw=plot_raw)
 
     print('\nintegrated.\n')
 
@@ -241,10 +257,17 @@ for shot in shots:
 
     fitter = relation_fitter.Processor(expected_1064, GLOBAL_DB_PATH, expected_1047)
 
+    profiles = {
+        '64': {},
+        '47': {},
+        'rel': {},
+        'ave': {}
+    }
+    times = []
+    with open('%s/result/%05d/%05d.json' % (LOCAL_DB_PATH, shotn, shotn), 'r') as res_file:
+        result = json.load(res_file)
     for poly_ind_ind in range(len(polys)):
         poly_ind = polys[poly_ind_ind]
-        with open('%s/result/%05d/%05d.json' % (LOCAL_DB_PATH, shotn, shotn), 'r') as res_file:
-            result = json.load(res_file)
         with open('local_db/csv/%05d_poly#%d.csv' % (shotn, poly_ind), 'w') as file:
             file.write(header)
             file.write(units)
@@ -256,7 +279,29 @@ for shot in shots:
                     continue
                 if 'error' in raw_processor.processed[event_ind] and raw_processor.processed[event_ind]['error'] != '':
                     continue
-                #integration_viewer.draw(shotn, [event_ind], poly_ind)
+
+                ts = raw_processor.processed[event_ind]['timestamp']
+                if raw_processor.processed[event_ind]['timestamp'] not in profiles['64']:
+                    profiles['64'][ts] = {
+                            'T': [],
+                            'err': []
+                        }
+                    profiles['47'][ts] = {
+                            'T': [],
+                            'err': []
+                        }
+                    profiles['rel'][ts] = {
+                            'T': [],
+                            'err': []
+                        }
+                    profiles['ave'][ts] = {
+                            'T': [],
+                            'err': []
+                        }
+
+
+                if plot_raw:
+                    integration_viewer.draw(shotn, [event_ind], poly_ind)
                 line = '%05d, %.1f, %.1f, ' % (shotn, raw_processor.processed[event_ind]['timestamp'], raw_processor.processed[event_ind]['timestamp'])
                 for ch in channels:
                     if 'error' in raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch] and raw_processor.processed[event_ind]['ts']['1064'][poly_ind][ch]['error'] != '':
@@ -279,16 +324,24 @@ for shot in shots:
                     ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, %.2e, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'], res_ev['poly'][poly_ind]['mult'])
+                    profiles['64'][ts]['T'].append(res_ev['poly'][poly_ind]['T'])
+                    profiles['64'][ts]['err'].append(res_ev['poly'][poly_ind]['Terr'])
                 else:
                     line += '--, --, --, --, --, --, --, '
+                    profiles['64'][ts]['T'].append(0)
+                    profiles['64'][ts]['err'].append(0)
                 res_ev = result['events'][event_ind]['ts']['1047']
                 if 'T' in res_ev['poly'][poly_ind]:
                     t_ave += res_ev['poly'][poly_ind]['T'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     ave_err += res_ev['poly'][poly_ind]['Terr'] / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     w_ave += 1 / math.pow(res_ev['poly'][poly_ind]['Terr'], 2)
                     line += '%.1f, %.1f, %.2e, %.2e, %.2f, %.2f, %.2e, ' % (res_ev['poly'][poly_ind]['T'], res_ev['poly'][poly_ind]['Terr'], res_ev['poly'][poly_ind]['n'], res_ev['poly'][poly_ind]['n_err'], res_ev['poly'][poly_ind]['chi2'], res_ev['energy'], res_ev['poly'][poly_ind]['mult'])
+                    profiles['47'][ts]['T'].append(res_ev['poly'][poly_ind]['T'])
+                    profiles['47'][ts]['err'].append(res_ev['poly'][poly_ind]['Terr'])
                 else:
                     line += '--, --, --, --, --, --, --, '
+                    profiles['47'][ts]['T'].append(0)
+                    profiles['47'][ts]['err'].append(0)
                 if w_ave != 0:
                     t_ave /= w_ave
                     ave_err /= (w_ave * math.sqrt(2))
@@ -326,14 +379,50 @@ for shot in shots:
                 #print('fitted: ', fitted)
                 if 'error' in fitted:
                     line += '--, --, --, --, --, '
+                    profiles['rel'][ts]['T'].append(0)
+                    profiles['rel'][ts]['err'].append(0)
                 else:
                     line += '%.1f, %.1f, %.2f, %.2f, %.2f, ' % (fitted['T'], fitted['Terr'],
                                                               fitted['gamma'], fitted['g_err'],
                                                               fitted['chi2'])
+                    profiles['rel'][ts]['T'].append(fitted['T'])
+                    profiles['rel'][ts]['err'].append(fitted['Terr'])
                 line += '%.1f, %.1f\n' % (t_ave, ave_err)
+                profiles['ave'][ts]['T'].append(t_ave)
+                profiles['ave'][ts]['err'].append(ave_err)
                 file.write(line)
                 files[poly_ind_ind].write(line)
     print('shot ok\n\n')
+
+    with open('local_db/csv/%d_profiles.csv' % shotn, 'w') as file:
+        header = 'R, '
+        units = 'cm, '
+        for ts in profiles['64'].keys():
+            header += '64_t%.1f, err, ' % ts
+            units += 'eV, eV, '
+        for ts in profiles['64'].keys():
+            header += '47_t%.1f, err, ' % ts
+            units += 'eV, eV, '
+        for ts in profiles['64'].keys():
+            header += 'rel_t%.1f, err, ' % ts
+            units += 'eV, eV, '
+        for ts in profiles['64'].keys():
+            header += 'ave_t%.1f, err, ' % ts
+            units += 'eV, eV, '
+        file.write(header[:-2] + '\n')
+        file.write(units[:-2] + '\n')
+
+        for poly_ind in range(10):
+            line = '%d, ' % (result['polys'][poly_ind]['R'] * 0.1)
+            for ts in profiles['64'].keys():
+                line += '%.1f, %.1f, ' % (profiles['64'][ts]['T'][poly_ind], profiles['64'][ts]['err'][poly_ind])
+            for ts in profiles['64'].keys():
+                line += '%.1f, %.1f, ' % (profiles['47'][ts]['T'][poly_ind], profiles['47'][ts]['err'][poly_ind])
+            for ts in profiles['64'].keys():
+                line += '%.1f, %.1f, ' % (profiles['rel'][ts]['T'][poly_ind], profiles['rel'][ts]['err'][poly_ind])
+            for ts in profiles['64'].keys():
+                line += '%.1f, %.1f, ' % (profiles['ave'][ts]['T'][poly_ind], profiles['ave'][ts]['err'][poly_ind])
+            file.write(line[:-2] + '\n')
 
 for file in files:
     file.close()

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 channels = [0, 2, 3]
-colors = ['r', 'g', 'b', 'c', 'm', 'y']
+colors = ['k', 'r', 'b', 'g', 'm', 'c', 'y']
 
 def draw(shotn, events, poly):
     with open('local_db/export/%05d.json' % shotn, 'r') as file:
@@ -18,6 +18,7 @@ def draw(shotn, events, poly):
                 plt.plot(range(1024), [v - entry[ch]['zero_lvl'] for v in entry[ch]['raw']], color=colors[ch])
                 plt.fill_between([entry[ch]['from'], entry[ch]['to']], entry[ch]['int'] * 0.1, color=colors[ch], alpha=0.3)
             plt.legend(['ch %d' % (ch + 1) for ch in channels])
+            plt.title('%05d, event %.d = %.1f, poly %d' % (shotn, event_ind, data[event_ind]['timestamp'], poly))
             plt.show()
             plt.clf()
             print('_____\n')

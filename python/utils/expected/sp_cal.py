@@ -59,7 +59,7 @@ class SpCal:
                 kappas.append((cal_data['poly'][poly]['u'][ch] - cal_data['poly'][poly]['dark'][ch]) /
                               (integrate(wl, integrand) * config['poly'][poly]['channels'][ch]['slow_gain']))
             self.kappas.append(kappas)
-        self.dump_rel_sens()  # debug
+        #self.dump_rel_sens()  # debug
 
     def get_spectrum(self, wl):
         if wl <= self.lamp_wl[0] or wl >= self.lamp_wl[-1]:

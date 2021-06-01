@@ -64,7 +64,6 @@ result = {
 }
 
 
-
 def dump_kappa(poly):
     integrated = [0 for i in range(5)]
     for wl_ind in range(len(wl_arr) - 1):
@@ -94,11 +93,11 @@ def dump_expected(expected):
 
 
 #dump_kappa(8)  # tmp
-poly = 8
-for ch in range(5):
-    print(kappa.kappa(poly, ch + 1))
+poly = 4
+#for ch in range(5):
+#    print(kappa.kappa(poly, ch + 1))
 print('\n\n')
-dump_spectrum(poly, '2020.11.20', 800)
+dump_spectrum(poly, '2020.11.20', 500)
 fuck
 
 for poly in range(10):
