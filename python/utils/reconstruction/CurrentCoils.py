@@ -362,6 +362,8 @@ def linearization(x, y):
     sum_y = 0
     sum_xy = 0
     sum_x2 = 0
+    if len(x) <= 1:
+        return 1, 0
     for i in range(len(x)):
         sum_x += x[i]
         sum_y += y[i]
@@ -389,6 +391,7 @@ class CCM:
         self.error = err
 
     def __init__(self, shotn):
+        self.error = None
         filename = '%smcc_%d.json' % (CCM_DB, shotn)
         if not os.path.isfile(filename):
             self.set_error('No mcc file!')
@@ -582,6 +585,7 @@ class CCM:
             Te_err = max(Te_err, poly['Te_err'])
             ne_err = max(ne_err, poly['ne_err'])
         #print(result)
+
         a, b = linearization(r_arr, T_arr)
         result[0]['Te'] = max(0, a * result[0]['a'] + b)
         a, b = linearization(r_arr, n_arr)
