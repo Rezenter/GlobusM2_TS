@@ -14,7 +14,9 @@ apd_path = 'apd/'
 csv_ext = '.csv'
 
 temperature = const.t_room  # [K] nitrogen in torus temperature
-lambda_las = 1064e-9  # [m] laser wavelength
+temperature = 273 + 200   # [K] heated nitrogen in torus temperature
+lambda_las = 1064.4e-9  # [m] laser wavelength
+lambda_las = 1047.6e-9  # [m] laser wavelength
 
 csv_header = 2
 filters = {}
@@ -47,7 +49,10 @@ def wavenumber2wavelength(w_in):  # [m] return corresponding wavelength
 
 
 def get_raman_shift(j):  # [1/m] return wavenumber shift
-    return (4 * j - 2) * B0_vibr
+    if j > 0:
+        return (4 * j - 2) * B0_vibr  # antistocs
+    else:
+        return -(4 * -j + 6) * B0_vibr  # stocs
 
 
 def get_raman_wavelength(j):  # [m] return shifted wavelength for given laser and j
@@ -58,7 +63,10 @@ def get_raman_wavelength(j):  # [m] return shifted wavelength for given laser an
 
 def get_raman_section(j):  # [m^2 / sr] return differential cross-section
     first = 64 * math.pow(math.pi, 4) / 45
-    sec = 3 * j * (j - 1) / (2 * (2 * j + 1) * (2 * j - 1))
+    if j > 0:
+        sec = 3 * j * (j - 1) / (2 * (2 * j + 1) * (2 * j - 1)) # antistocs
+    else:
+        sec = (3 * (-j + 1) * (-j + 2)) / (2 * (2 * -j + 1) * (2 * -j + 3))
     third = math.pow(wavelength2wavenumber(lambda_las) + get_raman_shift(j), 4)
     return first * sec * third * gamma_sq
 
@@ -106,8 +114,8 @@ def load_filter(ch):
 
 
 quant_exit = get_qe()
-load_filter(1)
-load_filter(2)
+for ch in range(5):
+    load_filter(ch + 1)
 
 
 def get_sum(ch):
@@ -121,24 +129,48 @@ def get_sum(ch):
 
 
 def check():
-    summ = 0.0
-    sig1 = 0.0
-    sig2 = 0.0
+    sig = [0 for ch in range(5)]
     for j in range(2, J_max + 1):
         fj = get_fraction(j)
-        #summ += fj
+
         wl = get_raman_wavelength(j)
         sigma = get_raman_section(j)
         res = fj * sigma
-        #print('J = %2d, Fj = %.5f, sigma = %.5e, res = %.5e, wl = %.3f' % (j, fj, sigma, res, wl*1e9))
         qe = get_linearization(wl * 1e9, quant_exit)
-        line1 = res * qe * get_linearization(wl * 1e9, filters[1])
-        sig1 += line1
-        line2 = res * qe * get_linearization(wl * 1e9, filters[2]) * (1 - get_linearization(wl * 1e9, filters[1]))
-        sig2 += line2
-        print('%.2f %.2e %.2f %.2e %.2e %.2e' % (wl*1e9, res, qe, res * qe, line1, line2))
-        #print(sig1, sig2, sig1 / sig2)
 
-    print(sig1, sig2, sig1/sig2)
+        out_line = '%.2f %.2e %.2f %.2e ' % (wl*1e9, res, qe, res * qe)
+        for ch in range(5):
+            trans = get_linearization(wl * 1e9, filters[ch + 1])
+            for ch_prev in range(ch):
+                trans *= (1 - get_linearization(wl * 1e9, filters[ch_prev + 1]))
+
+            line = res * qe * trans
+            sig[ch] += line
+            out_line += '%.2e ' % line
+        print(out_line[:-1])
+    for j in range(0, J_max + 1):
+        fj = get_fraction(j)
+
+        wl = get_raman_wavelength(-j)
+        sigma = get_raman_section(-j)
+        res = fj * sigma
+        qe = get_linearization(wl * 1e9, quant_exit)
+
+        out_line = '%.2f %.2e %.2f %.2e ' % (wl*1e9, res, qe, res * qe)
+        for ch in range(5):
+            trans = get_linearization(wl * 1e9, filters[ch + 1])
+            for ch_prev in range(ch):
+                trans *= (1 - get_linearization(wl * 1e9, filters[ch_prev + 1]))
+
+            line = res * qe * trans
+            sig[ch] += line
+            out_line += '%.2e ' % line
+        print(out_line[:-1])
+
+    for ch in range(5):
+        print(sig[ch] / sig[0])
+    print('\n\n')
+    print(sig[0])
+
     #print('formula = %.5f, summ = %.5f' % (get_normalisation_formula(), summ))
     "9.445147608304963e-36 8.776913057222178e-37 10.761354871269827"
