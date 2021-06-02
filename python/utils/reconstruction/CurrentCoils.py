@@ -598,7 +598,6 @@ class CCM:
         n_arr = []
         Te_err = 0
         ne_err = 0
-        print('search this')
         for i in range(3):
             if i >= len(result) - 2:
                 break

@@ -170,7 +170,7 @@ class Processor:
                 os.path.getmtime('%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT))).
                 strftime('%Y.%m.%d %H:%M:%S'),
             'config_name': self.signal['common']['config_name'],
-            'polys': [],
+            'config': self.signal['common']['config'],
             'events': []
         }
         print('Processing shot...')
@@ -206,14 +206,7 @@ class Processor:
             for ch_ind in range(len(stray[poly_ind])):
                 if count[poly_ind][ch_ind] > 0:
                     stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
-            self.result['polys'].append({
-                'ind': self.signal['common']['config']['poly'][poly_ind]['ind'],
-                'fiber': self.signal['common']['config']['poly'][poly_ind]['fiber'],
-                'R': self.signal['common']['config']['poly'][poly_ind]['R'],
-                'l05': self.signal['common']['config']['poly'][poly_ind]['l05'],
-                'h': self.signal['common']['config']['poly'][poly_ind]['h'],
-                'stray': stray[poly_ind]
-            })
+            self.result['config']['poly'][poly_ind]['stray'] = stray[poly_ind]
 
         for event_ind in range(len(self.signal['data'])):
             error = None
@@ -377,11 +370,11 @@ class Processor:
     def to_csv(self, x_from, x_to, correction, aux_data=None):
         temp_evo = ''
         line = 't, '
-        for poly in self.result['polys']:
+        for poly in self.result['config']['poly']:
             line += '%.1f, err, ' % poly['R']
         temp_evo += line[:-2] + '\n'
         line = 'ms, '
-        for poly in self.result['polys']:
+        for poly in self.result['config']['poly']:
             line += 'eV, eV,'
         temp_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
@@ -404,8 +397,8 @@ class Processor:
                     units += 'eV, eV, '
         temp_prof += names[:-2] + '\n'
         temp_prof += units[:-2] + '\n'
-        for poly_ind in range(len(self.result['polys'])):
-            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
+        for poly_ind in range(len(self.result['config']['poly'])):
+            line = '%.1f, ' % self.result['config']['poly'][poly_ind]['R']
             for event in self.result['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
@@ -418,11 +411,11 @@ class Processor:
 
         dens_evo = ''
         line = 't, '
-        for poly in self.result['polys']:
+        for poly in self.result['config']['poly']:
             line += '%.1f, err, ' % poly['R']
         dens_evo += line[:-2] + '\n'
         line = 'ms, '
-        for poly in self.result['polys']:
+        for poly in self.result['config']['poly']:
             line += 'm-3, m-3,'
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
@@ -446,8 +439,8 @@ class Processor:
                     units += 'm-3, m-3, '
         dens_prof += names[:-2] + '\n'
         dens_prof += units[:-2] + '\n'
-        for poly_ind in range(len(self.result['polys'])):
-            line = '%.1f, ' % self.result['polys'][poly_ind]['R']
+        for poly_ind in range(len(self.result['config']['poly'])):
+            line = '%.1f, ' % self.result['config']['poly'][poly_ind]['R']
             for event in self.result['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:

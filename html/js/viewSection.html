@@ -918,7 +918,7 @@
                     for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
                         text += '<p style="color:' + this.palette[ch] + ';">' +
                             'ch ' + (ch + 1) + ', S = ' +
-                            ((this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el - this.m_currentShot.polys[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
+                            ((this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el - this.m_currentShot.config.poly[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
                             '±' + (this.m_current_event_sig.poly[poly_ind].ch[ch].err / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) + ' a.u.</p>'
                     }
                     return text;
@@ -1481,7 +1481,7 @@
             this.m_n_evo_chart.options.data = [];
             this.m_T_profile_data = [];
             this.m_n_profile_data = [];
-            for(let poly_ind = 0; poly_ind < this.m_currentShot.polys.length; poly_ind++) {
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
                 this.m_T_evo_chart.options.data.push(
                     {
                         type: "line",
@@ -1489,7 +1489,7 @@
                         visible: true,
                         markerType: "none",
                         showInLegend: true,
-                        name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                         connectNullData: true,
                         nullDataLineDashType: "dot",
                         dataPoints: [],
@@ -1504,7 +1504,7 @@
                         color: this.palette[poly_ind],
                         visible: true,
                         showInLegend: false,
-                        name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                         dataPoints: [],
                         click: function (event) {
                             this.ShowEvent(event, poly_ind);
@@ -1519,7 +1519,7 @@
                         visible: true,
                         markerType: "none",
                         showInLegend: false,
-                        name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                         connectNullData: true,
                         nullDataLineDashType: "dot",
                         dataPoints: [],
@@ -1534,7 +1534,7 @@
                         color: this.palette[poly_ind],
                         visible: true,
                         showInLegend: false,
-                        name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                         dataPoints: [],
                         click: function (event) {
                             this.ShowEvent(event, poly_ind);
@@ -1581,7 +1581,7 @@
                     }
                 );
 
-                for(let poly_ind = 0; poly_ind < this.m_currentShot.polys.length; poly_ind++) {
+                for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
                     this.MainChartsSetPoint(event_ind, poly_ind);
                 }
             }
@@ -1630,20 +1630,20 @@
         this.DrawPoloidal = function(){
             this.m_radius_chart.options.data = [];
             this.m_poloidal_poly = [];
-            for(let poly_ind = 0; poly_ind < this.m_currentShot.polys.length; poly_ind++){
-                let h05 = this.m_currentShot.polys[poly_ind].h * 0.5 * 0.1;
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++){
+                let h05 = this.m_currentShot.config.poly[poly_ind].h * 0.5 * 0.1;
                 this.m_poloidal_poly.push({
                     type: "rangeArea",
                     markerType: "none",
                     color: this.palette[poly_ind],
                     showInLegend: false,
-                    name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                    name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                     dataPoints: [{
-                        x: (this.m_currentShot.polys[poly_ind].R - this.m_currentShot.polys[poly_ind].l05) * 0.1,
+                        x: (this.m_currentShot.config.poly[poly_ind].R - this.m_currentShot.config.poly[poly_ind].l05) * 0.1,
                         y: [-h05, h05]
                     },
                         {
-                            x: (this.m_currentShot.polys[poly_ind].R + this.m_currentShot.polys[poly_ind].l05) * 0.1,
+                            x: (this.m_currentShot.config.poly[poly_ind].R + this.m_currentShot.config.poly[poly_ind].l05) * 0.1,
                             y: [-h05, h05]
                         }]
                 });
@@ -1652,13 +1652,13 @@
                     markerType: "none",
                     color: this.palette[poly_ind],
                     showInLegend: true,
-                    name: 'R = ' + this.m_currentShot.polys[poly_ind].R,
+                    name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
                     dataPoints: [{
-                        x: this.m_currentShot.polys[poly_ind].R - this.m_currentShot.polys[poly_ind].l05,
+                        x: this.m_currentShot.config.poly[poly_ind].R - this.m_currentShot.config.poly[poly_ind].l05,
                         y: [-h05, h05]
                     },
                         {
-                            x: this.m_currentShot.polys[poly_ind].R + this.m_currentShot.polys[poly_ind].l05,
+                            x: this.m_currentShot.config.poly[poly_ind].R + this.m_currentShot.config.poly[poly_ind].l05,
                             y: [-h05, h05]
                         }]
                 });
@@ -1695,8 +1695,8 @@
                     Object.assign(this.m_currentShot, resp);
                     this.m_currentShot.shotn = shotn;
                     this.m_currentShot.is_plasma = is_plasma;
-                    this.selectors.polyInputs.attr('max', this.m_currentShot.polys.length - 1);
-                    $('#time_input').attr('max', this.m_currentShot.polys.length - 1);
+                    this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
+                    $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
 
                     this.DrawTimeline();
                     this.DrawMain();
@@ -1749,26 +1749,26 @@
 
                 this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: null
                     }
                 );
                 this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: [null,
                             null]
                     }
                 );
                 this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: null
                     }
                 );
                 this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: [null,
                             null]
                     }
@@ -1805,26 +1805,26 @@
 
                 this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
                     }
                 );
                 this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
                             this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
                     }
                 );
                 this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
                     }
                 );
                 this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
-                        x: this.m_currentShot.polys[poly_ind].R,
+                        x: this.m_currentShot.config.poly[poly_ind].R,
                         y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
                             (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
                     }
@@ -1909,8 +1909,8 @@
                         });
                         if(resp.poly[poly_ind].ch[ch].error === null) {
                             let signal = resp.poly[poly_ind].ch[ch].ph_el;
-                            if(this.m_currentShot.polys[poly_ind].stray[ch] > 100){
-                                signal -= this.m_currentShot.polys[poly_ind].stray[ch];
+                            if(this.m_currentShot.config.poly[poly_ind].stray[ch] > 100){
+                                signal -= this.m_currentShot.config.poly[poly_ind].stray[ch];
                             }
                             this.m_fitting_chart.options.data.push({
                                 type: "scatter",
@@ -2308,7 +2308,7 @@
             let x_ticks = [];
             for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
                 x_ticks.push(this.m_currentShot.events[event_ind].timestamp);
-                for(let poly_ind = 0; poly_ind < this.m_currentShot.polys.length; poly_ind++) {
+                for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
                     indexes.push({
                         x: event_ind,
                         y: poly_ind
@@ -2316,8 +2316,8 @@
                 }
             }
             let y_ticks = [];
-            for(let poly_ind = 0; poly_ind < this.m_currentShot.polys.length; poly_ind++) {
-                y_ticks.push(this.m_currentShot.polys[poly_ind].R);
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
+                y_ticks.push(this.m_currentShot.config.poly[poly_ind].R);
             }
 
             // Build X scales and axis:
@@ -2387,7 +2387,7 @@
                         return x(this.m_currentShot.events[entry.x].timestamp);
                     }.bind(this))
                 .attr("y", function(entry) {
-                        return y(this.m_currentShot.polys[entry.y].R);
+                        return y(this.m_currentShot.config.poly[entry.y].R);
 
                     }.bind(this))
                 .attr("rx", 4)
@@ -2869,7 +2869,7 @@
         };
 
         this.UpdatePopups = function () {
-            this.selectors.poly_radius.html(this.m_currentShot.polys[this.selectors.polyInputs.val()].R + ' mm');
+            this.selectors.poly_radius.html(this.m_currentShot.config.poly[this.selectors.polyInputs.val()].R + ' mm');
             if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
                 this.draw_popup();
             }

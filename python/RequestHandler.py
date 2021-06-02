@@ -285,8 +285,7 @@ class Handler:
             self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], req['config'])
         resp = {
             'timestamps': [],
-            'energies': [],
-            'polys': [poly for poly in self.raw_processor.config['poly']]
+            'energies': []
         }
         for event_ind in range(len(self.raw_processor.processed)):
             event = self.raw_processor.processed[event_ind]
@@ -370,16 +369,19 @@ class Handler:
             self.raw_processor.load_raw()
         event = []
         starts = []
+
         for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
             event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
             starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
-        adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][ch['adc']]['ch'])
+
+        board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
+        adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
         resp = {
             'data': event,
-            'laser': self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch],
+            'laser': self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch],
             'starts': starts,
-            'laser_start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'],
+            'laser_start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][board_ind]['sync_ind'],
             'ok': True
         }
         return resp

@@ -14,9 +14,9 @@ apd_path = 'apd/'
 csv_ext = '.csv'
 
 temperature = const.t_room  # [K] nitrogen in torus temperature
-temperature = 273 + 200   # [K] heated nitrogen in torus temperature
+#temperature = 273 + 200   # [K] heated nitrogen in torus temperature
 lambda_las = 1064.4e-9  # [m] laser wavelength
-lambda_las = 1047.6e-9  # [m] laser wavelength
+#lambda_las = 1047.6e-9  # [m] laser wavelength
 
 csv_header = 2
 filters = {}
