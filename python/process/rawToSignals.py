@@ -254,12 +254,12 @@ class Integrator:
         flag = False
         integration_stop = -1
         for i in range(len(signal) - 1):
-            if signal[i] - zero >= 400:  # self.header['triggerThreshold']:
+            if signal[i] - zero >= 300:  # self.header['triggerThreshold']:
                 flag = True
                 start = i
             res += self.time_step * (signal[i] + signal[i + 1] - 2 * zero) * 0.5  # ns*mV
             # if flag and signal[i + 1] - zero < 0:
-            if flag and i - start > 100:
+            if flag and i - start > 177:
                 integration_stop = i
                 break
         else:

@@ -2262,6 +2262,16 @@
                         format: 'png',
                         fileName: this.m_currentShot.shotn + '_pol_' + this.selectors.chord_time.html()
                     });
+            }else if(targetId === 'ccm_surf_chart'){
+                this.m_ccm_surf_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_surf_' + this.selectors.chord_time.html()
+                });
+            }else if(targetId === 'ccm_chord_chart'){
+                this.m_ccm_chord_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_chord_' + this.selectors.chord_time.html()
+                });
             }else{
                 console.log('Wtf? Unknown target: ', targetId);
             }

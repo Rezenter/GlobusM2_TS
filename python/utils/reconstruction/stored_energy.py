@@ -18,7 +18,7 @@ class StoredCalculator:
             return
         self.ts_data = ts_data
         self.polys = []
-        for poly in ts_data['polys']:
+        for poly in ts_data['config']['poly']:
             self.polys.append({
                 'ind': poly['ind'],
                 'R': poly['R'] * 0.1
