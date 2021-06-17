@@ -1,6 +1,8 @@
 import json
 import os
 import time
+import threading
+import socket
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -33,9 +35,13 @@ DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
 TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
 
+UDP_IP = "192.168.10.41"
+UDP_PORT = 8888
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+sock.bind((UDP_IP, UDP_PORT))
 
 class Handler:
-
     def __init__(self):
         self.HandlingTable = {
             'adc': {
@@ -570,3 +576,43 @@ class Handler:
 
     def las_idle(self, req):
         return self.las.set_state_1()
+
+    def check_shot(self):
+
+        data, addr = sock.recvfrom(16)
+        print("received message: %s" % data)
+
+    def arm_all(self, req):
+        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
+        shot_filename = SHOTN_FILE
+        if not os.path.isfile(shot_filename):
+            return {
+                'ok': False,
+                'description': 'Shotn file "%s" not found.' % shot_filename
+            }
+        with open(shot_filename, 'r') as shotn_file:
+            line = shotn_file.readline()
+            shotn = int(line)
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            return {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
+
+        caen.send_cmd(caen.Commands.Arm, [shotn, True])
+        print(caen.read())
+
+        caen.disconnect()
+
+        las = self.las_fire(req)
+
+        expect_shot = threading.Thread(target=self.check_shot())
+        expect_shot.start()
+        return {
+            'ok': True,
+            'shotn': shotn,
+            'las': las
+        }
