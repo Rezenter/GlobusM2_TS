@@ -1,10 +1,10 @@
 import json
 import os
 
-shotn = 40061
+shotn = 40266
 db = 'd:/data/db/plasma/'
-t_start = 118
-t_stop = 271
+t_start = 122
+t_stop = 221
 
 if not os.path.isdir('%sresult/%05d' % (db, shotn)):
     fuck

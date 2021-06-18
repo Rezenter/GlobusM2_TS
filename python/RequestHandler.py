@@ -1,8 +1,10 @@
 import json
 import os
+import logging
 import time
 import threading
 import socket
+import select
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -41,9 +43,18 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock.bind((UDP_IP, UDP_PORT))
 
+laser_maxTime = 15# debug 60 + 10  # seconds
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+
 class Handler:
     def __init__(self):
         self.HandlingTable = {
+            'diag': {
+                'arm': self.arm_all,
+                'status': self.diag_status
+            },
             'adc': {
                 'status': self.fast_status,
                 'arm': self.fast_arm,
@@ -76,6 +87,7 @@ class Handler:
         self.raw_processor = None
         self.fine_processor = None
         self.las = laser1064.Chatter()
+        self.state = {}
         return
 
     def handle_request(self, req):
@@ -172,7 +184,7 @@ class Handler:
                 'description': '"events" field is missing from request.'
             }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4',
                                                       '2021.02.03')
             err = self.fine_processor.get_error()
             if err is not None:
@@ -219,7 +231,7 @@ class Handler:
             }
         print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.02.01',
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4',
                                                       '2021.02.03')
             err = self.fine_processor.get_error()
             if err is not None:
@@ -251,7 +263,7 @@ class Handler:
             return resp
 
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.02.01',
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.05.27_1064.4',
                                                       '2021.02.03')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
@@ -417,7 +429,7 @@ class Handler:
             resp['description'] = '"r" field is missing from request.'
             return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.02.01',
+            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.05.27_1064.4',
                                                       '2021.02.03')
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
@@ -457,42 +469,43 @@ class Handler:
         print('status...')
 
         if not os.path.isfile(SHOTN_FILE):
-            return {
+            self.state['fast'] = {
                 'ok': False,
                 'description': 'Shotn file not found.'
             }
-
-        try:
-            caen.connect()
-        except ConnectionError as err:
-            print('caen connection error', err)
-            return {
-                'ok': False,
-                'description': ('Connection error: "%s"' % err)
-            }
-        caen.send_cmd(caen.Commands.Alive)
-        time.sleep(1)
-        resp = caen.read()
-        print(resp)
-        caen.disconnect()
-
-        if resp['status']:
-            shotn = 0
-
-
-            with open(SHOTN_FILE, 'r') as shotn_file:
-                line = shotn_file.readline()
-                shotn = int(line)
-
-
-            return {
-                'ok': True,
-                'resp': resp,
-                'shotn': shotn
-                #'shotn': 90000
-            }
         else:
-            return resp
+            try:
+                caen.connect()
+            except ConnectionError as err:
+                print('caen connection error', err)
+                self.state['fast'] = {
+                    'ok': False,
+                    'description': ('Connection error: "%s"' % err)
+                }
+            else:
+                caen.send_cmd(caen.Commands.Alive)
+                time.sleep(1)
+                resp = caen.read()
+                print(resp)
+                caen.disconnect()
+
+                if resp['status']:
+                    shotn = 0
+
+
+                    with open(SHOTN_FILE, 'r') as shotn_file:
+                        line = shotn_file.readline()
+                        shotn = int(line)
+
+
+                    self.state['fast'] = {
+                        'ok': True,
+                        'resp': resp,
+                        'shotn': shotn
+                    }
+                else:
+                    self.state['fast'] = resp
+        return self.state['fast']
 
     def fast_arm(self, req):
         if 'isPlasma' not in req:
@@ -505,85 +518,107 @@ class Handler:
         isPlasma = req['isPlasma']
         if isPlasma:
             shot_filename = SHOTN_FILE
-
-        '''if 'shotn' not in req:
-            return {
-                'ok': False,
-                'description': '"shotn" field is missing from request.'
-            }
-        shotn = int(req['shotn'])'''
-
-
         if not os.path.isfile(shot_filename):
-            return {
+            self.state['fast'] = {
                 'ok': False,
                 'description': 'Shotn file "%s" not found.' % shot_filename
             }
-        with open(shot_filename, 'r') as shotn_file:
-            line = shotn_file.readline()
-            shotn = int(line)
-        try:
-            caen.connect()
-        except ConnectionError as err:
-            print('caen connection error', err)
-            return {
-                'ok': False,
-                'description': ('Connection error: "%s"' % err)
-            }
+        else:
+            with open(shot_filename, 'r') as shotn_file:
+                line = shotn_file.readline()
+                shotn = int(line)
+            try:
+                caen.connect()
+            except ConnectionError as err:
+                print('caen connection error', err)
+                self.state['fast'] = {
+                    'ok': False,
+                    'description': ('Connection error: "%s"' % err)
+                }
+            else:
+                caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
+                print(caen.read())
 
-        caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
-        print(caen.read())
+                caen.disconnect()
 
-        caen.disconnect()
+                if not isPlasma:
+                    with open(shot_filename, 'w') as shotn_file:
+                        # shotn_file.seek(0)
+                        shotn_file.write('%d' % (shotn + 1))
 
-        if not isPlasma:
-            with open(shot_filename, 'w') as shotn_file:
-                #shotn_file.seek(0)
-                shotn_file.write('%d' % (shotn + 1))
+                self.state['fast'] = {
+                    'ok': True,
+                    'armed': True,
+                    'shotn': shotn
+                }
 
-        return {
-            'ok': True,
-            'shotn': shotn
-        }
+        return self.state['fast']
 
     def fast_disarm(self, req):
         try:
             caen.connect()
         except ConnectionError as err:
             print('caen connection error', err)
-            return {
+            self.state['fast'] = {
                 'ok': False,
                 'description': ('Connection error: "%s"' % err)
             }
+        else:
+            caen.send_cmd(caen.Commands.Disarm)
+            caen.read()
 
-        caen.send_cmd(caen.Commands.Disarm)
-        caen.read()
-
-        time.sleep(0.5)
-        caen.disconnect()
-        return {
-            'ok': True
-        }
+            time.sleep(0.5)
+            caen.disconnect()
+            self.state['fast'] = {
+                'ok': True,
+                'armed': False
+            }
+        return self.state['fast']
 
     def las_connect(self, req):
-        return self.las.connect()
+        self.state['las'] = self.las.connect()
+        return self.state['las']
 
     def las_status(self, req):
-        return self.las.status()
+        self.state['las'] = self.las.status()
+        return self.state['las']
 
     def las_fire(self, req):
-        return self.las.set_state_3()
+        self.state['las'] = self.las.set_state_3()
+        return self.state['las']
 
     def las_idle(self, req):
-        return self.las.set_state_1()
+        self.state['las'] = self.las.set_state_1()
+        return self.state['las']
+
+    def diag_status(self):
+        self.las_status({})
+        self.fast_status({})
+        return self.state
 
     def check_shot(self):
+        logging.info("Thread: expecting tokamak shot...")
+        sock.setblocking(False)
 
-        data, addr = sock.recvfrom(16)
-        print("received message: %s" % data)
+        ready_to_read, a, b = select.select(
+                            [sock],
+                            [],
+                            [],
+                            laser_maxTime)
+        if len(ready_to_read):
+            data = sock.recv(8)
+            if int.from_bytes(data, 'big') == 255:
+                logging.info("Thread: received packet")
+            else:
+                logging.info(data)
+                logging.info("Thread: WTF packet")
+        else:
+            logging.info("Thread: timed out")
+        # anyway
+        self.las_idle({})
+        self.fast_disarm({})
 
     def arm_all(self, req):
-        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
         shot_filename = SHOTN_FILE
         if not os.path.isfile(shot_filename):
             return {
@@ -594,25 +629,25 @@ class Handler:
             line = shotn_file.readline()
             shotn = int(line)
         try:
-            caen.connect()
+            #caen.connect()
+            #caen.send_cmd(caen.Commands.Arm, [shotn, True])
+            #print(caen.read())
+
+            #caen.disconnect()
+
+            las = 'ok'# self.las_fire(req)
+
+            expect_shot = threading.Thread(target=self.check_shot)
+            expect_shot.start()
+
+            return {
+                'ok': True,
+                'shotn': shotn,
+                'las': las
+            }
         except ConnectionError as err:
             print('caen connection error', err)
             return {
                 'ok': False,
                 'description': ('Connection error: "%s"' % err)
             }
-
-        caen.send_cmd(caen.Commands.Arm, [shotn, True])
-        print(caen.read())
-
-        caen.disconnect()
-
-        las = self.las_fire(req)
-
-        expect_shot = threading.Thread(target=self.check_shot())
-        expect_shot.start()
-        return {
-            'ok': True,
-            'shotn': shotn,
-            'las': las
-        }

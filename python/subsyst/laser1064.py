@@ -1,5 +1,6 @@
 import socket
 from datetime import datetime
+import time
 
 IP = '192.168.10.44'
 PORT = 4001
@@ -41,6 +42,8 @@ class Chatter:
         self.sock = None
         self.connect()
         self.err = None
+        self.state = 0
+        self.lastTime = time.time()
 
     def connect(self):
         resp = self.status()
@@ -150,21 +153,50 @@ class Chatter:
         state = [False for bit in range(16)]
         for bit in range(16):
             state[bit] = (1 == (status >> bit) & 1)
+        timeout = -1
         if state[7]:
             self.set_err('Аварийная остановка!')
-        '''
+            self.state = -1
+            return {
+                'ok': False,
+                'state': self.state,
+                'timeout': timeout
+            }
         elif not state[0]:
-            self.disp('Исходное. (контактор разомкнут)')
+            if self.state != 0:
+                self.lastTime = time.time()
+            timeout = time.time() - self.lastTime
+            self.state = 0
+            # self.disp('Исходное. (контактор разомкнут)')
         elif not state[1]:
-            self.disp('Термостабилизация. (нет накачки, ЗГ отключен)')
+            if self.state != 1:
+                self.lastTime = time.time()
+            self.state = 1
+            timeout = time.time() - self.lastTime
+            # self.disp('Термостабилизация. (нет накачки, ЗГ отключен)')
         elif state[6]:
-            self.disp('Холостой ход. (Накачка и ЗГ рассогласованы)')
+            curr_time = time.time()
+            if self.state == 1:
+                self.lastTime = curr_time
+            self.state = 2
+            timeout = 10 - curr_time + self.lastTime
+            if timeout < 0:
+                timeout += 60  # warm-up finished
+            self.state = 2.5
+            if timeout < 0:
+                self.set_state_1()
+            # self.disp('Холостой ход. (Накачка и ЗГ рассогласованы)')
         else:
-            self.disp('Генерация. (Накачка и ЗГ согласованы)')
-            '''
+            timeout = 10 + 60 - time.time() + self.lastTime
+            self.state = 3
+            if timeout < 0:
+                self.set_state_1()
+            # self.disp('Генерация. (Накачка и ЗГ согласованы)')
+
         return {
             'ok': True,
-            'state': state
+            'state': self.state,
+            'timeout': timeout
         }
 
     def parse_error(self, error):
