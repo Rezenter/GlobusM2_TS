@@ -28,8 +28,9 @@
         <p>Laser control</p>
         <div class="row">
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                <p id="laser_state">No connection</p>
+                <p id="laser_state">Unknown state</p>
                 <button class="btn btn-info" id="laser_reconnect_button">Reconnect</button>
+                <p id="laser_connection">No connection</p>
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                 <p id="laser_enable">Disabled</p>
@@ -45,6 +46,12 @@
         <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
              src="http://192.168.10.46/action/stream?subject=mjpeg" width="500px" height="500px">
              -->
+    </div>
+    <hr>
+    <div id="diag_row">
+        <p>Diagnostics control</p>
+            <button class="btn btn-danger" id="diag_arm_button">Arm ADC and fire laser.</button>
+        </div>
     </div>
 </body>
 <script>
@@ -155,18 +162,69 @@
         this.LasStatus = function(ev){
             if ($(document.body).find( "title" )[0].innerHTML !== 'Acquisition Section'){
                 clearTimeout(this.m_lasWatchdog);
-                console.log('stop laser requests');
+                //console.log('stop laser requests');
                 return;
             }
-            let state = $('#laser_state');
-            state.css('background-color','grey');
-            state.html('Requesting...');
+            let conn = $('#laser_connection');
+            conn.css('background-color','grey');
+            conn.html('Requesting...');
+
             this.RequestLas(
                 {
                     reqtype: 'status'
                 }
                 , function (resp) {
+                    conn.css('background-color','green');
+                    conn.html('Connected');
+
+                    let state = $('#laser_state');
                     if(resp.ok){
+                        console.log(resp);
+                        let string = '';
+                        switch (resp.state){
+                            case -1:
+                                console.log(resp)
+                                state.css('background-color','red');
+                                state.html('Аварийная остановка!');
+                                alert('Аварийная остановка лазера!');
+                                break;
+                            case 0:
+                                state.css('background-color','blue');
+                                string = 'Power off. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 1:
+                                state.css('background-color','white');
+                                string = 'Idle. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 2:
+                                state.css('background-color','yellow');
+                                string = 'Warming-up... ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 2.5:
+                                state.css('background-color','green');
+                                string = 'Ready. Time left ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 3:
+                                state.css('background-color','red');
+                                string = 'Firing... Time left' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                        }
+                        /*
                         if(resp.state[7]){
                             alert('Аварийная остановка лазера!');
                             state.css('background-color','red');
@@ -197,7 +255,7 @@
                             }
                         }else{
                             //console.log('fire', resp.state);
-                            state.css('background-color','red');
+                            state.css('background-color','magenta');
                             state.html('Firing! ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
                         }
                         let sync = $('#laser_sync')
@@ -224,10 +282,15 @@
                             enable.css('background-color','yellow');
                             enable.html('Generation blocked.');
                         }
+
+                         */
                     }else{
-                        console.log(resp);
-                        state.css('background-color','red');
-                        state.html(resp.description);
+                        console.log(resp)
+                        conn.css('background-color','red');
+                        conn.html(resp.description);
+
+                        state.css('background-color','grey');
+                        state.html('Unknown');
                     }
                 }.bind(this)
             );
@@ -279,6 +342,36 @@
             );
         }.bind(this);
 
+        this.RequestDiag = function (req, callback) {
+            req.subsystem = 'diag';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
+
+        this.DiagArm = function(ev){
+            let stateADC = $('#ADC_state');
+            stateADC.css('background-color','grey');
+            stateADC.html('Requesting...');
+            let stateLas = $('#laser_state');
+            stateLas.css('background-color','grey');
+            stateLas.html('Requesting...');
+            this.RequestDiag(
+                {
+                    reqtype: 'arm'
+                }
+                , function (resp) {
+                    if(resp.ok){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = Date.now();
+                            return;
+                        }
+                    }
+                    console.log(resp);
+                    stateLas.css('background-color','red');
+                    stateLas.html(resp.description);
+                }.bind(this)
+            );
+        }.bind(this);
+
         this.ConnectControls = function () {
             $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.ADCArm);
@@ -287,6 +380,8 @@
             $('#laser_reconnect_button').on('click', this, this.LasConnect);
             $('#laser_fire_button').on('click', this, this.LasFire);
             $('#laser_idle_button').on('click', this, this.LasIdle);
+
+            $('#diag_arm_button').on('click', this, this.DiagArm);
         };
 
         this.ConnectControls();

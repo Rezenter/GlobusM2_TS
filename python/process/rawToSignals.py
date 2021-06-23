@@ -32,7 +32,7 @@ class Integrator:
     ch_per_group = 2
     adc_baseline = 1250
     offscale_threshold = 50
-    laser_prehistory_residual_pc = 40 / 100
+    laser_prehistory_residual_pc = 5  # mv
     laser_integral_residual_pc = 5 / 100
     laser_length_residual_ind = 5
     left_limit = 100  # ind
@@ -214,12 +214,7 @@ class Integrator:
             if error is None:
                 for poly in self.config['poly']:
                     proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
-
-                self.processed.append(proc_event)
-            else:
-                self.processed.append({
-                    'error': error
-                })
+            self.processed.append(proc_event)
 
         self.save_processed()
 
@@ -358,15 +353,11 @@ class Integrator:
             for board_ind in range(len(self.data)):
                 if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                     continue
-                if math.fabs(laser['ave']['pre_std'] - laser['boards'][board_ind]['pre_std']) / \
-                        laser['ave']['pre_std'] > self.laser_prehistory_residual_pc:
-                    error = 'prehistory differ'
+                if laser['boards'][board_ind]['pre_std'] > self.laser_prehistory_residual_pc:
+                    error = 'too large prehistory error'
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
                     error = 'integrals differ'
-                """if math.fabs(laser['ave']['int_len'] - laser['boards'][board_ind]['int_len']) > \
-                        self.laser_length_residual_ind:
-                    error = 'integral length differ'"""
         if error is not None:
             print(error, event_ind)
         return laser, error
