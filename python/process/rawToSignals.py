@@ -32,7 +32,7 @@ class Integrator:
     ch_per_group = 2
     adc_baseline = 1250
     offscale_threshold = 50
-    laser_prehistory_residual_pc = 5  # mv
+    laser_prehistory_residual_pc = 20  # mv
     laser_integral_residual_pc = 5 / 100
     laser_length_residual_ind = 5
     left_limit = 100  # ind

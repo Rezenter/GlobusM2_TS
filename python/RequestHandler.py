@@ -467,44 +467,46 @@ class Handler:
 
     def fast_status(self, req):
         print('status...')
-
-        if not os.path.isfile(SHOTN_FILE):
-            self.state['fast'] = {
-                'ok': False,
-                'description': 'Shotn file not found.'
-            }
+        print(req)
+        if 'shotn' in req:
+            shotn = req['shotn']
         else:
-            try:
-                caen.connect()
-            except ConnectionError as err:
-                print('caen connection error', err)
+            print('wtf')
+            if not os.path.isfile(SHOTN_FILE):
+                shotn = 0
                 self.state['fast'] = {
                     'ok': False,
-                    'description': ('Connection error: "%s"' % err)
+                    'description': 'Shotn file not found.'
                 }
             else:
-                caen.send_cmd(caen.Commands.Alive)
-                time.sleep(1)
-                resp = caen.read()
-                print(resp)
-                caen.disconnect()
+                shotn = 0
+                with open(SHOTN_FILE, 'r') as shotn_file:
+                    line = shotn_file.readline()
+                    shotn = int(line)
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            self.state['fast'] = {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
+        else:
+            caen.send_cmd(caen.Commands.Alive)
+            time.sleep(1)
+            resp = caen.read()
+            print(resp)
+            caen.disconnect()
 
-                if resp['status']:
-                    shotn = 0
+            if resp['status']:
 
-
-                    with open(SHOTN_FILE, 'r') as shotn_file:
-                        line = shotn_file.readline()
-                        shotn = int(line)
-
-
-                    self.state['fast'] = {
-                        'ok': True,
-                        'resp': resp,
-                        'shotn': shotn
-                    }
-                else:
-                    self.state['fast'] = resp
+                self.state['fast'] = {
+                    'ok': True,
+                    'resp': resp,
+                    'shotn': shotn
+                }
+            else:
+                self.state['fast'] = resp
         return self.state['fast']
 
     def fast_arm(self, req):
@@ -513,45 +515,47 @@ class Handler:
                 'ok': False,
                 'description': '"isPlasma" field is missing from request.'
             }
-
-        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
         isPlasma = req['isPlasma']
-        if isPlasma:
-            shot_filename = SHOTN_FILE
-        if not os.path.isfile(shot_filename):
-            self.state['fast'] = {
-                'ok': False,
-                'description': 'Shotn file "%s" not found.' % shot_filename
-            }
+        if 'shotn' in req:
+            shotn = int(req['shotn'])
         else:
-            with open(shot_filename, 'r') as shotn_file:
-                line = shotn_file.readline()
-                shotn = int(line)
-            try:
-                caen.connect()
-            except ConnectionError as err:
-                print('caen connection error', err)
+            shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
+            if isPlasma:
+                shot_filename = SHOTN_FILE
+            if not os.path.isfile(shot_filename):
                 self.state['fast'] = {
                     'ok': False,
-                    'description': ('Connection error: "%s"' % err)
+                    'description': 'Shotn file "%s" not found.' % shot_filename
                 }
+                return self.state['fast']
             else:
-                caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
-                print(caen.read())
+                with open(shot_filename, 'r') as shotn_file:
+                    line = shotn_file.readline()
+                    shotn = int(line)
+        try:
+            caen.connect()
+        except ConnectionError as err:
+            print('caen connection error', err)
+            self.state['fast'] = {
+                'ok': False,
+                'description': ('Connection error: "%s"' % err)
+            }
+        else:
+            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
+            print(caen.read())
 
-                caen.disconnect()
+            caen.disconnect()
 
-                if not isPlasma:
-                    with open(shot_filename, 'w') as shotn_file:
-                        # shotn_file.seek(0)
-                        shotn_file.write('%d' % (shotn + 1))
+            if not isPlasma and 'shotn' not in req:
+                with open(shot_filename, 'w') as shotn_file:
+                    # shotn_file.seek(0)
+                    shotn_file.write('%d' % (shotn + 1))
 
-                self.state['fast'] = {
-                    'ok': True,
-                    'armed': True,
-                    'shotn': shotn
-                }
-
+            self.state['fast'] = {
+                'ok': True,
+                'armed': True,
+                'shotn': shotn
+            }
         return self.state['fast']
 
     def fast_disarm(self, req):
