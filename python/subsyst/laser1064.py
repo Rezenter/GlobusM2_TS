@@ -39,7 +39,7 @@ def crc(packet):
 class Chatter:
     def __init__(self):
         self.sock = None
-        self.connect()
+        #self.connect()
         self.err = None
 
     def connect(self):
