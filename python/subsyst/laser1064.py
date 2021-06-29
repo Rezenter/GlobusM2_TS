@@ -196,7 +196,8 @@ class Chatter:
         return {
             'ok': True,
             'state': self.state,
-            'timeout': timeout
+            'timeout': timeout,
+            'flags': state
         }
 
     def parse_error(self, error):

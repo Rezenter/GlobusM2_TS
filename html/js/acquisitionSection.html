@@ -73,7 +73,7 @@
             this.RequestADC(
                 {
                     reqtype: 'status',
-                    shotn: shotn
+                    //shotn: shotn
                 }
                 , function (resp) {
                     //console.log(resp);
@@ -97,7 +97,7 @@
             let req = {
                 reqtype: 'arm',
                 isPlasma: $('#is_plasma')[0].checked,
-                shotn: shotn
+                //shotn: shotn
             }
             this.RequestADC(
                 req, function (resp) {
@@ -226,42 +226,9 @@
                                 state.html(string);
                                 break;
                         }
-                        /*
-                        if(resp.state[7]){
-                            alert('Аварийная остановка лазера!');
-                            state.css('background-color','red');
-                            state.html(resp.description);
-                        }else if(!resp.state[0]){
-                            state.css('background-color','blue');
-                            state.html('Power off.');
-                            this.m_laser_warm = null;
-                            this.m_laser_warming = null;
-                        }else if(!resp.state[1]){
-                            state.css('background-color','white');
-                            state.html('Idle.');
-                            this.m_laser_warm = null;
-                            this.m_laser_warming = null;
-                        }else if(resp.state[6]){
-                            if(this.m_laser_warm){
-                                //console.log('ready', resp.state);
-                                state.css('background-color', 'green');
-                                state.html('Ready. ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
-                            }else {
-                                let time_left = 15 - (Date.now() - this.m_laser_warming)/1000;
-                                if(time_left <= 0){
-                                    this.m_laser_warm = Date.now();
-                                }
-                                //console.log('warming', resp.state, time_left);
-                                state.css('background-color', 'yellow');
-                                state.html('Warming up... ' + time_left.toFixed(0) + 's left.');
-                            }
-                        }else{
-                            //console.log('fire', resp.state);
-                            state.css('background-color','magenta');
-                            state.html('Firing! ' + (60 - (Date.now() - this.m_laser_warm)/1000).toFixed(0) + 's left.');
-                        }
+
                         let sync = $('#laser_sync')
-                        if(resp.state[2]){
+                        if(resp.flags[2]){
                             sync.css('background-color','yellow');
                             sync.html('Internal sync.');
                         }else{
@@ -269,7 +236,7 @@
                             sync.html('External sync.');
                         }
                         let remote = $('#laser_remote')
-                        if(resp.state[14]){
+                        if(resp.flags[14]){
                             remote.css('background-color','white');
                             remote.html('Remote control.');
                         }else{
@@ -277,7 +244,7 @@
                             remote.html('Local control.');
                         }
                         let enable = $('#laser_enable')
-                        if(resp.state[15]){
+                        if(resp.flags[15]){
                             enable.css('background-color','white');
                             enable.html('Generation allowed.');
                         }else{
@@ -285,7 +252,7 @@
                             enable.html('Generation blocked.');
                         }
 
-                         */
+
                     }else{
                         console.log(resp)
                         conn.css('background-color','red');
