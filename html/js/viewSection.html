@@ -129,6 +129,8 @@
             <label for="auto_load">Load last shot automatically?</label><input type="checkbox" id="auto_load" checked>
             <button class="btn btn-success glyphicon glyphicon-cloud-upload" id="save_shot">Save to DB</button>
             <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
+            <label for="export_old">Include old format?</label>
+                <input type="checkbox" id="export_old">
         </div>
 
         <hr>
@@ -2087,7 +2089,8 @@
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
                     correction: this.selectors.abs_mult.val(),
-                    aux: this.m_current_ccm.data
+                    aux: this.m_current_ccm.data,
+                    old: $('#export_old')[0].checked
                 }, function (resp) {
                     this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
                     this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
@@ -2102,6 +2105,12 @@
                         absolute_correction: this.selectors.abs_mult.val()
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
+                    if('old' in resp){
+                        this.DownloadFile(resp.old.TR, (this.m_currentShot.shotn + '_T(R)_old.csv'));
+                        this.DownloadFile(resp.old.Tt, (this.m_currentShot.shotn + '_T(t)_old.csv'));
+                        this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
+                        this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
+                    }
                 }.bind(this)
             );
         };
