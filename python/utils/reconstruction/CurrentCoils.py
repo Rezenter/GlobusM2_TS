@@ -369,6 +369,8 @@ def linearization(x, y):
         sum_y += y[i]
         sum_xy += x[i] * y[i]
         sum_x2 += math.pow(x[i], 2)
+    if len(x) * sum_x2 - math.pow(sum_x, 2) == 0:
+        return 1e10, 0
     a = (len(x) * sum_xy - sum_x * sum_y) / (len(x) * sum_x2 - math.pow(sum_x, 2))
     b = (sum_y - a * sum_x) / len(x)
     return a, b
