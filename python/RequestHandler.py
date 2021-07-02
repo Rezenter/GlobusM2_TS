@@ -43,7 +43,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock.bind((UDP_IP, UDP_PORT))
 
-laser_maxTime = 15# debug 60 + 10  # seconds
+laser_maxTime = 60 + 10  # seconds
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
@@ -645,13 +645,13 @@ class Handler:
             line = shotn_file.readline()
             shotn = int(line)
         try:
-            #caen.connect()
-            #caen.send_cmd(caen.Commands.Arm, [shotn, True])
-            #print(caen.read())
+            caen.connect()
+            caen.send_cmd(caen.Commands.Arm, [shotn, True])
+            print(caen.read())
 
-            #caen.disconnect()
+            caen.disconnect()
 
-            las = 'ok'# self.las_fire(req)
+            las = self.las_fire(req)
 
             expect_shot = threading.Thread(target=self.check_shot)
             expect_shot.start()

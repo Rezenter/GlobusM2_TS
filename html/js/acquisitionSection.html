@@ -181,7 +181,7 @@
 
                     let state = $('#laser_state');
                     if(resp.ok){
-                        console.log(resp);
+                        //console.log(resp);
                         let string = '';
                         switch (resp.state){
                             case -1:
@@ -334,7 +334,7 @@
                             return;
                         }
                     }
-                    console.log(resp);
+                    console.log('diagArm', resp);
                     stateLas.css('background-color','red');
                     stateLas.html(resp.description);
                 }.bind(this)
