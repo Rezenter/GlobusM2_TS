@@ -229,6 +229,11 @@ class Handler:
                 'ok': False,
                 'description': '"correction" field is missing from request.'
             }
+        if 'old' not in req:
+            return {
+                'ok': False,
+                'description': '"old" field is missing from request.'
+            }
         print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4',
@@ -240,8 +245,15 @@ class Handler:
                     'description': err
                 }
         if 'aux' not in req:
-            return self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']))
-        return self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']), req['aux'])
+            resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']))
+            if req['old']:
+                resp['old'] = self.fine_processor.to_old_csv(req['from'], req['to'], float(req['correction']))
+        else:
+            resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']), req['aux'])
+            if req['old']:
+                resp['old'] = self.fine_processor.to_old_csv(req['from'], req['to'], float(req['correction']), req['aux'])
+
+        return resp
 
     def get_chord_integrals(self, req):
         resp = {}

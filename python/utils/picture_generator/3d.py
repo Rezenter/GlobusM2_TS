@@ -1,10 +1,11 @@
 import json
 import os
 
-shotn = 40266
+shotn = 40033
 db = 'd:/data/db/plasma/'
-t_start = 122
-t_stop = 221
+t_start = 112
+correction_mult = 0.6
+t_stop = 232
 
 if not os.path.isdir('%sresult/%05d' % (db, shotn)):
     fuck
@@ -44,7 +45,7 @@ with open('%sresult/%05d/%05d.json' % (db, shotn, shotn), 'r') as result_fp:
                     line = '%.2f, ' % event['timestamp']
                     for poly in event['T_e']:
                         if 'T' in poly:
-                            line += '%.1f, ' % poly['n']
+                            line += '%.3e, ' % (poly['n'] * correction_mult)
                         else:
                             line += '--, '
                     out_file.write(line[:-2] + '\n')

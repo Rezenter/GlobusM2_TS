@@ -493,3 +493,116 @@ class Processor:
             'nR': dens_prof,
             'aux': aux[:-1]
         }
+
+    def to_old_csv(self, x_from, x_to, correction, aux_data=None):
+        temp_evo = ''
+        line = 't, '
+        for poly in self.result['config']['poly']:
+            line += '%.dcm, %.dcm, ' % (poly['R'] * 0.1, poly['R'] * 0.1)
+        temp_evo += line[:-2] + '\n'
+        for event_ind in range(len(self.result['events'])):
+            if 'timestamp' in self.result['events'][event_ind]:
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.6f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
+                    for poly in self.result['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
+                    temp_evo += line[:-2] + '\n'
+        temp_prof = ''
+        names = 'R, '
+        for event in self.result['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.3fs, %.3fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+        temp_prof += names[:-2] + '\n'
+        for poly_ind in range(len(self.result['config']['poly'])):
+            line = '%.2f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
+            for event in self.result['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+            temp_prof += line[:-2] + '\n'
+
+        dens_evo = ''
+        line = 't, '
+        for poly in self.result['config']['poly']:
+            line += '%.dcm, %.dcm, ' % (poly['R'] * 0.1, poly['R'] * 0.1)
+        dens_evo += line[:-2] + '\n'
+        for event_ind in range(len(self.result['events'])):
+            if 'timestamp' in self.result['events'][event_ind]:
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.6f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
+                    for poly in self.result['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.2e, %.2e, ' % (poly['n'] * correction * 1e-6, poly['n_err'] * correction  * 1e-6)
+                    dens_evo += line[:-2] + '\n'
+
+        dens_prof = ''
+        names = 'R, '
+        for event in self.result['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.3fs, %.3fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+        dens_prof += names[:-2] + '\n'
+        for poly_ind in range(len(self.result['config']['poly'])):
+            line = '%.2f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
+            for event in self.result['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction * 1e-6,
+                                                      event['T_e'][poly_ind]['n_err'] * correction * 1e-6)
+            dens_prof += line[:-2] + '\n'
+        aux = ''
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
+        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
+        if aux_data is None:
+            return {
+                'ok': True,
+                'Tt': temp_evo,
+                'TR': temp_prof,
+                'nt': dens_evo,
+                'nR': dens_prof,
+                'aux': ''
+            }
+        for event in aux_data:
+            event_ind = event['event_index']
+            if 'error' in event:
+                continue
+            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
+                    length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'],
+                            event['data']['nl'] * correction, event['data']['nl_err'] * correction,
+                            length,
+                            event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
+                            event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
+                            event['data']['t_vol'], event['data']['t_vol_err'],
+                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
+                            event['data']['vol'],
+                            event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
+                            event['data']['surfaces'][-1]['ne'] * correction,
+                            event['data']['surfaces'][-1]['ne_err'] * correction)
+                else:
+                    aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                           (event_ind, self.result['events'][event_ind]['timestamp'])
+        return {
+            'ok': True,
+            'Tt': temp_evo,
+            'TR': temp_prof,
+            'nt': dens_evo,
+            'nR': dens_prof,
+            'aux': aux[:-1]
+        }
