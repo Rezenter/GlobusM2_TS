@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import json
 
 lambda0 = 1064.4
-lambda0 = 1047.6
+#lambda0 = 1047.6
 
 aux_filter = 'zs-10.csv'  # WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 aux_filter = None
@@ -94,10 +94,16 @@ def dump_expected(expected):
 
 #dump_kappa(8)  # tmp
 poly = 4
-#for ch in range(5):
-#    print(kappa.kappa(poly, ch + 1))
+for ch in range(5):
+    #print(kappa.kappa(poly, ch + 1))
+    pass
+for wl in wl_arr:
+    line = '%.2f ' % wl
+    for ch in range(5):
+        line += '%.4f ' % kappa.rel_sens(poly, ch + 1, wl)
+    print(line[:-1])
 print('\n\n')
-dump_spectrum(poly, '2020.11.20', 500)
+#dump_spectrum(poly, '2020.11.20', 500)
 fuck
 
 for poly in range(10):

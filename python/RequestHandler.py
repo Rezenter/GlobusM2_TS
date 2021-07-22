@@ -10,6 +10,7 @@ import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
+import python.subsyst.db as db
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.ShtRipper_local as shtRipper
@@ -77,6 +78,9 @@ class Handler:
                 'chord_int': self.get_chord_integrals,
                 'load_ccm': self.load_ccm,
                 'load_sht': self.combiscope,
+            },
+            'db':{
+                'get_shot': self.get_db_shot
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -88,6 +92,8 @@ class Handler:
         self.fine_processor = None
         self.las = laser1064.Chatter()
         self.state = {}
+
+        self.db = db.DB(self.plasma_path)
         return
 
     def handle_request(self, req):
@@ -667,3 +673,22 @@ class Handler:
                 'ok': False,
                 'description': ('Connection error: "%s"' % err)
             }
+
+    def get_db_shot(self, req):
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+        if not isinstance(req['shotn'], int):
+            return {
+                'ok': False,
+                'description': '"%s" is not a valid integer shotnumber.' % req['shotn']
+            }
+        data = self.db.get_shot(req['shotn'])
+        if 'ok' not in data:
+            return {
+                'ok': False,
+                'description':'Internal db error.'
+            }
+        return data

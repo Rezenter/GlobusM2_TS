@@ -18,7 +18,14 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
         uri = self.requestline.split(' ')[1]
         if uri != '/api':
             print('Wrong API uri: {0}'.format(uri))
-
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps({
+                'ok': False,
+                'description': 'Wrong API uri'
+            }), 'utf-8'))
+            return
 
         bodyLength = int(self.headers.get('content-length', 0))
         body = self.rfile.read(bodyLength).decode('utf-8')

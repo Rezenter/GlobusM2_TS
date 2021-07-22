@@ -75,6 +75,7 @@ class SpCal:
         return self.kappas[poly][ch - 1] / self.kappas[poly][0]
 
     def rel_sens(self, poly, ch, wl):
+        #return self.apd.qe(wl) * self.fil.transmission(ch, wl) * self.get_aux_filter(wl)  # debug for pictures without spectral calibration
         return self.apd.qe(wl) * self.kappa(poly, ch) * self.fil.transmission(ch, wl) * self.get_aux_filter(wl)
 
     def get_aux_filter(self, wl):
