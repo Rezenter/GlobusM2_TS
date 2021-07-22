@@ -2,25 +2,26 @@ import json
 import matplotlib.pyplot as plt
 import math
 
-shotn = 39629
+shotn = 38800
 event_ind = 39
 
 theta_count = 360
 r42 = 42
 gamma_shift = 1
 
+"""
 with open('d:/data/db/plasma/result/%05d/%05d.json' % (shotn, shotn), 'r') as ts_fp:
     ts = json.load(ts_fp)
 if ts is None:
     fuck
-
+"""
 # y:/  = \\172.16.12.127\Data
 with open('y:/!!!CURRENT_COIL_METHOD/mcc_%d.json' % shotn, 'r') as mcc_file:
     data = json.load(mcc_file)
 if data is None:
     fuck
 
-requested_time = ts['events'][event_ind]['timestamp'] * 0.001
+requested_time = 0.2#ts['events'][event_ind]['timestamp'] * 0.001
 timestamps = data['time']['variable']
 
 t_ind = 0
@@ -99,6 +100,15 @@ chord = {
     'down': [],
     'mid': {}
 }
+
+plt.title('#%d timestamp %.1f ms' % (shotn, timestamps[t_ind] * 1000))
+plt.xlim(0, 65)
+plt.ylim(-50, 50)
+plt.xlabel('R, cm')
+plt.ylabel('Z, cm')
+#plt.savefig('figs/poly%d.png' % poly)
+#print('processed %d' % poly)
+plt.show()
 
 for poly_ind in range(len(ts['polys'])):
     r = ts['polys'][poly_ind]['R'] * 0.1

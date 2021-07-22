@@ -15,17 +15,18 @@ import json
 db_path = 'd:/data/db/'
 calibr_path = 'calibration/abs/'
 
-abs_filename = '2021.01.22_raw'
+abs_filename = '2021.07.20_raw'
 abs_calibration = {}
 with open('%s%s%s.json' % (db_path, calibr_path, abs_filename), 'r') as abs_file:
     abs_calibration = json.load(abs_file)
 
 stray = None
 
+
 def process_point(point):
     n_N2 = phys_const.torr_to_pa(point['pressure']) / (phys_const.k_b * (abs_calibration['temperature'] + 273))
 
-    with rawToSignals.Integrator(db_path, point['shotn'], False, '2020.12.08_raman') as integrator:
+    with rawToSignals.Integrator(db_path, point['shotn'], False, '2021.06.10_g10') as integrator:
         signals = {'%d' % poly: {'val': 0,
                                  'weight': 0} for poly in range(10)}
         laser = 0
@@ -54,11 +55,8 @@ def process_point(point):
             'measured_w/o_stray': {}
         }
         for poly_ind in range(10):
-            if stray is None:
-                result['measured']['%d' % poly_ind] = signals['%d' % poly_ind]['val'] / signals['%d' % poly_ind]['weight']
-            else:
-                result['measured']['%d' % poly_ind] = signals['%d' % poly_ind]['val'] / signals['%d' % poly_ind][
-                    'weight']
+            result['measured']['%d' % poly_ind] = signals['%d' % poly_ind]['val'] / signals['%d' % poly_ind]['weight']
+            if stray is not None:
                 result['measured_w/o_stray']['%d' % poly_ind] = result['measured']['%d' % poly_ind] - \
                                                                 stray['measured']['%d' % poly_ind]
                 result['A']['%d' % poly_ind] = result['measured_w/o_stray']['%d' % poly_ind] / \
