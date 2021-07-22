@@ -290,7 +290,7 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            front_ind = find_front_findex(signal, 80+300)#self.header['triggerThreshold'])
+            front_ind = find_front_findex(signal, signal[0] + self.header['triggerThreshold'])
             if front_ind == -1:
                 sync_event.append(True)
                 error = 'Laser signal does not reach threshold.'
@@ -344,7 +344,7 @@ class Integrator:
             return laser, error
 
         if board_count < len(self.data):
-            error = 'boards failed to get laser signal'
+            error = 'not all boards got laser signal'
         else:
             laser['ave']['pre_std'] /= board_count
             laser['ave']['int'] /= board_count
