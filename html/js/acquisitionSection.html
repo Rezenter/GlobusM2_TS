@@ -51,6 +51,9 @@
     <div id="diag_row">
         <p>Diagnostics control</p>
             <button class="btn btn-danger" id="diag_arm_button">Arm ADC and fire laser.</button>
+            <label for="config_select">Configuration:</label><select id="config_select"></select>
+            <label for="spectral_select">Spectral calibr.:</label><select id="spectral_select"></select>
+            <label for="abs_select">Abs. calibr.:</label><select id="abs_select"></select>
         </div>
     </div>
 </body>
@@ -97,6 +100,11 @@
             let req = {
                 reqtype: 'arm',
                 isPlasma: $('#is_plasma')[0].checked,
+                header: {
+                    config: $('#config_select').val(),
+                    abs_cal: $('#abs_select').val(),
+                    spectral_cal: $('#spectral_select').val()
+                }
                 //shotn: shotn
             }
             this.RequestADC(
@@ -316,6 +324,31 @@
             $.post('/api', JSON.stringify(req), callback, 'json');
         };
 
+        this.UpdateSelects = function() {
+            this.RequestDiag(
+                {
+                    reqtype: 'get_conf'
+                }
+                , function (resp) {
+                    this.m_config_list = resp['config'];
+                    this.m_spectralConf_list = resp['spectral_cal'];
+                    this.m_absConf_list = resp['abs_cal'];
+                    //options = ['<option>2020.12.10</option>'];
+                    let options = [];
+                    this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#config_select').html(options);
+
+                    options = [];
+                    this.m_absConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#abs_select').html(options);
+
+                    options = [];
+                    this.m_spectralConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#spectral_select').html(options);
+                }.bind(this)
+            );
+        };
+
         this.DiagArm = function(ev){
             let stateADC = $('#ADC_state');
             stateADC.css('background-color','grey');
@@ -325,7 +358,12 @@
             stateLas.html('Requesting...');
             this.RequestDiag(
                 {
-                    reqtype: 'arm'
+                    reqtype: 'arm',
+                    header: {
+                        config: $('#config_select').val(),
+                        abs_cal: $('#abs_select').val(),
+                        spectral_cal: $('#spectral_select').val()
+                    }
                 }
                 , function (resp) {
                     if(resp.ok){
@@ -351,6 +389,8 @@
             $('#laser_idle_button').on('click', this, this.LasIdle);
 
             $('#diag_arm_button').on('click', this, this.DiagArm);
+
+            this.UpdateSelects();
         };
 
         this.ConnectControls();

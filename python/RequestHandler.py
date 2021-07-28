@@ -54,7 +54,8 @@ class Handler:
         self.HandlingTable = {
             'diag': {
                 'arm': self.arm_all,
-                'status': self.diag_status
+                'status': self.diag_status,
+                'get_conf': self.get_configs
             },
             'adc': {
                 'status': self.fast_status,
@@ -534,6 +535,11 @@ class Handler:
                 'description': '"isPlasma" field is missing from request.'
             }
         isPlasma = req['isPlasma']
+        if 'header' not in req:
+            return {
+                'ok': False,
+                'description': '"header" field is missing from request.'
+            }
         if 'shotn' in req:
             shotn = int(req['shotn'])
         else:
@@ -559,7 +565,7 @@ class Handler:
                 'description': ('Connection error: "%s"' % err)
             }
         else:
-            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
+            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, req['header']])
             print(caen.read())
 
             caen.disconnect()
@@ -647,12 +653,17 @@ class Handler:
                 'ok': False,
                 'description': 'Shotn file "%s" not found.' % shot_filename
             }
+        if 'header' not in req:
+            return {
+                'ok': False,
+                'description': '"header" field is missing from request.'
+            }
         with open(shot_filename, 'r') as shotn_file:
             line = shotn_file.readline()
             shotn = int(line)
         try:
             caen.connect()
-            caen.send_cmd(caen.Commands.Arm, [shotn, True])
+            caen.send_cmd(caen.Commands.Arm, [shotn, True, req['header']])
             print(caen.read())
 
             caen.disconnect()
@@ -692,3 +703,26 @@ class Handler:
                 'description':'Internal db error.'
             }
         return data
+
+    def get_configs(self, req):
+        resp = {}
+
+        tmp = sorted(os.listdir(self.config_path), reverse=True)
+        resp['config'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['config'].append(entry[:-5])
+
+        tmp = sorted(os.listdir(self.spectral_path), reverse=True)
+        resp['spectral_cal'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['spectral_cal'].append(entry[:-5])
+
+        tmp = sorted(os.listdir(self.abs_path), reverse=True)
+        resp['abs_cal'] = []
+        for entry in tmp:
+            if entry.endswith('.json'):
+                resp['abs_cal'].append(entry[:-5])
+        resp['ok'] = True
+        return resp
