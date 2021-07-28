@@ -559,7 +559,9 @@ class Handler:
                 'description': ('Connection error: "%s"' % err)
             }
         else:
-            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma])
+            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, {
+                'test': True
+            }])
             print(caen.read())
 
             caen.disconnect()

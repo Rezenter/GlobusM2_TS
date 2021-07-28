@@ -14,7 +14,7 @@ class Commands:  # describes all implemented commands
 
     class Arm:
         _cmd = "arm"
-        _args = ["shotn", "isPlasma"]
+        _args = ["shotn", "isPlasma", "aux"]
 
     class Disarm:
         _cmd = "disarm"
