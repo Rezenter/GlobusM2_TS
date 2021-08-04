@@ -408,7 +408,8 @@ class Integrator:
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
                                                        self.config['preamp']['charge'] *
                                                        self.config['preamp']['feedbackResistance'] *
-                                                       sp_ch['fast_gain'])
+                                                       sp_ch['fast_gain'] *
+                                                       self.config['preamp']['matchingFastGain'])
             if self.config['preamp']['voltageDivider']:
                 photoelectrons *= 2
             pre_std = statistics.stdev(signal[:integration_from], zero)
