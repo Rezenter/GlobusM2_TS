@@ -405,11 +405,16 @@ class Integrator:
                     integral += self.time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
             else:
                 print(error)
+            if 'matchingFastGain' not in self.config['preamp']:
+                matching_gain = 1
+                print('WARNING! forgotten preamp gain')
+            else:
+                matching_gain = self.config['preamp']['matchingFastGain']
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
                                                        self.config['preamp']['charge'] *
                                                        self.config['preamp']['feedbackResistance'] *
                                                        sp_ch['fast_gain'] *
-                                                       self.config['preamp']['matchingFastGain'])
+                                                       matching_gain)
             if self.config['preamp']['voltageDivider']:
                 photoelectrons *= 2
             pre_std = statistics.stdev(signal[:integration_from], zero)

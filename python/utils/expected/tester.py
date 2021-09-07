@@ -27,8 +27,8 @@ exit()
 fil = filter.Filters()
 apd = qe.APD()
 
-cross = selden.Selden(0, '2020.11.20')
-cross9 = selden.Selden(9, '2020.11.20')
+cross = selden
+cross9 = selden
 
 temp = 500  # eV
 wl = 900  # nm

@@ -23,9 +23,9 @@ def interpolate(x1, x, x2, y1, y2):
 
 
 def filter(res):
-    if res['Terr'] / res['T'] > 0.3:
+    if res['Terr'] / res['T'] > 0.4:
         res['error'] = 'high Te error'
-    elif res['n_err'] / res['n'] > 0.1:
+    elif res['n_err'] / res['n'] > 0.2:
         res['error'] = 'high ne error'
     elif res['chi2'] > 20:
         res['error'] = 'high chi'
