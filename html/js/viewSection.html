@@ -1227,7 +1227,7 @@
             zoomEnabled: true,
             zoomType: 'xy',
             title: {
-                text: "CCM reconstruction",
+                text: "CFM reconstruction",
                 fontSize: 14,
                 fontFamily: 'arial'
             },
@@ -1320,7 +1320,7 @@
             zoomEnabled: true,
             zoomType: 'xy',
             title: {
-                text: "CCM reconstruction",
+                text: "CFM reconstruction",
                 fontSize: 14,
                 fontFamily: 'arial'
             },
@@ -2454,7 +2454,7 @@
                     if(this.m_current_ccm.ok){
                         this.DrawCCM();
                     }else{
-                        alert('CCM data error! See console for details.');
+                        alert('CFM data error! See console for details.');
                     }
                 }.bind(this)
             );
@@ -3423,14 +3423,14 @@
         <a href="#" class="context-menu__link" data-action="save">Save as png</a>
     </li>
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="ccm">Load CCM data</a>
+        <a href="#" class="context-menu__link" data-action="ccm">Load CFM data</a>
     </li>
                     `;
 
                     if(taskItemInContext.attributes.getNamedItem('ccm') != null){
                         html += `
     <li class="context-menu__item">
-        <a href="#" class="context-menu__link" data-action="surf">Show CCM reconstruction & Surfaces</a>
+        <a href="#" class="context-menu__link" data-action="surf">Show CFM reconstruction & Surfaces</a>
     </li>
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="sht">Load sht file</a>
