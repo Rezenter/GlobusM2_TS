@@ -660,6 +660,7 @@
 
         this.m_T_profile_data = [];
         this.m_T_profile_chart = new CanvasJS.Chart("T_profile_chart", {
+            zoomEnabled: true,
             title: {
                 text: 'Electron temperature profile',
                 fontSize: 14,
@@ -675,8 +676,8 @@
             axisX: {
                 title: "R, mm",
                 titleFontSize: 12,
-                minimum: 350,
-                maximum: 570,
+                minimum: 400,
+                maximum: 600,
                 interval: 20,
                 fontFamily: 'arial'
             },
@@ -691,6 +692,7 @@
         this.m_T_profile_chart.render();
         this.m_n_profile_data = [];
         this.m_n_profile_chart = new CanvasJS.Chart("n_profile_chart", {
+            zoomEnabled: true,
             title: {
                 text: 'Electron density profile',
                 fontSize: 14,
@@ -709,8 +711,8 @@
             axisX: {
                 title: "R, mm",
                 titleFontSize: 12,
-                minimum: 350,
-                maximum: 570,
+                minimum: 400,
+                maximum: 600,
                 interval: 20,
                 fontFamily: 'arial'
             },

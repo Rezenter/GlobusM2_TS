@@ -2,15 +2,13 @@ import json
 import os
 import logging
 import time
-import threading
-import socket
-import select
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.subsyst.db as db
+import python.subsyst.tokamak as tokamak
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.ShtRipper_local as shtRipper
@@ -38,16 +36,9 @@ DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
 TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
 
-UDP_IP = "192.168.10.41"
-UDP_PORT = 8888
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-sock.bind((UDP_IP, UDP_PORT))
-
 laser_maxTime = 60 + 10  # seconds
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-
 
 class Handler:
     def __init__(self):
@@ -91,9 +82,11 @@ class Handler:
         self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
         self.raw_processor = None
         self.fine_processor = None
-        self.las = laser1064.Chatter()
+        self.las = laser1064.ControlUnit()
         self.state = {}
 
+        self.tokamak = tokamak.Chatter()
+        self.las_cool = laser1064.Coolant()
         self.db = db.DB(self.plasma_path)
         return
 
@@ -605,10 +598,17 @@ class Handler:
 
     def las_connect(self, req):
         self.state['las'] = self.las.connect()
+        self.state['las_cool'] = self.las_cool.connect()
+        self.tokamak.connect()
         return self.state['las']
 
     def las_status(self, req):
         self.state['las'] = self.las.status()
+
+        print('Last shot:', time.asctime(time.localtime(self.tokamak.last_event)))
+        if len(self.las_cool.log):
+            print('water temperature:', self.las_cool.log[-1]['temperature'])
+
         return self.state['las']
 
     def las_fire(self, req):
@@ -623,28 +623,6 @@ class Handler:
         self.las_status({})
         self.fast_status({})
         return self.state
-
-    def check_shot(self):
-        logging.info("Thread: expecting tokamak shot...")
-        sock.setblocking(False)
-
-        ready_to_read, a, b = select.select(
-                            [sock],
-                            [],
-                            [],
-                            laser_maxTime)
-        if len(ready_to_read):
-            data = sock.recv(8)
-            if int.from_bytes(data, 'big') == 255:
-                logging.info("Thread: received packet")
-            else:
-                logging.info(data)
-                logging.info("Thread: WTF packet")
-        else:
-            logging.info("Thread: timed out")
-        # anyway
-        self.las_idle({})
-        self.fast_disarm({})
 
     def arm_all(self, req):
         shot_filename = SHOTN_FILE
@@ -670,8 +648,7 @@ class Handler:
 
             las = self.las_fire(req)
 
-            expect_shot = threading.Thread(target=self.check_shot)
-            expect_shot.start()
+            # set flag here
 
             return {
                 'ok': True,

@@ -1,15 +1,12 @@
 import socket
 from datetime import datetime
 import time
+import threading
+from pyModbusTCP.client import ModbusClient
+import struct
 
-IP = '192.168.10.44'
-PORT = 4001
-SOCK_TIMEOUT = 1  # timeout for network operations
-
-BUFFER_SIZE = 16
-ENCODING = 'utf-8'
-PACKET_END = '\n'
-SEPARATOR = ' '
+# dependencies:
+#   pyModbusTCP
 
 
 class Cmd:
@@ -25,11 +22,6 @@ class Cmd:
     error = 'J0800'
 
 
-def pack(data):
-    data = bytes(data + SEPARATOR, ENCODING)
-    return data + bytes(crc(data) + PACKET_END, ENCODING)
-
-
 def crc(packet):
     res = 0
     for byte in packet:
@@ -37,8 +29,17 @@ def crc(packet):
     return hex(res)[-2:].upper()
 
 
-class Chatter:
+class ControlUnit:
     def __init__(self):
+        self.IP = '192.168.10.44'
+        self.PORT = 4001
+        self.SOCK_TIMEOUT = 1  # timeout for network operations
+
+        self.BUFFER_SIZE = 16
+        self.ENCODING = 'utf-8'
+        self.PACKET_END = '\n'
+        self.SEPARATOR = ' '
+
         self.sock = None
         #self.connect()
         self.err = None
@@ -52,9 +53,9 @@ class Chatter:
         if self.sock:
             self.sock.close()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(SOCK_TIMEOUT)
+        self.sock.settimeout(self.SOCK_TIMEOUT)
         try:
-            self.sock.connect((IP, PORT))
+            self.sock.connect((self.IP, self.PORT))
         except socket.timeout:
             self.set_err('Laser connection timeout.')
             return {
@@ -71,8 +72,12 @@ class Chatter:
         now = datetime.now()
         print('Las: ' + now.strftime("%H:%M:%S.%f ") + message)
 
+    def pack(self, data):
+        data = bytes(data + self.SEPARATOR, self.ENCODING)
+        return data + bytes(crc(data) + self.PACKET_END, self.ENCODING)
+
     def send(self, packet):
-        bin_packet = pack(packet)
+        bin_packet = self.pack(packet)
         if not self.sock:
             self.set_err('Socket is closed.')
             return {
@@ -104,7 +109,7 @@ class Chatter:
 
     def receive(self):
         try:
-            data = self.sock.recv(BUFFER_SIZE)
+            data = self.sock.recv(self.BUFFER_SIZE)
         except socket.timeout:
             self.set_err('Receive timeout.')
             return None
@@ -113,14 +118,14 @@ class Chatter:
             return None
         else:
             #self.disp('received: %s.' % data)
-            if chr(data[-1]) != PACKET_END:
+            if chr(data[-1]) != self.PACKET_END:
                 self.set_err('Wrong packet end: %s.' % data)
                 return None
             data = data[:-1]
             cmd = chr(data[0])
 
             if cmd == 'A':
-                if chr(data[-1]) != SEPARATOR:
+                if chr(data[-1]) != self.SEPARATOR:
                     self.set_err('Wrong packet separator: %s.' % data)
                     return None
                 return {
@@ -128,18 +133,18 @@ class Chatter:
                     'code': int(data[1:-1])
                 }
             elif cmd == 'K':
-                if data[-2:] != bytes(crc(data[:-2]), ENCODING):
+                if data[-2:] != bytes(crc(data[:-2]), self.ENCODING):
                     self.set_err('Wrong CRC: %s, expected: %s.' % (data, crc(data[:-2])))
                     return None
                 data = data[1:-2]
-                if chr(data[-1]) != SEPARATOR:
+                if chr(data[-1]) != self.SEPARATOR:
                     self.set_err('Wrong packet separator: %s.' % data)
                     return None
                 data = data[:-1]
 
-                if data[:4] == bytes(Cmd.state[1:], ENCODING):
+                if data[:4] == bytes(Cmd.state[1:], self.ENCODING):
                     return self.parse_status(int(data[4:], base=16))
-                elif data[:4] == bytes(Cmd.error[1:], ENCODING):
+                elif data[:4] == bytes(Cmd.error[1:], self.ENCODING):
                     return self.parse_error(int(data[4:], base=16))
                 else:
                     self.set_err('Unknown cmd code %s.' % data[4:])
@@ -291,3 +296,48 @@ class Chatter:
 
     def status(self):
         return self.send(Cmd.state)
+
+
+class Coolant:
+    def __init__(self):
+        self.dt = 1
+
+        self.ip = "192.168.10.47"
+        self.port = 502
+        self.unit_id = 2
+
+        self.client = None
+        self.worker = None
+        self.log = []
+        self.connected = self.connect()
+
+    def connect(self) -> bool:
+        self.client = ModbusClient(host=self.ip, port=self.port, unit_id=self.unit_id, auto_open=True)
+        self.client.read_input_registers(30, 2)  # needed for is_open function
+        if not self.client.is_open():
+            return False
+
+        self.worker = threading.Thread(target=self.receive)
+        self.worker.start()
+        return True
+
+    def disp(self, message):
+        print('udp: ' + datetime.now().strftime("%H:%M:%S.%f ") + message)
+
+    def receive(self):
+        while self.client.is_open():
+            resp = self.client.read_input_registers(30, 2)
+            if resp:
+                f = resp[0].to_bytes(2, 'big')
+                s = resp[1].to_bytes(2, 'big')
+
+                t = time.time()
+                self.log.append({
+                    'temperature': struct.unpack('>f', s + f)[0],
+                    'time_f': t,
+                    'time': time.localtime(t)
+                })
+
+            time.sleep(self.dt)
+        self.connected = False
+        self.disp("worker exit")
