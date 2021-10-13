@@ -1,4 +1,4 @@
-import selden
+import sp_dens
 import sp_cal
 import matplotlib.pyplot as plt
 import json
@@ -9,7 +9,7 @@ lambda0 = 1064.4
 aux_filter = 'zs-10.csv'  # WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 aux_filter = None
 
-wl_start = 700
+wl_start = 400
 wl_stop = 1099
 wl_step = 1
 
@@ -79,9 +79,14 @@ def dump_kappa(poly):
 
 
 def dump_spectrum(poly, config, T):
-    cross = selden.Selden(poly, config, lambda0)
+    cross = sp_dens.Selden(poly, config, lambda0)
+    cross_check = sp_dens
+
     for wl in wl_arr:
-        print('%.1f %.5f' % (wl, cross.scat_power_dens(T, wl)))
+        print('%.2e %.5f %.5f' % ((wl - lambda0) / lambda0, cross.scat_power_dens(T, wl), cross_check.scat_power_dens(T, wl)))
+
+#dump_spectrum(4, '2020.11.20', 10000)
+#fuck
 
 
 def dump_expected(expected):
@@ -93,23 +98,36 @@ def dump_expected(expected):
 
 
 #dump_kappa(8)  # tmp
-poly = 4
-for ch in range(5):
-    #print(kappa.kappa(poly, ch + 1))
-    pass
+kappas = [[] for ch in range(5)]
+for poly in range(10):
+    #pass
+    line = ''
+    for ch in range(5):
+        val = kappa.kappa(poly, ch + 1)
+        kappas[ch].append(val)
+        line += '%.2f ' % val
+    print(line)
+
+line = '\n'
+for ch in kappas:
+    line += '%.2f ' % (sum(ch) / len(ch))
+print(line)
+fuck
 for wl in wl_arr:
     line = '%.2f ' % wl
     for ch in range(5):
         line += '%.4f ' % kappa.rel_sens(poly, ch + 1, wl)
     print(line[:-1])
-print('\n\n')
+print('\n\n here')
 #dump_spectrum(poly, '2020.11.20', 500)
 fuck
 
 for poly in range(10):
     print('processing poly %d...' % poly)
     #poly = 8
-    cross = selden.Selden(poly, '2020.11.20', lambda0)
+    cross = sp_dens.Selden(poly, '2020.11.20', lambda0)
+    cross_check = sp_dens.Naito(170, 1064)
+
     expected = [[] for ch in range(5)]
     for ch in range(5):
         for T in temp:
