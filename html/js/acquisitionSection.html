@@ -41,6 +41,7 @@
                 <button class="btn btn-danger" id="laser_fire_button">Fire</button>
                 <button class="btn btn-success" id="laser_idle_button">Idle</button>
             </div>
+            <div id="coolant_chart" style="width:100%; height:200px;" class="context-target"></div>
         </div>
         <!--
         <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
@@ -54,6 +55,7 @@
             <label for="config_select">Configuration:</label><select id="config_select"></select>
             <label for="spectral_select">Spectral calibr.:</label><select id="spectral_select"></select>
             <label for="abs_select">Abs. calibr.:</label><select id="abs_select"></select>
+            <button class="btn btn-success" id="diag_status_button">status.</button>
         </div>
     </div>
 </body>
@@ -62,6 +64,48 @@
         this.m_laser_warm = null;
         this.m_laser_warming = null;
         this.m_lasWatchdog = null;
+
+        this.m_coolant_chart = new CanvasJS.Chart("coolant_chart", {
+            title: {
+                text: 'Laser coolant temperature',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'coolant temperature (deg C)',
+                titleFontSize: 12,
+                minimum: 20,
+                maximum: 30,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time s",
+                titleFontSize: 12,
+                minimum: -600,
+                maximum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial'
+            },
+            data: [
+                {
+                    type: "line",
+                    color: '#000000',
+                    visible: true,
+                    markerType: "none",
+                    connectNullData: true,
+                    nullDataLineDashType: "dot",
+                    dataPoints: []
+                }
+            ]
+        });
+        this.m_coolant_chart.render();
 
         this.RequestADC = function (req, callback) {
             req.subsystem = 'adc';
@@ -379,6 +423,25 @@
             );
         }.bind(this);
 
+        this.DiagStatus = function(ev){
+            this.RequestDiag(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    console.log('diagStatus', resp);
+                    /*
+                    this.m_coolant_chart.options.data[0].dataPoints.push(
+                        {
+                            x: this.m_currentShot.events[event_ind].timestamp,
+                            y: null
+                        }
+                    );
+                     */
+                }.bind(this)
+            );
+        }.bind(this);
+
         this.ConnectControls = function () {
             $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.ADCArm);
@@ -389,6 +452,7 @@
             $('#laser_idle_button').on('click', this, this.LasIdle);
 
             $('#diag_arm_button').on('click', this, this.DiagArm);
+            $('#diag_status_button').on('click', this, this.DiagStatus);
 
             this.UpdateSelects();
         };

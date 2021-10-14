@@ -9,13 +9,10 @@ import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
+import python.subsyst.crate as crate
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.ShtRipper_local as shtRipper
-
-
-def __init__():
-    return
 
 
 DB_PATH = 'd:/data/db/'
@@ -39,6 +36,7 @@ TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
 laser_maxTime = 60 + 10  # seconds
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
 
 class Handler:
     def __init__(self):
@@ -85,8 +83,9 @@ class Handler:
         self.las = laser1064.ControlUnit()
         self.state = {}
 
-        self.tokamak = tokamak.Chatter()
+        self.tokamak = tokamak.Sync(self.diag_disarm)
         self.las_cool = laser1064.Coolant()
+        self.crate = crate.Crate()
         self.db = db.DB(self.plasma_path)
         return
 
@@ -511,12 +510,12 @@ class Handler:
             caen.disconnect()
 
             if resp['status']:
-
                 self.state['fast'] = {
                     'ok': True,
                     'resp': resp,
                     'shotn': shotn
                 }
+                self.crate.connect()
             else:
                 self.state['fast'] = resp
         return self.state['fast']
@@ -558,7 +557,11 @@ class Handler:
                 'description': ('Connection error: "%s"' % err)
             }
         else:
-            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, req['header']])
+            injection = req['header']
+            injection.update({
+
+            })
+            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, injection])
             print(caen.read())
 
             caen.disconnect()
@@ -604,11 +607,6 @@ class Handler:
 
     def las_status(self, req):
         self.state['las'] = self.las.status()
-
-        print('Last shot:', time.asctime(time.localtime(self.tokamak.last_event)))
-        if len(self.las_cool.log):
-            print('water temperature:', self.las_cool.log[-1]['temperature'])
-
         return self.state['las']
 
     def las_fire(self, req):
@@ -619,10 +617,18 @@ class Handler:
         self.state['las'] = self.las.set_state_1()
         return self.state['las']
 
-    def diag_status(self):
+    def diag_status(self, req):
         self.las_status({})
         self.fast_status({})
+        self.state['coolant'] = self.las_cool.log
+        self.state['tokamak'] = self.tokamak.log
+        self.state['crate'] = self.crate.log
         return self.state
+
+    def diag_disarm(self):
+        self.fast_disarm({})
+        self.las_idle({})
+        print('auto disarmed')
 
     def arm_all(self, req):
         shot_filename = SHOTN_FILE

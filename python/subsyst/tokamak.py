@@ -5,16 +5,17 @@ import threading
 import select
 
 
-class Chatter:
-    def __init__(self):
+class Sync:
+    def __init__(self, callback):
         self.ip = "192.168.10.41"
         self.port = 8888
 
         self.sock = None
         self.worker = None
-        self.last_event = time.time()
-        self.timeout = 1
+        self.timeout = 0.5
         self.stop = False
+        self.log = []
+        self.callback = callback
         self.connect()
 
     def connect(self):
@@ -32,8 +33,12 @@ class Chatter:
         self.stop = False
         self.worker.start()
 
+    def close(self):
+        self.stop = True
+        time.sleep(self.timeout)
+
     def disp(self, message):
-        print('udp: ' + datetime.now().strftime("%H:%M:%S.%f ") + message)
+        print('udp: ' + datetime.now().strftime("%H:%M:%S ") + message)
 
     def receive(self):
         while self.sock and not self.stop:
@@ -45,11 +50,16 @@ class Chatter:
             if len(ready_to_read):
                 data = self.sock.recv(8)
                 if int.from_bytes(data, 'big') == 255:
-                    self.last_event = time.time()
-                    self.disp("START ____________")
+                    t = time.time()
+                    self.log.append({
+                        'time_f': t,
+                        'time': time.localtime(t)
+                    })
+                    self.callback()
+                    self.disp("TOKAMAK START ____________")
                 else:
                     self.disp("WTF")
             else:
-                #continue
+                continue
                 self.disp("timed out")
-        self.disp("worker exit")
+        self.disp("udp worker exit")

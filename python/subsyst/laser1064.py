@@ -4,6 +4,7 @@ import time
 import threading
 from pyModbusTCP.client import ModbusClient
 import struct
+import math
 
 # dependencies:
 #   pyModbusTCP
@@ -309,6 +310,7 @@ class Coolant:
         self.client = None
         self.worker = None
         self.log = []
+        self.log_size = math.ceil(60 * 10 / self.dt)
         self.connected = self.connect()
 
     def connect(self) -> bool:
@@ -321,8 +323,12 @@ class Coolant:
         self.worker.start()
         return True
 
+    def close(self):
+        self.client.close()
+        time.sleep(self.dt)
+
     def disp(self, message):
-        print('udp: ' + datetime.now().strftime("%H:%M:%S.%f ") + message)
+        print('coolant: ' + datetime.now().strftime("%H:%M:%S ") + message)
 
     def receive(self):
         while self.client.is_open():
@@ -337,7 +343,10 @@ class Coolant:
                     'time_f': t,
                     'time': time.localtime(t)
                 })
+                if len(self.log) > self.log_size:
+                    self.log.pop(0)
+
 
             time.sleep(self.dt)
         self.connected = False
-        self.disp("worker exit")
+        self.disp("coolant worker exit")

@@ -661,6 +661,7 @@
         this.m_T_profile_data = [];
         this.m_T_profile_chart = new CanvasJS.Chart("T_profile_chart", {
             zoomEnabled: true,
+            zoomType: 'xy',
             title: {
                 text: 'Electron temperature profile',
                 fontSize: 14,
@@ -693,6 +694,7 @@
         this.m_n_profile_data = [];
         this.m_n_profile_chart = new CanvasJS.Chart("n_profile_chart", {
             zoomEnabled: true,
+            zoomType: 'xy',
             title: {
                 text: 'Electron density profile',
                 fontSize: 14,
