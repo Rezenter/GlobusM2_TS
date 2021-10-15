@@ -41,8 +41,8 @@
                 <button class="btn btn-danger" id="laser_fire_button">Fire</button>
                 <button class="btn btn-success" id="laser_idle_button">Idle</button>
             </div>
-            <div id="coolant_chart" style="width:100%; height:200px;" class="context-target"></div>
         </div>
+        <div id="coolant_chart" style="width:100%; height:400px;" class="context-target"></div>
         <!--
         <img alt="No connection to camera!" style="-webkit-user-select: none; margin: auto;"
              src="http://192.168.10.46/action/stream?subject=mjpeg" width="500px" height="500px">
@@ -73,16 +73,33 @@
             },
             axisY: {
                 includeZero: true,
-                title: 'coolant temperature (deg C)',
+                title: 'coolant temperature (°C)',
                 titleFontSize: 12,
-                minimum: 20,
+                minimum: 22,
                 maximum: 30,
-                fontFamily: 'arial'
+                fontFamily: 'arial',
+                stripLines: [
+                    {
+                        value: 26.5,
+                        color: '#00FF00',
+                        label : "Set point",
+                        labelFontColor: "#00FF00",
+                        labelPlacement:"inside",
+                    },
+                    {
+                        value:29,
+                        color:'#FF0000',
+                        label : "CRITICAL",
+                        labelFontColor: "#FF0000",
+                        labelPlacement:"inside",
+                    }
+
+                ]
             },
             axisX: {
                 title: "Time s",
                 titleFontSize: 12,
-                minimum: -600,
+                minimum: -900,
                 maximum: 0,
                 crosshair: {
                     enabled: true,
@@ -429,15 +446,14 @@
                     reqtype: 'status'
                 }
                 , function (resp) {
-                    console.log('diagStatus', resp);
-                    /*
-                    this.m_coolant_chart.options.data[0].dataPoints.push(
-                        {
-                            x: this.m_currentShot.events[event_ind].timestamp,
-                            y: null
-                        }
-                    );
-                     */
+                    console.log('diagStatus new', resp);
+                    this.m_coolant_chart.options.data[0].dataPoints = [];
+
+                    resp.coolant.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
+                        y: entry.temperature,
+                        x: entry.time_f - resp.coolant[resp.coolant.length - 1].time_f
+                    }));
+                    this.m_coolant_chart.render();
                 }.bind(this)
             );
         }.bind(this);

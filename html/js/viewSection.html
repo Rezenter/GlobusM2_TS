@@ -3006,6 +3006,7 @@
                     });
                     resized = true;
                 } else {
+                    console.log('left');
                     this.m_timestamp_chart.navigator.slider.set("maximum",
                         this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
                     this.m_timestamp_chart.navigator.slider.set("minimum",
@@ -3015,6 +3016,7 @@
                         maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                     });
                     resized = true;
+                    console.log('left ok');
                 }
             } else if (event.key === 'ArrowRight') {
                 event.preventDefault();

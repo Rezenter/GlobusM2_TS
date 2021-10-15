@@ -81,6 +81,9 @@ class ControlUnit:
         bin_packet = self.pack(packet)
         if not self.sock:
             self.set_err('Socket is closed.')
+
+            print('LAS ERROR 1')
+
             return {
                 'ok': False,
                 'description': self.err
@@ -89,6 +92,9 @@ class ControlUnit:
             send = self.sock.send(bin_packet)
         except socket.timeout:
             self.set_err('Laser responce timeout.')
+
+            print('LAS ERROR 2')
+
             return {
                 'ok': False,
                 'description': self.err
@@ -96,6 +102,10 @@ class ControlUnit:
         if send == len(bin_packet):
             recv = self.receive()
             if recv is None:
+                self.set_err(self.err)
+
+                print('LAS ERROR 3')
+
                 return {
                     'ok': False,
                     'description': self.err
@@ -103,6 +113,9 @@ class ControlUnit:
             return recv
 
         self.set_err('Warning! Failed to transmit packet %s as %s!' % (packet, bin_packet))
+
+        print('LAS ERROR 4')
+
         return {
             'ok': False,
             'description': self.err
@@ -269,8 +282,6 @@ class ControlUnit:
         else:
             self.disp('Error in this code.')
 
-
-
     def set_state_0(self):
         self.disp('Request "Power off" state.')
         return self.send(Cmd.power_off)
@@ -310,18 +321,24 @@ class Coolant:
         self.client = None
         self.worker = None
         self.log = []
-        self.log_size = math.ceil(60 * 10 / self.dt)
-        self.connected = self.connect()
+        self.log_size = math.ceil(60 * 15 / self.dt)
+        self.connect()
 
-    def connect(self) -> bool:
+    def __connect(self):
+        if self.client and self.client.is_open():
+            self.close()
         self.client = ModbusClient(host=self.ip, port=self.port, unit_id=self.unit_id, auto_open=True)
         self.client.read_input_registers(30, 2)  # needed for is_open function
         if not self.client.is_open():
-            return False
+            return
 
         self.worker = threading.Thread(target=self.receive)
+        self.disp('coolant connected')
         self.worker.start()
-        return True
+
+    def connect(self):
+        task = threading.Thread(target=self.__connect)
+        task.start()
 
     def close(self):
         self.client.close()
@@ -346,7 +363,5 @@ class Coolant:
                 if len(self.log) > self.log_size:
                     self.log.pop(0)
 
-
             time.sleep(self.dt)
-        self.connected = False
         self.disp("coolant worker exit")

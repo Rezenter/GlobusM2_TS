@@ -11,7 +11,7 @@ class Crate:
 
     def __init__(self):
         self.dt = 60
-        self.timeout = 0.5
+        self.timeout = 2
 
         self.ip = '192.168.10.43'
         self.port = 8100
@@ -53,13 +53,10 @@ class Crate:
                 self.timeout)
             if len(ready_to_read):
                 resp = self.sock.recv(64).decode()
+                if len(resp) == 0:
+                    continue
                 temp = int(resp.split(':')[-1])
 
-                '''
-File "D:\code\TomsonViewer\python\subsyst\crate.py", line 56, in request
-temp = int(resp.split(':')[-1])
-ValueError: invalid literal for int() with base 10: ''
-                '''
             else:
                 continue
 
@@ -71,6 +68,8 @@ ValueError: invalid literal for int() with base 10: ''
                 self.timeout)
             if len(ready_to_read):
                 resp = self.sock.recv(64).decode()
+                if len(resp) == 0:
+                    continue
                 fan_temp = int(resp.split(':')[-1])
             else:
                 continue
@@ -83,6 +82,8 @@ ValueError: invalid literal for int() with base 10: ''
                 self.timeout)
             if len(ready_to_read):
                 resp = self.sock.recv(64).decode()
+                if len(resp) == 0:
+                    continue
                 error = (int(resp.split(':')[-1])).to_bytes(2, 'big')
                 online = bool(error[1] & 0x01)
                 is_error = bool(error[0] & 0b11111101) or bool(error[1] & 0b11111110)
