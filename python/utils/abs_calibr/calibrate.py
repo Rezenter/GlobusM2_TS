@@ -15,7 +15,7 @@ import json
 db_path = 'd:/data/db/'
 calibr_path = 'calibration/abs/'
 
-abs_filename = '2021.07.20_raw'
+abs_filename = '2021.10.18_raw'
 abs_calibration = {}
 with open('%s%s%s.json' % (db_path, calibr_path, abs_filename), 'r') as abs_file:
     abs_calibration = json.load(abs_file)
@@ -24,9 +24,9 @@ stray = None
 
 
 def process_point(point):
-    n_N2 = phys_const.torr_to_pa(point['pressure']) / (phys_const.k_b * (abs_calibration['temperature'] + 273))
+    n_N2 = phys_const.torr_to_pa(point['pressure']) / (phys_const.k_b * (phys_const.cels_to_kelv(abs_calibration['temperature'])))
 
-    with rawToSignals.Integrator(db_path, point['shotn'], False, '2021.06.10_g10') as integrator:
+    with rawToSignals.Integrator(db_path, point['shotn'], False, abs_calibration['config']) as integrator:
         signals = {'%d' % poly: {'val': 0,
                                  'weight': 0} for poly in range(10)}
         laser = 0

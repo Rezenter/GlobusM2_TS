@@ -30,13 +30,11 @@ class Selden:
         return (c_loc / a_loc) * math.exp(-2 * alpha * b_loc) / self.lambda_0  # wtf i need /lambda_0?
 
 
-def Naito(temp, wl, theta_deg, lambda0=1064):  # Scattering Power
-    print('WARNING! 1/lambda0 may be required!')
-    lambda_0 = lambda0  # [nm], laser wavelength
+def Naito(temp, wl, theta_deg, lambda_0=1064):  # Scattering Power
     theta = theta_deg * math.pi / 180.0
-    j2ev = 6.241509e18
+    _j2ev = 6.241509e18
 
-    alpha2 = const.m_e * math.pow(const.c, 2) * j2ev / temp
+    alpha2 = const.m_e * math.pow(const.c, 2) * _j2ev / temp
     epsilon = (wl - lambda_0) / lambda_0
 
     x = math.sqrt(
@@ -50,5 +48,5 @@ def Naito(temp, wl, theta_deg, lambda0=1064):  # Scattering Power
         return 0
     sz = math.exp(-alpha2 * x) / (sci.kn(2, alpha2) * math.pow(1 + epsilon, 3)) * math.pow(2 * (1 - math.cos(theta)) * (1 + epsilon) + math.pow(epsilon, 2), - 0.5)
     q = 1 - 4 * eta * zeta * (2 * zeta - (2 - 3 * math.pow(zeta, 2)) * eta) / (2 * zeta - (2 - 15 * math.pow(zeta, 2)) * eta)
-    return sz * q
+    return sz * q / lambda_0
 

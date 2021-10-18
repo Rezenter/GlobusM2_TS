@@ -68,7 +68,7 @@ class Integrator:
             []
         ]
         '''
-        self.missing = missing
+        #self.missing = missing
 
         self.header = {}
         self.data = []
@@ -107,7 +107,7 @@ class Integrator:
         self.processed = []
         shot_folder = '%s%s%05d/' % (self.prefix, self.RAW_FOLDER, self.shotn)
         if not os.path.isdir(shot_folder):
-            print('Requested shotn is missing.')
+            print('Requested %d shotn is missing: %s' % (self.shotn, shot_folder))
             return False
         header_path = '%s%s%s' % (shot_folder, self.HEADER_FILE, self.FILE_EXT)
         if not os.path.isfile(header_path):
@@ -155,20 +155,20 @@ class Integrator:
                 event_ind = 0
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
-                    while event_ind in self.missing[board_ind]:
+                    '''while event_ind in self.missing[board_ind]:
                         self.data[board_ind].append({
                             'captured_bad': True
                         })
-                        event_ind += 1
+                        event_ind += 1'''
                     #if event_ind != 0:
                     #    self.data[board_ind].append(event['groups'])
                     #event_ind += 1
                     self.data[board_ind].append(event['groups'])
-                while event_ind in self.missing[board_ind]:
+                '''while event_ind in self.missing[board_ind]:
                     self.data[board_ind].append({
                         'captured_bad': True
                     })
-                    event_ind += 1
+                    event_ind += 1'''
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
         return self.check_raw_integrity()
