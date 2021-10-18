@@ -2,22 +2,17 @@ import json
 import os
 import logging
 import time
-import threading
-import socket
-import select
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.subsyst.db as db
+import python.subsyst.tokamak as tokamak
+import python.subsyst.crate as crate
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.ShtRipper_local as shtRipper
-
-
-def __init__():
-    return
 
 
 DB_PATH = 'd:/data/db/'
@@ -37,12 +32,6 @@ SHOTN_FILE = 'Z:/SHOTN.TXT'
 DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
 TOLERANCE_BETWEEN_BOARDS = 0.05  # ms
-
-UDP_IP = "192.168.10.41"
-UDP_PORT = 8888
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-sock.bind((UDP_IP, UDP_PORT))
 
 laser_maxTime = 60 + 10  # seconds
 format = "%(asctime)s: %(message)s"
@@ -91,9 +80,12 @@ class Handler:
         self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
         self.raw_processor = None
         self.fine_processor = None
-        self.las = laser1064.Chatter()
+        self.las = laser1064.ControlUnit()
         self.state = {}
 
+        self.tokamak = tokamak.Sync(self.diag_disarm)
+        self.las_cool = laser1064.Coolant()
+        self.crate = crate.Crate()
         self.db = db.DB(self.plasma_path)
         return
 
@@ -518,12 +510,12 @@ class Handler:
             caen.disconnect()
 
             if resp['status']:
-
                 self.state['fast'] = {
                     'ok': True,
                     'resp': resp,
                     'shotn': shotn
                 }
+                self.crate.connect()
             else:
                 self.state['fast'] = resp
         return self.state['fast']
@@ -565,7 +557,11 @@ class Handler:
                 'description': ('Connection error: "%s"' % err)
             }
         else:
-            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, req['header']])
+            injection = req['header']
+            injection.update({
+
+            })
+            caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, injection])
             print(caen.read())
 
             caen.disconnect()
@@ -605,6 +601,8 @@ class Handler:
 
     def las_connect(self, req):
         self.state['las'] = self.las.connect()
+        self.state['las_cool'] = self.las_cool.connect()
+        self.tokamak.connect()
         return self.state['las']
 
     def las_status(self, req):
@@ -619,32 +617,18 @@ class Handler:
         self.state['las'] = self.las.set_state_1()
         return self.state['las']
 
-    def diag_status(self):
+    def diag_status(self, req):
         self.las_status({})
         self.fast_status({})
+        self.state['coolant'] = self.las_cool.log
+        self.state['tokamak'] = self.tokamak.log
+        self.state['crate'] = self.crate.log
         return self.state
 
-    def check_shot(self):
-        logging.info("Thread: expecting tokamak shot...")
-        sock.setblocking(False)
-
-        ready_to_read, a, b = select.select(
-                            [sock],
-                            [],
-                            [],
-                            laser_maxTime)
-        if len(ready_to_read):
-            data = sock.recv(8)
-            if int.from_bytes(data, 'big') == 255:
-                logging.info("Thread: received packet")
-            else:
-                logging.info(data)
-                logging.info("Thread: WTF packet")
-        else:
-            logging.info("Thread: timed out")
-        # anyway
-        self.las_idle({})
+    def diag_disarm(self):
         self.fast_disarm({})
+        self.las_idle({})
+        print('auto disarmed')
 
     def arm_all(self, req):
         shot_filename = SHOTN_FILE
@@ -670,8 +654,7 @@ class Handler:
 
             las = self.las_fire(req)
 
-            expect_shot = threading.Thread(target=self.check_shot)
-            expect_shot.start()
+            # set flag here
 
             return {
                 'ok': True,
