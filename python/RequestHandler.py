@@ -477,12 +477,12 @@ class Handler:
         return resp
 
     def fast_status(self, req):
-        print('status...')
-        print(req)
+        #print('status...')
+        #print(req)
         if 'shotn' in req:
             shotn = req['shotn']
         else:
-            print('wtf')
+            #print('wtf')
             if not os.path.isfile(SHOTN_FILE):
                 shotn = 0
                 self.state['fast'] = {
