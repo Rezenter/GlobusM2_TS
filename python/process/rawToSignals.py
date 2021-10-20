@@ -152,23 +152,9 @@ class Integrator:
                 print('Requested shot is missing requested board file.')
                 return False
             with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
-                event_ind = 0
                 self.data.append([])
                 for event in ijson.items(board_file, 'item', use_float=True):
-                    '''while event_ind in self.missing[board_ind]:
-                        self.data[board_ind].append({
-                            'captured_bad': True
-                        })
-                        event_ind += 1'''
-                    #if event_ind != 0:
-                    #    self.data[board_ind].append(event['groups'])
-                    #event_ind += 1
                     self.data[board_ind].append(event['groups'])
-                '''while event_ind in self.missing[board_ind]:
-                    self.data[board_ind].append({
-                        'captured_bad': True
-                    })
-                    event_ind += 1'''
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
         return self.check_raw_integrity()
@@ -249,7 +235,7 @@ class Integrator:
         flag = False
         integration_stop = -1
         for i in range(len(signal) - 1):
-            if signal[i] - zero >= 300:  # self.header['triggerThreshold']:
+            if signal[i] - zero >= self.header['triggerThreshold']:
                 flag = True
                 start = i
             res += self.time_step * (signal[i] + signal[i + 1] - 2 * zero) * 0.5  # ns*mV
@@ -408,6 +394,7 @@ class Integrator:
             if 'matchingFastGain' not in self.config['preamp']:
                 matching_gain = 1
                 print('WARNING! forgotten preamp gain')
+                fuck
             else:
                 matching_gain = self.config['preamp']['matchingFastGain']
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *

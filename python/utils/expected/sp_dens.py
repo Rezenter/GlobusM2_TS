@@ -27,7 +27,7 @@ class Selden:
         a_loc = math.pow(1 + x, 3) * math.sqrt(2 * (1 - math.cos(self.theta)) * (1 + x) + math.pow(x, 2))
         b_loc = math.sqrt(1 + x * x / (2 * (1 - math.cos(self.theta)) * (1 + x))) - 1
         c_loc = math.sqrt(alpha/math.pi)*(1 - (15/16)/alpha + 345/(512*alpha*alpha))
-        return (c_loc / a_loc) * math.exp(-2 * alpha * b_loc) / self.lambda_0  # wtf i need /lambda_0?
+        return (c_loc / a_loc) * math.exp(-2 * alpha * b_loc) / self.lambda_0
 
 
 def Naito(temp, wl, theta_deg, lambda_0=1064):  # Scattering Power
