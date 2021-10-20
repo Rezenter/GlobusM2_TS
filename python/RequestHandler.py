@@ -19,7 +19,7 @@ DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
 CONFIG = 'config/'
-SPECTRAL_CAL = 'calibration/spectral/'
+SPECTRAL_CAL = 'calibration/expected/'
 ABS_CAL = 'calibration/abs/processed/'
 #EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
@@ -83,9 +83,13 @@ class Handler:
         self.las = laser1064.ControlUnit()
         self.state = {}
 
+        print('connecting udp...')
         self.tokamak = tokamak.Sync(self.diag_disarm)
+        print('connecting coolant...')
         self.las_cool = laser1064.Coolant()
+        print('connecting crate...')
         self.crate = crate.Crate()
+        print('DONE')
         self.db = db.DB(self.plasma_path)
         return
 
@@ -152,9 +156,20 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"config" field is missing from request.'
             return resp
+        if 'abs_cal' not in req:
+            resp['ok'] = False
+            resp['description'] = '"abs_cal" field is missing from request.'
+            return resp
+        if 'sp_cal' not in req:
+            resp['ok'] = False
+            resp['description'] = '"sp_cal" field is missing from request.'
+            return resp
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4', #'2021.02.01',
-                                                      '2021.02.03')
+            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
+                                                      shotn=int(req['shotn']),
+                                                      is_plasma=req['is_plasma'],
+                                                      expected_id=req['sp_cal'],
+                                                      absolute_id=req['abs_cal'])
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()
@@ -182,9 +197,22 @@ class Handler:
                 'ok': False,
                 'description': '"events" field is missing from request.'
             }
+        if 'abs_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"abs_cal" field is missing from request.'
+            }
+        if 'sp_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"sp_cal" field is missing from request.'
+            }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4',
-                                                      '2021.02.03')
+            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
+                                                      shotn=int(req['shotn']),
+                                                      is_plasma=req['is_plasma'],
+                                                      expected_id=req['sp_cal'],
+                                                      absolute_id=req['abs_cal'])
             err = self.fine_processor.get_error()
             if err is not None:
                 return {
@@ -234,9 +262,22 @@ class Handler:
                 'description': '"old" field is missing from request.'
             }
         print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
+        if 'abs_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"abs_cal" field is missing from request.'
+            }
+        if 'sp_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"sp_cal" field is missing from request.'
+            }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), req['is_plasma'], '2021.05.27_1064.4',
-                                                      '2021.02.03')
+            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
+                                                      shotn=int(req['shotn']),
+                                                      is_plasma=req['is_plasma'],
+                                                      expected_id=req['sp_cal'],
+                                                      absolute_id=req['abs_cal'])
             err = self.fine_processor.get_error()
             if err is not None:
                 return {
@@ -273,9 +314,22 @@ class Handler:
             resp['description'] = '"start" field is missing from request.'
             return resp
 
+        if 'abs_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"abs_cal" field is missing from request.'
+            }
+        if 'sp_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"sp_cal" field is missing from request.'
+            }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.05.27_1064.4',
-                                                      '2021.02.03')
+            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
+                                                      shotn=int(req['shotn']),
+                                                      is_plasma=req['is_plasma'],
+                                                      expected_id=req['sp_cal'],
+                                                      absolute_id=req['abs_cal'])
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()
@@ -439,9 +493,22 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"r" field is missing from request.'
             return resp
+        if 'abs_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"abs_cal" field is missing from request.'
+            }
+        if 'sp_cal' not in req:
+            return {
+                'ok': False,
+                'description': '"sp_cal" field is missing from request.'
+            }
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(DB_PATH, int(req['shotn']), True, '2021.05.27_1064.4',
-                                                      '2021.02.03')
+            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
+                                                      shotn=int(req['shotn']),
+                                                      is_plasma=req['is_plasma'],
+                                                      expected_id=req['sp_cal'],
+                                                      absolute_id=req['abs_cal'])
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()

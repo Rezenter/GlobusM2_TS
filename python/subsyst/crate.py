@@ -26,7 +26,7 @@ class Crate:
         self.stop = True
         time.sleep(self.dt)
 
-    def connect(self):
+    def __connect(self):
         if self.sock:
             self.stop = True
             time.sleep(self.timeout * 2)
@@ -37,8 +37,12 @@ class Crate:
         self.sock.setblocking(False)
 
         self.worker = threading.Thread(target=self.request)
-        self.stop = False
+        self.disp('crate connected')
         self.worker.start()
+
+    def connect(self):
+        task = threading.Thread(target=self.__connect)
+        task.start()
 
     def disp(self, message):
         print('crate: ' + datetime.now().strftime("%H:%M:%S ") + message)

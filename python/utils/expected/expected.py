@@ -57,8 +57,7 @@ result = {
     'T_start': T_start,
     'T_stop': T_stop,
     'T_mult': T_mult,
-    'aux filter': aux_name,
-    "J_from_int": 6.7e-05,  # placeholder
+    'aux filter': aux_name
     'T_arr': temp,
     'poly': []
 }

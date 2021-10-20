@@ -1682,7 +1682,8 @@
                     is_plasma: is_plasma,
                     shotn: shotn,
                     config: $('#config_select').val(),
-                    calibr: $('#abs_select').val()
+                    abs_cal: $('#abs_select').val(),
+                    sp_cal: $('#spectral_select').val()
                 }, function (resp) {
                     //console.log(resp);
                     this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +

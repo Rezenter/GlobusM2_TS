@@ -110,6 +110,12 @@
                 },
                 fontFamily: 'arial'
             },
+            toolTip: {
+                contentFormatter: function(e){
+                    return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms\n Temperature = ' +
+                        e.entries[0].dataPoint.y.toFixed(1) + ' °C');
+                    }
+                },
             data: [
                 {
                     type: "line",
