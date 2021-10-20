@@ -57,6 +57,9 @@ class Crate:
                 self.timeout)
             if len(ready_to_read):
                 resp = self.sock.recv(64).decode()
+                '''
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+                '''
                 if len(resp) == 0:
                     continue
                 temp = int(resp.split(':')[-1])

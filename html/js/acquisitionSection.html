@@ -52,9 +52,10 @@
     <div id="diag_row">
         <p>Diagnostics control</p>
             <button class="btn btn-danger" id="diag_arm_button">Arm ADC and fire laser.</button>
-            <label for="config_select">Configuration:</label><select id="config_select"></select>
-            <label for="spectral_select">Spectral calibr.:</label><select id="spectral_select"></select>
-            <label for="abs_select">Abs. calibr.:</label><select id="abs_select"></select>
+            <label for="config_select">Configuration:</label><select id="config_select" class="configs"></select>
+            <label for="spectral_select">Spectral calibr.:</label>
+                <select id="spectral_select" class="sp_calibrations"></select>
+            <label for="abs_select">Abs. calibr.:</label><select id="abs_select" class="abs_calibrations"></select>
             <button class="btn btn-success" id="diag_status_button">status.</button>
         </div>
     </div>
@@ -112,7 +113,7 @@
             },
             toolTip: {
                 contentFormatter: function(e){
-                    return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms\n Temperature = ' +
+                    return ('time = ' + e.entries[0].dataPoint.x.toFixed(0) + 's\n Temperature = ' +
                         e.entries[0].dataPoint.y.toFixed(1) + ' °C');
                     }
                 },

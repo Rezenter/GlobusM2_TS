@@ -119,14 +119,7 @@
             margin-left: 0;
             margin-right: 0;
             ">
-            <label for="is_plasma">Is plasma?</label>
-                <input type="checkbox" id="is_plasma" checked>
-            <label for="shot_select">Shot №:</label><select id="shot_select"></select>
-            <label for="config_select">Configuration:</label><select id="config_select"></select>
-            <label for="spectral_select">Spectral calibr.:</label><select id="spectral_select"></select>
-            <label for="abs_select">Abs. calibr.:</label><select id="abs_select"></select>
-            <button class="btn btn-success glyphicon glyphicon-refresh" id="shot_refresh">Refresh</button>
-            <label for="auto_load">Load last shot automatically?</label><input type="checkbox" id="auto_load" checked>
+            <button class="btn btn-success" id="shotModal_button">Load Shot</button>
             <button class="btn btn-success glyphicon glyphicon-cloud-upload" id="save_shot">Save to DB</button>
             <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
             <label for="export_old">Include old format?</label>
@@ -171,6 +164,43 @@
         </div>
         <label for="abs_mult">correction mult.</label>
         <input id="abs_mult" type="number" value="1" min="0.1" step="0.05">
+    </div>
+
+    <div class="modal fade" id="shotSelectModal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Select tokamak shot</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul>
+                        <li>
+                            <label for="shot_select">Shot №:</label><select id="shot_select"></select>
+                        </li>
+                        <li>
+                            <label for="viewerConfig_select">Configuration:</label>
+                                <select id="viewerConfig_select" class="configs"></select>
+                        </li>
+                        <li>
+                            <label for="viewerSpectral_select">Spectral calibration:</label>
+                                <select id="viewerSpectral_select" class="sp_calibrations"></select>
+                        </li>
+                        <li>
+                            <label for="viewerAbs_select">Absolute calibration:</label>
+                                <select id="viewerAbs_select" class="abs_calibrations"></select>
+                        </li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button id='loadShot_button' type="button" class="btn btn-primary">Load shot</button>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
     <div id="singleEventPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
         <div class="container-fluid">
@@ -368,7 +398,6 @@
             chi_offscale: $('#chi_offscale'),
             poly_radius: $('.poly_radius'),
             shotn: $('#shot_select'),
-            isPlasma: $('#is_plasma'),
             chord_time: $('#chord_time'),
             chord_length: $('#chord_len'),
             chord_nl: $('#chord_nl'),
@@ -1431,7 +1460,6 @@
             req.subsystem = 'view';
             $.post('/api', JSON.stringify(req), function(resp){
                 if(!resp['ok']){
-                    //console.log(resp);
                     alert(resp['description']);
                 }else {
                     callback(resp);
@@ -1456,30 +1484,22 @@
         };
 
         this.UpdateShotSelect = function() {
-            let shots = this.m_plasma_shots;
-            if(! this.selectors.isPlasma[0].checked){
-                shots = this.m_debug_shots;
-            }
             let options = [];
-            shots.forEach(shot => options.push("<option>" + shot + "</option>"));
+            this.m_plasma_shots.forEach(shot => options.push("<option>" + shot + "</option>"));
             this.selectors.shotn.html(options);
 
             //options = ['<option>2020.12.10</option>'];
             options = [];
             this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
-            $('#config_select').html(options);
+            $('.configs').html(options);
 
             options = [];
             this.m_absConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
-            $('#abs_select').html(options);
+            $('.abs_calibrations').html(options);
 
             options = [];
             this.m_spectralConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
-            $('#spectral_select').html(options);
-
-            if(options.length && $('#auto_load')[0].checked){
-                this.Select();
-            }
+            $('.sp_calibrations').html(options);
         };
 
         this.DrawMain = function(){
@@ -1675,15 +1695,19 @@
 
         this.Select = function(){
             let shotn = this.selectors.shotn.val();
-            let is_plasma = this.selectors.isPlasma[0].checked;
+            $('#shotSelectModal').modal('hide');
+            for (let member in this.m_currentShot) delete this.m_currentShot[member];
+            for (let member in this.m_current_ccm) delete this.m_current_ccm[member];
+
+
             this.Request(
                 {
                     reqtype: 'get_shot',
-                    is_plasma: is_plasma,
+                    is_plasma: true,
                     shotn: shotn,
-                    config: $('#config_select').val(),
-                    abs_cal: $('#abs_select').val(),
-                    sp_cal: $('#spectral_select').val()
+                    config: $('#viewerConfig_select').val(),
+                    abs_cal: $('#viewerAbs_select').val(),
+                    sp_cal: $('#viewerSpectral_select').val()
                 }, function (resp) {
                     //console.log(resp);
                     this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
@@ -1701,7 +1725,6 @@
 
                     Object.assign(this.m_currentShot, resp);
                     this.m_currentShot.shotn = shotn;
-                    this.m_currentShot.is_plasma = is_plasma;
                     this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
                     $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
 
@@ -1851,7 +1874,8 @@
             if(jQuery.isEmptyObject(this.m_expected) || this.m_expected.name === this.m_currentShot.spectral_name){
                 this.Request(
                     {
-                        reqtype: 'get_expected'
+                        reqtype: 'get_expected',
+                        shot: Object.assign({}, this.m_currentShot, {events: undefined})
                     }
                     , function (resp) {
                         Object.assign(this.m_expected, resp);
@@ -1879,19 +1903,19 @@
             $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
 
 
-            this.update_fitting_chart(poly_ind, this.m_currentShot.is_plasma, this.m_currentShot.shotn);
-            this.update_raw_chart(poly_ind, this.m_currentShot.is_plasma, this.m_currentShot.shotn);
+            this.update_fitting_chart(poly_ind, this.m_currentShot.shotn);
+            this.update_raw_chart(poly_ind, this.m_currentShot.shotn);
         };
 
-        this.update_fitting_chart = function(poly_ind, is_plasma, shotn){
+        this.update_fitting_chart = function(poly_ind, shotn){
             this.m_fitting_chart.options.data = [];
             this.m_current_event_sig = {};
             this.Request(
                 {
                     reqtype: 'get_event_sig',
                     event: this.m_selected_event_ind,
-                    is_plasma: is_plasma,
-                    shotn: shotn
+                    is_plasma: true,
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined})
                 }
                 , function (resp) {
                     Object.assign(this.m_current_event_sig, resp);
@@ -1958,17 +1982,16 @@
             );
         };
 
-        this.update_raw_chart = function(poly_ind, is_plasma, shotn){
+        this.update_raw_chart = function(poly_ind, shotn){
             this.m_raw_chart.options.data = [];
             this.m_current_event_raw = {};
             this.Request(
                 {
                     reqtype: 'get_event_raw',
                     event: this.m_selected_event_ind,
-                    is_plasma: is_plasma,
-                    shotn: shotn,
-                    poly: poly_ind,
-                    config: $('#config_select').val()
+                    is_plasma: true,
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined}),
+                    poly: poly_ind
                 }
                 , function (resp) {
                     Object.assign(this.m_current_event_raw, resp);
@@ -2076,9 +2099,7 @@
             this.Request(
                 {
                     reqtype: 'save_shot',
-                    is_plasma: this.m_currentShot.is_plasma,
-                    shotn: this.m_currentShot.shotn,
-                    events: this.m_currentShot.events
+                    shot: this.m_currentShot
                 }, function (resp) {
                     alert('saved');
                 }.bind(this)
@@ -2089,8 +2110,8 @@
             this.Request(
                 {
                     reqtype: 'export_shot',
-                    is_plasma: this.m_currentShot.is_plasma,
-                    shotn: this.m_currentShot.shotn,
+                    is_plasma: true,
+                    shot: this.m_currentShot,
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
                     correction: this.selectors.abs_mult.val(),
@@ -2443,15 +2464,13 @@
             this.Request(
                 {
                     reqtype: 'load_ccm',
-                    shotn: this.m_currentShot.shotn,
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined}),
                     r: 42,
                     start: this.m_timestamp_chart.navigator.slider.minimum,
                     stop: this.m_timestamp_chart.navigator.slider.maximum
                 }
                 , function (resp) {
                     Object.assign(this.m_current_ccm, resp);
-                    console.log(this.m_current_ccm);
-                    console.log(this.m_currentShot);
                     this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
                         this.m_currentShot.shotn + this.m_defaults.nl_evo_title;
                     this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
@@ -2909,9 +2928,7 @@
         };
 
         this.ConnectControls = function () {
-            $('#shot_refresh').on('click', this, this.Refresh.bind(this));
-            this.selectors.shotn.on('change', this, this.Select.bind(this));
-            this.selectors.isPlasma.on('change', this, this.UpdateShotSelect.bind(this));
+            $('#loadShot_button').on('click', this, this.Select.bind(this));
             $(document).keydown(function(event){
                 if(this.selectors.singleEventPopup.contains(document.activeElement)){
                     this.KeydownSingleEventPopup(event);
@@ -2921,6 +2938,10 @@
                     this.KeydownMain(event);
                 }
 
+            }.bind(this));
+            $('#shotModal_button').on('click', this, function () {
+                this.Refresh();
+                $('#shotSelectModal').modal('show');
             }.bind(this));
             $('#save_shot').on('click', this, this.Save.bind(this));
             $('#export').on('click', this, this.Export.bind(this));
@@ -3007,7 +3028,6 @@
                     });
                     resized = true;
                 } else {
-                    console.log('left');
                     this.m_timestamp_chart.navigator.slider.set("maximum",
                         this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
                     this.m_timestamp_chart.navigator.slider.set("minimum",
@@ -3017,7 +3037,6 @@
                         maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
                     });
                     resized = true;
-                    console.log('left ok');
                 }
             } else if (event.key === 'ArrowRight') {
                 event.preventDefault();
@@ -3445,7 +3464,7 @@
                         `;
                     }
 
-                    if(taskItemInContext.attributes.getNamedItem('ne') !== null && this.m_currentShot.is_plasma){
+                    if(taskItemInContext.attributes.getNamedItem('ne') !== null){
                         html += `
     <li class="context-menu__item">
         <a href="#" class="context-menu__link" data-action="nl42">N_e integral along R=42 chord.</a>
@@ -3562,7 +3581,7 @@
     $(document).ready(
         function () {
             let viewer = new Main();
-            viewer.Refresh();
+            //viewer.Refresh();
         }
     );
 </script>
