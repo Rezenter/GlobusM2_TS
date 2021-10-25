@@ -501,12 +501,12 @@ class Processor:
         temp_evo = ''
         line = 't, '
         for poly in self.result['config']['poly']:
-            line += '%.dcm, %.dcm, ' % (poly['R'] * 0.1, poly['R'] * 0.1)
+            line += '%.4fcm, %.4fcm, ' % (poly['R'] * 1e-3, poly['R'] * 1e-3)
         temp_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if 'timestamp' in self.result['events'][event_ind]:
                 if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                    line = '%.6f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
+                    line = '%.4f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
                     for poly in self.result['events'][event_ind]['T_e']:
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '1, 1, '
@@ -518,10 +518,10 @@ class Processor:
         for event in self.result['events']:
             if 'timestamp' in event:
                 if x_from <= event['timestamp'] <= x_to:
-                    names += '%.3fs, %.3fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+                    names += '%.4fs, %.4fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
         temp_prof += names[:-2] + '\n'
         for poly_ind in range(len(self.result['config']['poly'])):
-            line = '%.2f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
+            line = '%.4f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
             for event in self.result['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
@@ -535,12 +535,12 @@ class Processor:
         dens_evo = ''
         line = 't, '
         for poly in self.result['config']['poly']:
-            line += '%.dcm, %.dcm, ' % (poly['R'] * 0.1, poly['R'] * 0.1)
+            line += '%.4fcm, %.4fcm, ' % (poly['R'] * 1e-3, poly['R'] * 1e-3)
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if 'timestamp' in self.result['events'][event_ind]:
                 if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                    line = '%.6f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
+                    line = '%.4f, ' % (self.result['events'][event_ind]['timestamp'] * 1e-3)
                     for poly in self.result['events'][event_ind]['T_e']:
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '1, 1, '
@@ -553,10 +553,10 @@ class Processor:
         for event in self.result['events']:
             if 'timestamp' in event:
                 if x_from <= event['timestamp'] <= x_to:
-                    names += '%.3fs, %.3fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+                    names += '%.4fs, %.4fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
         dens_prof += names[:-2] + '\n'
         for poly_ind in range(len(self.result['config']['poly'])):
-            line = '%.2f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
+            line = '%.4f, ' % (self.result['config']['poly'][poly_ind]['R'] * 1e-3)
             for event in self.result['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:

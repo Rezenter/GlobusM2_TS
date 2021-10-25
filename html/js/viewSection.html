@@ -201,7 +201,7 @@
             </div>
         </div>
     </div>
-    </div>
+
     <div id="singleEventPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
         <div class="container-fluid">
             <div class="row">
@@ -417,7 +417,7 @@
                 },
                 axisY: {
                     includeZero: true,
-                    title: "Energy, mV*ns",
+                    title: "Energy, J",
                     fontFamily: 'arial'
                 },
                 axisX: {
@@ -446,7 +446,7 @@
                 toolTip: {
                     contentFormatter: function(e){
                         return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms, E = ' +
-                            e.entries[0].dataPoint.y.toFixed(2) + 'mV*ns, index=' +
+                            e.entries[0].dataPoint.y.toFixed(2) + 'J, index=' +
                             e.entries[0].index);
                     },
                     updated: function(e){
@@ -707,7 +707,7 @@
                 title: "R, mm",
                 titleFontSize: 12,
                 minimum: 400,
-                maximum: 600,
+                maximum: 610,
                 interval: 20,
                 fontFamily: 'arial'
             },
@@ -743,7 +743,7 @@
                 title: "R, mm",
                 titleFontSize: 12,
                 minimum: 400,
-                maximum: 600,
+                maximum: 610,
                 interval: 20,
                 fontFamily: 'arial'
             },
@@ -2307,6 +2307,16 @@
                     format: 'png',
                     fileName: this.m_currentShot.shotn + '_chord_' + this.selectors.chord_time.html()
                 });
+            }else if(targetId === 'nl_evo_chart'){
+                this.m_nl_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_nl_' + this.selectors.chord_time.html()
+                });
+            }else if(targetId === 'w_evo_chart'){
+                this.m_w_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_We_' + this.selectors.chord_time.html()
+                });
             }else{
                 console.log('Wtf? Unknown target: ', targetId);
             }
@@ -2635,7 +2645,7 @@
                     color:'#000000'
                 },
                 {
-                    value:60,
+                    value:61,
                     color:'#000000'
                 },
                 {
