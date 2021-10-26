@@ -71,7 +71,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     server = http.server.HTTPServer
 
-    httpd = server(('', 8082), ApplicationServer)
+    httpd = server(('', 80), ApplicationServer)
     try:
         print('Serving from now.')
         httpd.serve_forever()

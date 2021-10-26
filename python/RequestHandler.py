@@ -137,12 +137,39 @@ class Handler:
         return resp
 
     def get_expected(self, req):
+        if 'shot' not in req:
+            return {
+                'ok': False,
+                'description': '"shot" field is missing from request'
+            }
+        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
+            return {
+                'ok': False,
+                'description': 'server has another shotn loaded'
+            }
+        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another config'
+            }
+        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another spectral calibration'
+            }
+        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another absolute calibration'
+            }
         expected = self.fine_processor.expected
         expected['ok'] = True
         resp = expected
         return resp
 
     def get_shot(self, req):
+        self.raw_processor = None
+        self.fine_processor = None
         resp = {}
         if 'is_plasma' not in req:
             resp['ok'] = False
@@ -231,15 +258,30 @@ class Handler:
             }
 
     def export_shot(self, req):
-        if 'is_plasma' not in req:
+        if 'shot' not in req:
             return {
                 'ok': False,
-                'description': '"is-plasma" field is missing from request.'
+                'description': '"shot" field is missing from request'
             }
-        if 'shotn' not in req:
+        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
             return {
                 'ok': False,
-                'description': '"shotn" field is missing from request.'
+                'description': 'server has another shotn loaded'
+            }
+        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another config'
+            }
+        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another spectral calibration'
+            }
+        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another absolute calibration'
             }
         if 'from' not in req:
             return {
@@ -262,28 +304,7 @@ class Handler:
                 'description': '"old" field is missing from request.'
             }
         print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
-        if 'abs_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"abs_cal" field is missing from request.'
-            }
-        if 'sp_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"sp_cal" field is missing from request.'
-            }
-        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
-                                                      shotn=int(req['shotn']),
-                                                      is_plasma=req['is_plasma'],
-                                                      expected_id=req['sp_cal'],
-                                                      absolute_id=req['abs_cal'])
-            err = self.fine_processor.get_error()
-            if err is not None:
-                return {
-                    'ok': False,
-                    'description': err
-                }
+
         if 'aux' not in req:
             resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']))
             if req['old']:
@@ -394,22 +415,34 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"is-plasma" field is missing from request.'
             return resp
-        if 'shotn' not in req:
-            resp['ok'] = False
-            resp['description'] = '"shotn" field is missing from request.'
-            return resp
-        if req['is_plasma']:
-            path = self.plasma_path
-        else:
-            path = self.debug_path
-        shot_path = '%s%s%s' % (path, RAW_FOLDER, req['shotn'])
-        if not os.path.isdir(shot_path):
-            resp['ok'] = False
-            resp['description'] = 'Requested shotn is missing.'
-            return resp
-        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
-                self.raw_processor.shotn != int(req['shotn']):
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], '2020.11.27')
+        if 'shot' not in req:
+            return {
+                'ok': False,
+                'description': '"shot" field is missing from request'
+            }
+        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
+            return {
+                'ok': False,
+                'description': 'server has another shotn loaded'
+            }
+        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another config'
+            }
+        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another spectral calibration'
+            }
+        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another absolute calibration'
+            }
+
+        if self.raw_processor is None:
+            self.raw_processor = raw_proc.Integrator(DB_PATH, self.fine_processor.shotn, True, req['shot']['config_name'])
         resp = self.raw_processor.processed[req['event']]
         resp['ok'] = True
         return resp
@@ -424,26 +457,39 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"is-plasma" field is missing from request.'
             return resp
-        if 'shotn' not in req:
-            resp['ok'] = False
-            resp['description'] = '"shotn" field is missing from request.'
-            return resp
-        if req['is_plasma']:
-            path = self.plasma_path
-        else:
-            path = self.debug_path
-        shot_path = '%s%s%s' % (path, RAW_FOLDER, req['shotn'])
+        if 'shot' not in req:
+            return {
+                'ok': False,
+                'description': '"shot" field is missing from request'
+            }
+        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
+            return {
+                'ok': False,
+                'description': 'server has another shotn loaded'
+            }
+        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another config'
+            }
+        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another spectral calibration'
+            }
+        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another absolute calibration'
+            }
+
+        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, self.fine_processor.shotn)
         if not os.path.isdir(shot_path):
             resp['ok'] = False
             resp['description'] = 'Requested shotn is missing.'
             return resp
-        if 'config' not in req:
-            resp['ok'] = False
-            resp['description'] = '"config" field is missing from request.'
-            return resp
-        if self.raw_processor is None or self.raw_processor.is_plasma != req['is_plasma'] or \
-                self.raw_processor.shotn != int(req['shotn']):
-            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shotn']), req['is_plasma'], req['config'])
+        if self.raw_processor is None:
+            self.raw_processor = raw_proc.Integrator(DB_PATH, self.fine_processor.shotn, True, req['shot']['config_name'])
         if 'poly' not in req:
             resp['ok'] = False
             resp['description'] = '"poly" field is missing from request.'
@@ -471,16 +517,31 @@ class Handler:
 
     def load_ccm(self, req):
         resp = {}
-        if 'shotn' not in req:
-            resp['ok'] = False
-            resp['description'] = '"shotn" field is missing from request.'
-            return resp
-        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, req['shotn'])
-        if not os.path.isdir(shot_path):
-            resp['ok'] = False
-            print(shot_path)
-            resp['description'] = 'Requested shotn is missing.'
-            return resp
+        if 'shot' not in req:
+            return {
+                'ok': False,
+                'description': '"shot" field is missing from request'
+            }
+        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
+            return {
+                'ok': False,
+                'description': 'server has another shotn loaded'
+            }
+        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another config'
+            }
+        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another spectral calibration'
+            }
+        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+            return {
+                'ok': False,
+                'description': 'server has shot loaded with another absolute calibration'
+            }
         if 'start' not in req:
             resp['ok'] = False
             resp['description'] = '"start" field is missing from request.'
@@ -493,31 +554,7 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"r" field is missing from request.'
             return resp
-        if 'abs_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"abs_cal" field is missing from request.'
-            }
-        if 'sp_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"sp_cal" field is missing from request.'
-            }
-        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
-                                                      shotn=int(req['shotn']),
-                                                      is_plasma=req['is_plasma'],
-                                                      expected_id=req['sp_cal'],
-                                                      absolute_id=req['abs_cal'])
-            if self.fine_processor.get_error() is not None:
-                self.get_integrals_shot(req)
-                self.fine_processor.load()
-        """return ccm.get_integrals(int(req['shotn']),
-                                 self.fine_processor.get_data(),
-                                 float(req['r']),
-                                 float(req['start']),
-                                 float(req['stop']))"""
-        stored_calc = ccm_energy.StoredCalculator(int(req['shotn']), self.fine_processor.get_data())
+        stored_calc = ccm_energy.StoredCalculator(self.fine_processor.shotn, self.fine_processor.get_data())
         if stored_calc.error is not None:
             return {
                 'ok': False,
@@ -544,12 +581,12 @@ class Handler:
         return resp
 
     def fast_status(self, req):
-        print('status...')
-        print(req)
+        #print('status...')
+        #print(req)
         if 'shotn' in req:
             shotn = req['shotn']
         else:
-            print('wtf')
+            #print('wtf')
             if not os.path.isfile(SHOTN_FILE):
                 shotn = 0
                 self.state['fast'] = {
