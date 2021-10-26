@@ -3,8 +3,8 @@ import json
 db_path = 'd:/data/db/plasma/result/'
 
 shots = [39586, 39589, 39590]
-n_mult = 1.4
-R_shift = 4
+n_mult = 1
+R_shift = 0
 
 polys = [
     {

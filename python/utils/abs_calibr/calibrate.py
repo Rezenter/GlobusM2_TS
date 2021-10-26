@@ -19,13 +19,13 @@ calibr_path = 'calibration/abs/'
 
 abs_filename = '2021.10.18_raw'
 ch = 0
+nl_correction = 13.3
 
-abs_calibration = {}
+
 with open('%s%s%s.json' % (db_path, calibr_path, abs_filename), 'r') as abs_file:
     abs_calibration = json.load(abs_file)
 
 stray = None
-
 
 def process_point(point):
     n_N2 = phys_const.torr_to_pa(point['pressure']) / (phys_const.k_b * (phys_const.cels_to_kelv(abs_calibration['temperature'])))
@@ -75,7 +75,8 @@ def process_point(point):
             result['measured_w/o_stray'].append(result['measured'][poly_ind] -
                                                             stray['measured'][poly_ind])
             result['A'].append(result['measured_w/o_stray'][poly_ind] /
-                                           (n_N2 * abs_calibration['laser_energy'] * spectrum.get_sum(ch + 1)))
+                               (n_N2 * abs_calibration['laser_energy'] * spectrum.get_sum(ch + 1)) /
+                               nl_correction)
     result['J_from_int'] = abs_calibration['laser_energy'] * len(signals[0]['signals']) / laser
 
     with open('%s.json' % abs_filename, 'w') as out_file:

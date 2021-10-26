@@ -194,7 +194,7 @@ class StoredCalculator:
     def calc_dynamics(self, t_from, t_to, nl_r):
         print('calc dynamics')
         result = []
-        for event_ind in range(len(self.ts_data['events'])):
+        for event_ind in range(1, len(self.ts_data['events'])):
             event = self.ts_data['events'][event_ind]
             if 'error' in event and event['error'] is not None:
                 result.append({
