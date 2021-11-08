@@ -238,11 +238,6 @@
         }.bind(this);
 
         this.LasStatus = function(ev){
-            if ($(document.body).find( "title" )[0].innerHTML !== 'Acquisition Section'){
-                clearTimeout(this.m_lasWatchdog);
-                //console.log('stop laser requests');
-                return;
-            }
             let conn = $('#laser_connection');
             conn.css('background-color','grey');
             conn.html('Requesting...');
