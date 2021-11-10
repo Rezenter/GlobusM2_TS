@@ -19,7 +19,8 @@ shots = [
 ]
 for shot in shots:
     with open('out/We_%d.csv' % shot['shotn'], 'w') as out_file:
-        header = 'time, We_%d, err, area, n_vol, err, vol\n' % shot['shotn']
+        header = 'time, We_%d, err, n_vol, err, area, vol\n' % shot['shotn']
+        header += 'ms, J, J, m^-3, m^-3, m^2, m^3\n'
         out_file.write(header)
 
         with open('%s%05d/%05d.json' % (db_path, shot['shotn'], shot['shotn']), 'r') as in_file:
@@ -37,14 +38,13 @@ for shot in shots:
                     fuck
 
                 line = '%.1f, ' % event['timestamp']
-                line += '%.4f, ' % (0.1 * res['config']['poly'][poly_ind]['R'] - sep_r)
-
-                if poly['error'] and poly['error'] != 'high Te error' and poly['error'] != 'high ne error':
-                    line += '--, --, '
-                    line += '--, --, '
+                data = cfm['data'][event_i - shot['start_i']]['data']
+                if data is None:
+                    line += '--, --, --, --\n'
                 else:
-                    line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
-                    line += '%.2e, %.2e, ' % (poly['n'], poly['n_err'])
+                    line += '%.1f, %.1f, %.2e, %.2e, %.3f, %.3f\n' % (data['vol_w'], data['w_err'],
+                                                                      data['n_vol'], data['n_vol_err'],
+                                                                      data['area'], data['vol'])
                 out_file.write(line[:-2] + '\n')
 
 print('OK')

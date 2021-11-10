@@ -3,6 +3,8 @@ import os
 import logging
 import time
 
+import shtRipper
+
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
@@ -12,8 +14,7 @@ import python.subsyst.tokamak as tokamak
 import python.subsyst.crate as crate
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
-import python.utils.sht.ShtRipper_local as shtRipper
-
+import python.utils.sht.sht_viewer as sht
 
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
@@ -67,7 +68,8 @@ class Handler:
                 'export_shot': self.export_shot,
                 'chord_int': self.get_chord_integrals,
                 'load_ccm': self.load_ccm,
-                'load_sht': self.combiscope,
+                'load_sht': self.sht_names,
+                'get_sht_signal': self.sht_signal,
             },
             'db':{
                 'get_shot': self.get_db_shot
@@ -80,6 +82,7 @@ class Handler:
         self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
         self.raw_processor = None
         self.fine_processor = None
+        self.sht = None
         self.las = laser1064.ControlUnit()
         self.state = {}
 
@@ -170,6 +173,7 @@ class Handler:
     def get_shot(self, req):
         self.raw_processor = None
         self.fine_processor = None
+        self.sht = None
         resp = {}
         if 'is_plasma' not in req:
             resp['ok'] = False
@@ -569,14 +573,41 @@ class Handler:
             'result': result
         }
 
-    def combiscope(self, req):
+    def sht_names(self, req):
         resp = {}
         if 'shotn' not in req:
             resp['ok'] = False
             resp['description'] = '"shotn" field is missing from request.'
             return resp
-        data_all = shtRipper.extract_sht('', int(req['shotn']))
-        resp['data'] = data_all[0]
+        shotn = int(req['shotn'])
+        if self.sht is not None and self.sht.shotn != shotn:
+            return {
+                'ok': False,
+                'description': 'server has another sht shotn loaded'
+            }
+        if self.sht is None:
+            self.sht = sht.sht(shotn)
+        resp['names'] = self.sht.get_names()
+        resp['ok'] = True
+        return resp
+
+    def sht_signal(self, req):
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        shotn = int(req['shotn'])
+        if self.sht is None or self.sht.shotn != shotn:
+            return {
+                'ok': False,
+                'description': 'server has another sht shotn loaded'
+            }
+        if 'name' not in req:
+            resp['ok'] = False
+            resp['description'] = '"name" field is missing from request.'
+            return resp
+        resp['signal'] = self.sht.get_sig(req['name'])
         resp['ok'] = True
         return resp
 

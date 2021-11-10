@@ -5,6 +5,9 @@
     <title>View section</title>
 </head>
 <style>
+    .hide{
+        display:none;
+    }
     #timestamp_chart .canvasjs-chart-tooltip,#T_evo_chart .canvasjs-chart-tooltip,#n_evo_chart .canvasjs-chart-tooltip{
         pointer-events: auto !important;
         right: auto !important;
@@ -154,10 +157,57 @@
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
                     <div id="nl_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
-                    <div id="n_3d_chart" style="width:100%; height:400px;" class="context-target" ne 3d></div>
                 </div>
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
                     <div id="w_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div style="width:100%; height:400px;">
+                        <label for="sht_search">SHT file signals:</label><input class="form-control" id="sht_search" type="text" placeholder="Filter signals:">
+                        <select multiple class="form-control" size="16" id="sht_signal_list"></select>
+                    </div>
+                </div>
+                <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1">
+                        <div class="row">
+                            <button class="btn btn-success glyphicon glyphicon glyphicon-arrow-right" id="show_signal" style="width:100%; height:40px; margin-bottom: 10px; margin-top: 10px;"></button>
+                        </div>
+                        <div class="row">
+                            <button class="btn btn-danger glyphicon glyphicon glyphicon glyphicon-arrow-left" id="remove_signal" style="width:100%; height:40px; margin-bottom: 10px; margin-top: 10px;"></button>
+                        </div>
+                        <div class="row">
+                            <button class="btn btn-danger glyphicon glyphicon glyphicon glyphicon glyphicon-remove" id="remove_signal_all" style="width:100%; height:40px; margin-bottom: 10px; margin-top: 10px;"></button>
+                        </div>
+                </div>
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div id="sht_signals_selected" style="width:100%; height:400px;">
+                        <div style="width:100%; height:400px;">
+                            <label for="sht_selected_search">Displayed signals:</label><input class="form-control" id="sht_selected_search" type="text" placeholder="Filter signals:">
+                            <select multiple class="form-control" size="16" id="sht_selected_list"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <div class="row">
+                        <label for="shtTarget_select">Target chart:</label>
+                            <select id="shtTarget_select">
+                                <option>local temperature</option>
+                                <option>local density</option>
+                                <option>linear density</option>
+                            </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="n_3d_chart" style="width:100%; height:400px;" class="context-target" ne 3d></div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
                     <div id="T_3d_chart" style="width:100%; height:400px;" class="context-target" te 3d></div>
                 </div>
             </div>
@@ -335,6 +385,57 @@
 </body>
 <script>
     function Main () {
+        this.EnRu = {
+            "q": "й",
+            "w": "ц",
+            "e": "у",
+            "r": "к",
+            "t": "е",
+            "y": "н",
+            "u": "г",
+            "i": "ш",
+            "o": "щ",
+            "p": "з",
+            "[": "х",
+            "{": "Х",
+            "]": "ъ",
+            "}": "Ъ",
+            "|": "/",
+            "`": "ё",
+            "~": "Ё",
+            "a": "ф",
+            "s": "ы",
+            "d": "в",
+            "f": "а",
+            "g": "п",
+            "h": "р",
+            "j": "о",
+            "k": "л",
+            "l": "д",
+            ";": "ж",
+            ":": "Ж",
+            "'": "э",
+            "\"": "Э",
+            "z": "я",
+            "x": "ч",
+            "c": "с",
+            "v": "м",
+            "b": "и",
+            "n": "т",
+            "m": "ь",
+            ",": "б",
+            "<": "Б",
+            ".": "ю",
+            ">": "Ю",
+            "/": ".",
+            "?": ",",
+            "@": "\"",
+            "#": "№",
+            "$": ";",
+            "^": ":",
+            "&": "?"
+        };
+
         this.m_keypress_timestep = 3;
         this.m_defaults = {
             time_min: 100,
@@ -356,6 +457,7 @@
         this.m_expected = {};
         this.m_current_chord = {};
         this.m_current_ccm = {};
+        this.m_current_sht = {};
         this.m_selected_event_ind = 0;
         this.palette = [
             '#181818',
@@ -404,7 +506,11 @@
             chord_n: $('#chord_n'),
             chord_div: $('#chord_divided'),
             chord_edge: $('#chord_edge'),
-            abs_mult: $('#abs_mult')
+            abs_mult: $('#abs_mult'),
+            sht_signals: $('#sht_signal_list'),
+            sht_search: $("#sht_search"),
+            sht_selected_search: $('#sht_selected_search'),
+            sht_selected_signals: $('#sht_selected_list')
         };
 
         //header charts
@@ -1698,6 +1804,7 @@
             $('#shotSelectModal').modal('hide');
             for (let member in this.m_currentShot) delete this.m_currentShot[member];
             for (let member in this.m_current_ccm) delete this.m_current_ccm[member];
+            for (let member in this.m_current_sht) delete this.m_current_ccm[member];
 
 
             this.Request(
@@ -1732,7 +1839,7 @@
                     this.DrawMain();
                     this.DrawPoloidal();
 
-
+                    this.LoadSHT();
 
                     this.m_ccm_surf_chart.options.data = [];
 
@@ -2680,14 +2787,43 @@
         };
 
         this.LoadSHT = function (){
+            this.selectors.sht_signals.html('');
+            Object.assign(this.m_current_sht, {});
             this.Request(
                 {
                     reqtype: 'load_sht',
                     shotn: this.m_currentShot.shotn,
                 }
                 , function (resp) {
-                    console.log(resp);
+                    if(!resp.ok){
+                        console.log(resp);
+                        console.log('Bad response!');
+                        return;
+                    }
                     Object.assign(this.m_current_sht, resp);
+
+                    let options = [];
+                    this.m_current_sht.names.forEach(signal => options.push("<option>" + signal + "</option>"));
+                    this.selectors.sht_signals.html(options);
+                }.bind(this)
+            );
+        };
+
+        this.AddSHTSignals = function(){
+            console.log('Add signals called');
+            this.LoadSHTSignal();
+        };
+
+        this.LoadSHTSignal = function (){
+            this.Request(
+                {
+                    reqtype: 'get_sht_signal',
+                    shotn: this.m_currentShot.shotn,
+                    name: 'Nl_42_УПЧ'
+                }
+                , function (resp) {
+                    console.log(resp);
+                    //Object.assign(this.m_current_sht, resp);
                 }.bind(this)
             );
         };
@@ -2937,6 +3073,25 @@
             this.DrawCCM();
         };
 
+        this.Filter = function(list, request){
+            let value = request.toLowerCase();
+            let val_ru = '';
+            let val_eng = '';
+            for(let symbolInd in value){
+                val_ru += this.EnRu[value[symbolInd]];
+                val_eng += Object.keys(this.EnRu).find(key => this.EnRu[key] === value[symbolInd]);
+            }
+            $(list + ' > option').each(function () {
+                let candidate = $(this).text().toLowerCase();
+                if(candidate.indexOf(value) <= -1 && candidate.indexOf(val_ru) <= -1 && candidate.indexOf(val_eng) <= -1){
+                    $(this)[0].selected = false;
+                    $(this).toggleClass( "hide", true);
+                }else{
+                    $(this).toggleClass( "hide", false);
+                }
+            });
+        };
+
         this.ConnectControls = function () {
             $('#loadShot_button').on('click', this, this.Select.bind(this));
             $(document).keydown(function(event){
@@ -2960,8 +3115,8 @@
             this.initDragElement(this.selectors.draggables);
             this.initResizeElement(this.selectors.draggables);
 
-            $('.hide_btn').each(function(el){
-                this.addEventListener('click', function (e) {
+            $('.hide_btn').each(function(){
+                this.addEventListener('click', function () {
                     $(this).parents('.draggable').attr('hidden', true);
                 });
             });
@@ -3003,6 +3158,17 @@
 
             this.selectors.chord_div.on('change', this, this.DrawChord.bind(this));
             this.selectors.abs_mult.on('change', this, this.UpdateDens.bind(this));
+
+
+            this.selectors.sht_search.on("keyup", function() {
+                this.Filter('#sht_signal_list', this.selectors.sht_search.val());
+            }.bind(this));
+
+            $("#sht_selected_search").on("keyup", function() {
+                this.Filter('#sht_selected_list', this.selectors.sht_selected_search.val());
+            }.bind(this))
+
+            $('#show_signal').on('click', this, this.AddSHTSignals.bind(this));
         };
 
         this.HideMainRightTooltips = function(){
