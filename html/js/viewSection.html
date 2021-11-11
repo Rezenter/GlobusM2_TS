@@ -540,6 +540,7 @@
                             this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
                             this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
                             this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.UpdateCCMPopup(e.value);
                         }.bind(this),
                         hidden: function (e){
                             this.m_n_evo_chart.axisX[0].crosshair.hide();
@@ -640,6 +641,7 @@
                         this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_n_evo_chart.axisX[0].crosshair.hide();
@@ -749,6 +751,7 @@
                         this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
                         this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
                     }.bind(this),
                     hidden: function (){
                         this.m_T_evo_chart.axisX[0].crosshair.hide();
@@ -2009,6 +2012,11 @@
 
             $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
 
+            this.m_T_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_n_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_nl_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_w_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
 
             this.update_fitting_chart(poly_ind, this.m_currentShot.shotn);
             this.update_raw_chart(poly_ind, this.m_currentShot.shotn);
@@ -2803,6 +2811,7 @@
                     Object.assign(this.m_current_sht, resp);
 
                     let options = [];
+                    this.m_current_sht.data = {};
                     this.m_current_sht.names.forEach(signal => options.push("<option>" + signal + "</option>"));
                     this.selectors.sht_signals.html(options);
                 }.bind(this)
@@ -2810,20 +2819,33 @@
         };
 
         this.AddSHTSignals = function(){
-            console.log('Add signals called');
-            this.LoadSHTSignal();
+            let signals = [];
+
+            $('#sht_signal_list > option').each(function () {
+                if(!$(this).hasClass( "hide") && $(this)[0].selected){
+                    signals.push($(this).text())
+                }
+            });
+
+            for(let ind in signals){
+                this.LoadSHTSignal(signals[ind]);
+            }
+            let options = this.selectors.sht_selected_signals.html();
+            signals.forEach(signal => options += ("<option>" + signal + "</option>"));
+            this.selectors.sht_selected_signals.html(options);
         };
 
-        this.LoadSHTSignal = function (){
+        this.LoadSHTSignal = function (name){
             this.Request(
                 {
                     reqtype: 'get_sht_signal',
                     shotn: this.m_currentShot.shotn,
-                    name: 'Nl_42_УПЧ'
+                    name: name
                 }
                 , function (resp) {
-                    console.log(resp);
-                    //Object.assign(this.m_current_sht, resp);
+                    this.m_current_sht.data[name] = {};
+                    Object.assign(this.m_current_sht.data[name], resp);
+                    console.log(this.m_current_sht);
                 }.bind(this)
             );
         };
@@ -3102,7 +3124,6 @@
                 }else{
                     this.KeydownMain(event);
                 }
-
             }.bind(this));
             $('#shotModal_button').on('click', this, function () {
                 this.Refresh();
