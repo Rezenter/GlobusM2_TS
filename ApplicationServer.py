@@ -2,6 +2,7 @@ import http.server
 import json
 from python.RequestHandler import Handler
 import mimetypes
+import ssl
 
 handler = Handler()
 
@@ -71,7 +72,8 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     server = http.server.HTTPServer
 
-    httpd = server(('', 80), ApplicationServer)
+    httpd = server(('', 443), ApplicationServer)
+    httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='privatekey.key', certfile='certificate.pem', server_side=True)
     try:
         print('Serving from now.')
         httpd.serve_forever()
