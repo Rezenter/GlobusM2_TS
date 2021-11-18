@@ -47,6 +47,10 @@ class Crate:
     def disp(self, message):
         print('crate: ' + datetime.now().strftime("%H:%M:%S ") + message)
 
+    def power_on(self):
+        if self.sock:
+            self.sock.sendall(b'$CMD:SET,CH:8,PAR:ON\r\n')
+
     def request(self):
         while self.sock and not self.stop:
             self.sock.sendall(b'$CMD:MON,CH:8,PAR:PSTEMP\r\n')

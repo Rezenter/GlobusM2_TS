@@ -2794,6 +2794,54 @@
             this.m_ccm_chord_chart.render();
         };
 
+        this.DrawNL = function (){
+            let signals = [
+                'nl 42 cm (1.5мм) 64pi',
+                'Nl_42_УПЧ',
+                'NL_42_No_Filtr'
+            ];
+            let y_mult = [
+                1e18,
+                1e4,
+                1e4
+            ];
+
+            for(let ind in signals){
+                this.Request(
+                    {
+                        reqtype: 'get_sht_signal',
+                        shotn: this.m_currentShot.shotn,
+                        name: signals[ind]
+                    }
+                    , function (resp) {
+                        this.m_current_sht.data[signals[ind]] = {};
+                        Object.assign(this.m_current_sht.data[signals[ind]], resp);
+                        if(resp.ok) {
+                            let points = [];
+                            for(let i = 0; i < resp.signal.x.length; i ++){
+                                points.push({
+                                    x: resp.signal.x[i] * 1000,
+                                    y: resp.signal.y[i] * y_mult[ind]
+                                });
+                            }
+
+                            this.m_nl_evo_chart.options.data.push(
+                                {
+                                    color: this.palette[parseInt(ind) + 1],
+                                    type: "line",
+                                    markerType: "none",
+                                    dataPoints: points,
+                                    showInLegend: true,
+                                    legendText: signals[ind]
+                                }
+                            );
+                            this.m_nl_evo_chart.render();
+                        }
+                    }.bind(this)
+                );
+            }
+        };
+
         this.LoadSHT = function (){
             this.selectors.sht_signals.html('');
             Object.assign(this.m_current_sht, {});
@@ -2814,6 +2862,8 @@
                     this.m_current_sht.data = {};
                     this.m_current_sht.names.forEach(signal => options.push("<option>" + signal + "</option>"));
                     this.selectors.sht_signals.html(options);
+
+                    this.DrawNL();
                 }.bind(this)
             );
         };

@@ -8,7 +8,7 @@ class sht:
         self.shotn: int = shotn
         self.data = shtRipper.ripper.read('%ssht%d.SHT' % (SHT_LOCATION, shotn))
 
-    def get_names(self) -> list[str]:
+    def get_names(self):
         return list(self.data.keys())
 
     def get_sig(self, key: str) -> dict:
