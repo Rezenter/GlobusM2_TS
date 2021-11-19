@@ -754,6 +754,7 @@ class Handler:
 
     def diag_status(self, req):
         self.las_status({})
+        self.state['las']['delays'] = self.las.get_energy()
         self.fast_status({})
         self.state['coolant'] = self.las_cool.log
         self.state['tokamak'] = self.tokamak.log

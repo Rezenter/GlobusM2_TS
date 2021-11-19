@@ -161,6 +161,8 @@ class ControlUnit:
                 elif data[:4] == bytes(Cmd.error[1:], self.ENCODING):
                     return self.parse_error(int(data[4:], base=16))
                 else:
+                    if len(data) == 8:
+                        return int(data[4:], base=16)
                     self.set_err('Unknown cmd code %s.' % data[4:])
                     return None
             else:
@@ -308,6 +310,13 @@ class ControlUnit:
 
     def status(self):
         return self.send(Cmd.state)
+
+    def get_energy(self):
+        res = {
+            'pump': self.send(Cmd.pump_delay),
+            'gen': self.send(Cmd.gen_delay)
+        }
+        return res
 
 
 class Coolant:
