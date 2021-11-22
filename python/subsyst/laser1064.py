@@ -47,14 +47,20 @@ class ControlUnit:
         self.state = 0
         self.lastTime = time.time()
 
-    def connect(self):
-        resp = self.status()
-        if resp and resp['ok']:
-            return resp
+        self.reconnection_time = 0
+        self.reconnection_timer = 10
+
+    def connect(self, recursion=False):
+        if not recursion:
+            resp = self.status()
+            if resp and resp['ok']:
+                return resp
+        self.reconnection_time = time.time()
         if self.sock:
             self.sock.close()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(self.SOCK_TIMEOUT)
+
         try:
             self.sock.connect((self.IP, self.PORT))
         except socket.timeout:
@@ -78,34 +84,54 @@ class ControlUnit:
         return data + bytes(crc(data) + self.PACKET_END, self.ENCODING)
 
     def send(self, packet):
-        bin_packet = self.pack(packet)
         if not self.sock:
             self.set_err('Socket is closed.')
-
             print('LAS ERROR 1')
 
-            return {
-                'ok': False,
-                'description': self.err
-            }
+            if time.time() - self.reconnection_time > self.reconnection_timer:
+                print('RECONNECT')
+                connected = self.connect(recursion=True)
+                if not connected['ok'] or not self.sock:
+                    return {
+                        'ok': False,
+                        'description': self.err
+                    }
+        bin_packet = self.pack(packet)
         try:
             send = self.sock.send(bin_packet)
         except socket.timeout:
             self.set_err('Laser responce timeout.')
 
             print('LAS ERROR 2')
+            if time.time() - self.reconnection_time > self.reconnection_timer:
+                print('RECONNECT')
+                self.connect(recursion=True)
+            return {
+                'ok': False,
+                'description': self.err
+            }
+        except ConnectionResetError:
+            self.set_err('Connection reset.')
+            print('LAS ERROR 5')
 
+            if time.time() - self.reconnection_time > self.reconnection_timer:
+                print('RECONNECT')
+                self.connect(recursion=True)
             return {
                 'ok': False,
                 'description': self.err
             }
         if send == len(bin_packet):
-            recv = self.receive()
-            if recv is None:
+            for attempt in range(3):
+                recv = self.receive()
+                if recv is None:
+                    print('No response from laser, attempt % d' % (attempt + 1))
+                    continue
+                else:
+                    break
+            else:
                 self.set_err(self.err)
-
                 print('LAS ERROR 3')
-
                 return {
                     'ok': False,
                     'description': self.err
