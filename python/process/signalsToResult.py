@@ -455,8 +455,8 @@ class Processor:
                                                       event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
         aux = ''
-        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, vol, T_center, T_c_err, n_center, n_c_err\n'
-        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, m3, eV, eV, m-3, m-3\n'
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err\n'
+        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3\n'
         if aux_data is None:
             return {
                 'ok': True,
@@ -466,21 +466,35 @@ class Processor:
                 'nR': dens_prof,
                 'aux': ''
             }
-        for event in aux_data:
+
+        for event_ind_aux in range(len(aux_data)):
+            event = aux_data[event_ind_aux]
+
             event_ind = event['event_index']
             if 'error' in event:
                 continue
             if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                 if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
                     length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
-                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
+
+                    we_derivative = 0
+                    if len(aux_data) > 1:
+                        if event_ind_aux == 0:
+                            we_derivative = (aux_data[event_ind_aux + 1]['data']['vol_w'] - event['data']['vol_w']) * correction / (self.result['events'][aux_data[event_ind_aux + 1]['event_index']]['timestamp'] - self.result['events'][event_ind]['timestamp'])
+                        elif event_ind_aux == len(aux_data) - 1:
+                            we_derivative = (aux_data[event_ind_aux - 1]['data']['vol_w'] - event['data']['vol_w']) * correction / (self.result['events'][aux_data[event_ind_aux - 1]['event_index']]['timestamp'] - self.result['events'][event_ind]['timestamp'])
+                        elif len(aux_data) > 2:
+                            we_derivative = (aux_data[event_ind_aux + 1]['data']['vol_w'] - aux_data[event_ind_aux - 1]['data']['vol_w']) * correction / \
+                                            (self.result['events'][aux_data[event_ind_aux + 1]['event_index']]['timestamp'] - self.result['events'][aux_data[event_ind_aux - 1]['event_index']]['timestamp'])
+
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
                             event['data']['nl'] * correction, event['data']['nl_err'] * correction,
                             length,
                             event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
                             event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
                             event['data']['t_vol'], event['data']['t_vol_err'],
-                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction,
+                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction, we_derivative,
                             event['data']['vol'],
                             event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
                             event['data']['surfaces'][-1]['ne'] * correction,
