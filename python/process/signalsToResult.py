@@ -455,8 +455,8 @@ class Processor:
                                                       event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
         aux = ''
-        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err\n'
-        aux += ', ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3\n'
+        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking\n'
+        aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1\n'
         if aux_data is None:
             return {
                 'ok': True,
@@ -487,7 +487,7 @@ class Processor:
                             we_derivative = (aux_data[event_ind_aux + 1]['data']['vol_w'] - aux_data[event_ind_aux - 1]['data']['vol_w']) * correction / \
                                             (self.result['events'][aux_data[event_ind_aux + 1]['event_index']]['timestamp'] - self.result['events'][aux_data[event_ind_aux - 1]['event_index']]['timestamp'])
 
-                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e\n' % \
+                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'],
                             event['data']['nl'] * correction, event['data']['nl_err'] * correction,
                             length,
@@ -498,7 +498,9 @@ class Processor:
                             event['data']['vol'],
                             event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
                             event['data']['surfaces'][-1]['ne'] * correction,
-                            event['data']['surfaces'][-1]['ne_err'] * correction)
+                            event['data']['surfaces'][-1]['ne_err'] * correction,
+                            event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
+                            event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
                 else:
                     aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                            (event_ind, self.result['events'][event_ind]['timestamp'])
