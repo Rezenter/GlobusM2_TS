@@ -191,7 +191,7 @@ class Integrator:
             else:
                 timestamp = -999
             proc_event = {
-                'timestamp_dummy': self.config['adc']['first_shot'] + event_ind * 3.0303,
+                'timestamp_dummy': self.config['adc']['first_shot'] + (event_ind - 1) * 3.03030303,
                 'timestamp': timestamp,
                 'laser': laser,
                 'poly': {},
