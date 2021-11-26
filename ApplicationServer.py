@@ -3,6 +3,7 @@ import json
 from python.RequestHandler import Handler
 import mimetypes
 import ssl
+from pathlib import Path
 
 handler = Handler()
 
@@ -53,9 +54,24 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
                 filepath = "index.html"
             else:
                 filepath = self.path.lstrip("/")
+                if filepath.startswith('sht'):
+                    shotn = filepath[4:]
+                    path = Path('D:/data/db/plasma/result/%s/TS_%s.sht' % (shotn, shotn))
+                    if not path.is_file():
+                        self.send_error(404, 'File Not Found: %s ' % path)
+                        return
+                    with open(path, 'rb') as file:
+                        self.send_response(200)
+                        # this part handles the mimetypes for you.
+                        mimetype, _ = mimetypes.guess_type(filepath)
+                        # print(mimetype)
+                        self.send_header('Content-type', mimetype)
+                        self.end_headers()
+                        for s in file:
+                            self.wfile.write(s)
+                    return
 
             f = open('html/%s' % filepath, "rb")
-
         except IOError:
             self.send_error(404, 'File Not Found: %s ' % filepath)
 
@@ -68,6 +84,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             for s in f:
                 self.wfile.write(s)
+            f.close()
 
 if __name__ == '__main__':
     server = http.server.HTTPServer

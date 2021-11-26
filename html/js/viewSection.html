@@ -2252,12 +2252,14 @@
                         this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
+                    this.DownloadSHT();
+
                 }.bind(this)
             );
         };
 
         this.DownloadFile = function(text, filename){
-            const textToBLOB = new Blob([text], { type: 'text/plain' });
+            const textToBLOB = new Blob([text], {type : 'text/html'});
 
             let newLink = document.createElement("a");
             newLink.download = filename;
@@ -2273,6 +2275,17 @@
 
             newLink.click();
             newLink.remove();
+        };
+
+        this.DownloadSHT = function(){
+            let oReq = new XMLHttpRequest();
+            oReq.open("GET",'/sht/' + this.m_currentShot.shotn, true);
+            oReq.responseType = "arraybuffer";
+            oReq.onload = function() {
+                this.DownloadFile(oReq.response, ('TS_' + this.m_currentShot.shotn + '.sht'));
+            }.bind(this);
+
+            oReq.send();
         };
 
         this.DrawChi = function(){
