@@ -373,17 +373,25 @@ class Processor:
     def dump_dynamics(self, correction: float, data, x_from: float, x_to:float):
         timestamps = []
         nl42 = []
-        # положение сепаратрисы
+        nl42_err = []
+        # расстояние до сепаратрисы
         # температура и концентрация на сепаратрисе
         # градиент на сепаратрисе
+        # центральную точку экстраполировать на 41й сантиметр.
         nl_ave = []
+        nl_ave_err = []
         n_ave = []
+        n_ave_err = []
         t_ave = []
+        t_ave_err = []
         we = []
+        we_err = []
         dwe = []
         vol = []
         t_c = []
+        t_c_err = []
         n_c = []
+        n_c_err = []
         t_p = []
         n_p = []
 
@@ -422,15 +430,29 @@ class Processor:
 
                     timestamps.append(self.result['events'][event_ind]['timestamp'] * 1e-3)
                     nl42.append(event['data']['nl'] * correction)
-                    # положение сепаратрисы
+                    nl42_err.append(event['data']['nl_err'] * correction)
+
                     nl_ave.append(event['data']['nl'] * correction / length)
+                    nl_ave_err.append(event['data']['nl_err'] * correction / length)
+
                     n_ave.append(event['data']['n_vol'] * correction)
+                    n_ave_err.append(event['data']['n_vol_err'] * correction)
+
                     t_ave.append(event['data']['t_vol'])
+                    t_ave_err.append(event['data']['t_vol_err'])
+
                     we.append(event['data']['vol_w'] * correction)
+                    we_err.append(event['data']['w_err'] * correction)
+
                     dwe.append(we_derivative)
                     vol.append(event['data']['vol'])
+
                     t_c.append(event['data']['surfaces'][-1]['Te'])
+                    t_c_err.append(event['data']['surfaces'][-1]['Te_err'])
+
                     n_c.append(event['data']['surfaces'][-1]['ne'] * correction)
+                    n_c_err.append(event['data']['surfaces'][-1]['ne_err'] * correction)
+
                     t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
                     n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
@@ -457,31 +479,36 @@ class Processor:
                 'comment': 'линейная концентрация по хорде R=42',
                 'unit': 'nl42(m^-2)',
                 'x': timestamps,
-                'y': nl42
+                'y': nl42,
+                'err': nl42_err
             },
             '<nl42>': {
                 'comment': 'средняя концентрация по хорде R=42',
                 'unit': '<nl42>(m^-3)',
                 'x': timestamps,
-                'y': nl_ave
+                'y': nl_ave,
+                'err': nl_ave_err
             },
             '<ne>': {
                 'comment': 'средняя по объёму концентрация',
                 'unit': '<n>(m^-3)',
                 'x': timestamps,
-                'y': n_ave
+                'y': n_ave,
+                'err': n_ave_err
             },
             '<Te>': {
                 'comment': 'средняя по объёму температура',
                 'unit': '<Te>(eV)',
                 'x': timestamps,
-                'y': t_ave
+                'y': t_ave,
+                'err': t_ave_err
             },
             'We': {
                 'comment': 'энергозапас в электронном компоненте',
                 'unit': 'We(J)',
                 'x': timestamps,
-                'y': we
+                'y': we,
+                'err': we_err
             },
             'dWe/dt': {
                 'comment': 'энергозапас в электронном компоненте',
@@ -499,13 +526,15 @@ class Processor:
                 'comment': 'температура в центре',
                 'unit': 'Te(eV)',
                 'x': timestamps,
-                'y': t_c
+                'y': t_c,
+                'err': t_c_err
             },
             'ne central': {
                 'comment': 'концентрация в центре',
                 'unit': 'ne(m^-3)',
                 'x': timestamps,
-                'y': n_c
+                'y': n_c,
+                'err': n_c_err
             },
             'Te peaking': {
                 'comment': 'мера пикированности профиля температуры',
