@@ -372,6 +372,7 @@ class Processor:
 
     def dump_dynamics(self, correction: float, data, x_from: float, x_to:float):
         to_pack = {}
+        aux = ''
         if data is not None:
             timestamps = []
             nl42 = []
@@ -396,7 +397,6 @@ class Processor:
             t_p = []
             n_p = []
 
-            aux = ''
             aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking\n'
             aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1\n'
             for event_ind_aux in range(len(data)):
@@ -568,8 +568,8 @@ class Processor:
                             serialised[poly_ind]['x'].append(self.result['events'][event_ind]['timestamp'] * 1e-3)
                             serialised[poly_ind]['t'].append(poly['T'])
                             serialised[poly_ind]['te'].append(poly['Terr'])
-                            serialised[poly_ind]['n'].append(poly['n'])
-                            serialised[poly_ind]['ne'].append(poly['n_err'])
+                            serialised[poly_ind]['n'].append(poly['n'] * correction)
+                            serialised[poly_ind]['ne'].append(poly['n_err'] * correction)
         for poly_ind in range(len(serialised)):
             to_pack['Te R%d' % (self.result['config']['poly'][poly_ind]['R'] / 10)] = {
                     'comment': 'локальная температура электронов',
@@ -591,6 +591,8 @@ class Processor:
         if len(packed) != 0:
             print('sht packing error: "%s"' % packed)
 
+        if len(aux) == 0:
+            return None
         return aux[:-1]
 
     def to_csv(self, x_from, x_to, correction, aux_data=None):
