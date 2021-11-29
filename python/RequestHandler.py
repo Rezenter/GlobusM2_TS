@@ -262,6 +262,7 @@ class Handler:
             }
 
     def export_shot(self, req):
+        print('export called')
         if 'shot' not in req:
             return {
                 'ok': False,

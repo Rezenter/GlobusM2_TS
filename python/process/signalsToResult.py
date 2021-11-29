@@ -565,7 +565,7 @@ class Processor:
                     for poly_ind in range(len(self.result['events'][event_ind]['T_e'])):
                         poly = self.result['events'][event_ind]['T_e'][poly_ind]
                         if poly['error'] is None and not ('hidden' in poly and poly['hidden']):
-                            serialised[poly_ind]['x'].append(self.result['events'][event_ind]['timestamp'])
+                            serialised[poly_ind]['x'].append(self.result['events'][event_ind]['timestamp'] * 1e-3)
                             serialised[poly_ind]['t'].append(poly['T'])
                             serialised[poly_ind]['te'].append(poly['Terr'])
                             serialised[poly_ind]['n'].append(poly['n'])
@@ -576,14 +576,14 @@ class Processor:
                     'unit': 'Te(eV)',
                     'x': serialised[poly_ind]['x'],
                     'y': serialised[poly_ind]['t'],
-                    'e': serialised[poly_ind]['te']
+                    'err': serialised[poly_ind]['te']
                 }
             to_pack['ne R%d' % (self.result['config']['poly'][poly_ind]['R'] / 10)] = {
                 'comment': 'm^-3, локальная концентрация электронов',
                 'unit': 'ne(m^-3)',
                 'x': serialised[poly_ind]['x'],
                 'y': serialised[poly_ind]['n'],
-                'e': serialised[poly_ind]['ne']
+                'err': serialised[poly_ind]['ne']
             }
 
         packed = shtRipper.ripper.write(path='%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn),
