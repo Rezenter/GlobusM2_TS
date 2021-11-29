@@ -371,184 +371,220 @@ class Processor:
         return res
 
     def dump_dynamics(self, correction: float, data, x_from: float, x_to:float):
-        timestamps = []
-        nl42 = []
-        nl42_err = []
-        # расстояние до сепаратрисы
-        # температура и концентрация на сепаратрисе
-        # градиент на сепаратрисе
-        # центральную точку экстраполировать на 41й сантиметр.
-        nl_ave = []
-        nl_ave_err = []
-        n_ave = []
-        n_ave_err = []
-        t_ave = []
-        t_ave_err = []
-        we = []
-        we_err = []
-        dwe = []
-        vol = []
-        t_c = []
-        t_c_err = []
-        n_c = []
-        n_c_err = []
-        t_p = []
-        n_p = []
+        to_pack = {}
+        if data is not None:
+            timestamps = []
+            nl42 = []
+            nl42_err = []
+            # расстояние до сепаратрисы
+            # температура и концентрация на сепаратрисе
+            # градиент на сепаратрисе
+            nl_ave = []
+            nl_ave_err = []
+            n_ave = []
+            n_ave_err = []
+            t_ave = []
+            t_ave_err = []
+            we = []
+            we_err = []
+            dwe = []
+            vol = []
+            t_c = []
+            t_c_err = []
+            n_c = []
+            n_c_err = []
+            t_p = []
+            n_p = []
 
-        aux = ''
-        aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking\n'
-        aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1\n'
-        for event_ind_aux in range(len(data)):
-            event = data[event_ind_aux]
+            aux = ''
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1\n'
+            for event_ind_aux in range(len(data)):
+                event = data[event_ind_aux]
 
-            event_ind = event['event_index']
-            if 'error' in event:
-                continue
-            if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
-                if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
-                    length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
+                event_ind = event['event_index']
+                if 'error' in event:
+                    continue
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
+                        length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
 
-                    we_derivative = 0
-                    if len(data) > 1:
-                        if event_ind_aux == 0:
-                            we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] - event['data'][
-                                'vol_w']) * correction / (self.result['events'][
-                                                              data[event_ind_aux + 1]['event_index']]['timestamp'] -
-                                                          self.result['events'][event_ind]['timestamp'])
-                        elif event_ind_aux == len(data) - 1:
-                            we_derivative = (data[event_ind_aux - 1]['data']['vol_w'] - event['data'][
-                                'vol_w']) * correction / (self.result['events'][
-                                                              data[event_ind_aux - 1]['event_index']]['timestamp'] -
-                                                          self.result['events'][event_ind]['timestamp'])
-                        elif len(data) > 2:
-                            we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
-                                             data[event_ind_aux - 1]['data']['vol_w']) * correction / \
-                                            (self.result['events'][data[event_ind_aux + 1]['event_index']][
-                                                 'timestamp'] -
-                                             self.result['events'][data[event_ind_aux - 1]['event_index']][
-                                                 'timestamp'])
+                        we_derivative = 0
+                        if len(data) > 1:
+                            if event_ind_aux == 0:
+                                we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] - event['data'][
+                                    'vol_w']) * correction / (self.result['events'][
+                                                                  data[event_ind_aux + 1]['event_index']]['timestamp'] -
+                                                              self.result['events'][event_ind]['timestamp'])
+                            elif event_ind_aux == len(data) - 1:
+                                we_derivative = (data[event_ind_aux - 1]['data']['vol_w'] - event['data'][
+                                    'vol_w']) * correction / (self.result['events'][
+                                                                  data[event_ind_aux - 1]['event_index']]['timestamp'] -
+                                                              self.result['events'][event_ind]['timestamp'])
+                            elif len(data) > 2:
+                                we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
+                                                 data[event_ind_aux - 1]['data']['vol_w']) * correction / \
+                                                (self.result['events'][data[event_ind_aux + 1]['event_index']][
+                                                     'timestamp'] -
+                                                 self.result['events'][data[event_ind_aux - 1]['event_index']][
+                                                     'timestamp'])
 
-                    timestamps.append(self.result['events'][event_ind]['timestamp'] * 1e-3)
-                    nl42.append(event['data']['nl'] * correction)
-                    nl42_err.append(event['data']['nl_err'] * correction)
+                        timestamps.append(self.result['events'][event_ind]['timestamp'] * 1e-3)
+                        nl42.append(event['data']['nl'] * correction)
+                        nl42_err.append(event['data']['nl_err'] * correction)
 
-                    nl_ave.append(event['data']['nl'] * correction / length)
-                    nl_ave_err.append(event['data']['nl_err'] * correction / length)
+                        nl_ave.append(event['data']['nl'] * correction / length)
+                        nl_ave_err.append(event['data']['nl_err'] * correction / length)
 
-                    n_ave.append(event['data']['n_vol'] * correction)
-                    n_ave_err.append(event['data']['n_vol_err'] * correction)
+                        n_ave.append(event['data']['n_vol'] * correction)
+                        n_ave_err.append(event['data']['n_vol_err'] * correction)
 
-                    t_ave.append(event['data']['t_vol'])
-                    t_ave_err.append(event['data']['t_vol_err'])
+                        t_ave.append(event['data']['t_vol'])
+                        t_ave_err.append(event['data']['t_vol_err'])
 
-                    we.append(event['data']['vol_w'] * correction)
-                    we_err.append(event['data']['w_err'] * correction)
+                        we.append(event['data']['vol_w'] * correction)
+                        we_err.append(event['data']['w_err'] * correction)
 
-                    dwe.append(we_derivative)
-                    vol.append(event['data']['vol'])
+                        dwe.append(we_derivative)
+                        vol.append(event['data']['vol'])
 
-                    t_c.append(event['data']['surfaces'][-1]['Te'])
-                    t_c_err.append(event['data']['surfaces'][-1]['Te_err'])
+                        t_c.append(event['data']['surfaces'][-1]['Te'])
+                        t_c_err.append(event['data']['surfaces'][-1]['Te_err'])
 
-                    n_c.append(event['data']['surfaces'][-1]['ne'] * correction)
-                    n_c_err.append(event['data']['surfaces'][-1]['ne_err'] * correction)
+                        n_c.append(event['data']['surfaces'][-1]['ne'] * correction)
+                        n_c_err.append(event['data']['surfaces'][-1]['ne_err'] * correction)
 
-                    t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
-                    n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
+                        t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
+                        n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
-                    aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f\n' % \
-                           (event_ind, self.result['events'][event_ind]['timestamp'],
-                            event['data']['nl'] * correction, event['data']['nl_err'] * correction,
-                            length,
-                            event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
-                            event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
-                            event['data']['t_vol'], event['data']['t_vol_err'],
-                            event['data']['vol_w'] * correction, event['data']['w_err'] * correction, we_derivative,
-                            event['data']['vol'],
-                            event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
-                            event['data']['surfaces'][-1]['ne'] * correction,
-                            event['data']['surfaces'][-1]['ne_err'] * correction,
-                            event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
-                            event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
-                else:
-                    aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
-                           (event_ind, self.result['events'][event_ind]['timestamp'])
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f\n' % \
+                               (event_ind, self.result['events'][event_ind]['timestamp'],
+                                event['data']['nl'] * correction, event['data']['nl_err'] * correction,
+                                length,
+                                event['data']['nl'] * correction / length, event['data']['nl_err'] * correction / length,
+                                event['data']['n_vol'] * correction, event['data']['n_vol_err'] * correction,
+                                event['data']['t_vol'], event['data']['t_vol_err'],
+                                event['data']['vol_w'] * correction, event['data']['w_err'] * correction, we_derivative,
+                                event['data']['vol'],
+                                event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
+                                event['data']['surfaces'][-1]['ne'] * correction,
+                                event['data']['surfaces'][-1]['ne_err'] * correction,
+                                event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
+                                event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
+                    else:
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                               (event_ind, self.result['events'][event_ind]['timestamp'])
 
-        to_pack = {
-            'nl42': {
-                'comment': 'линейная концентрация по хорде R=42',
-                'unit': 'nl42(m^-2)',
-                'x': timestamps,
-                'y': nl42,
-                'err': nl42_err
-            },
-            '<nl42>': {
-                'comment': 'средняя концентрация по хорде R=42',
-                'unit': '<nl42>(m^-3)',
-                'x': timestamps,
-                'y': nl_ave,
-                'err': nl_ave_err
-            },
-            '<ne>': {
-                'comment': 'средняя по объёму концентрация',
-                'unit': '<n>(m^-3)',
-                'x': timestamps,
-                'y': n_ave,
-                'err': n_ave_err
-            },
-            '<Te>': {
-                'comment': 'средняя по объёму температура',
-                'unit': '<Te>(eV)',
-                'x': timestamps,
-                'y': t_ave,
-                'err': t_ave_err
-            },
-            'We': {
-                'comment': 'энергозапас в электронном компоненте',
-                'unit': 'We(J)',
-                'x': timestamps,
-                'y': we,
-                'err': we_err
-            },
-            'dWe/dt': {
-                'comment': 'производная энергозапаса в электронном компоненте',
-                'unit': 'dWe/dt(kW)',
-                'x': timestamps,
-                'y': dwe
-            },
-            'plasma volume': {
-                'comment': 'объём плазмы внутри сепаратрисы',
-                'unit': 'V(m^-3)',
-                'x': timestamps,
-                'y': vol
-            },
-            'Te central': {
-                'comment': 'температура в центре',
-                'unit': 'Te(eV)',
-                'x': timestamps,
-                'y': t_c,
-                'err': t_c_err
-            },
-            'ne central': {
-                'comment': 'концентрация в центре',
-                'unit': 'ne(m^-3)',
-                'x': timestamps,
-                'y': n_c,
-                'err': n_c_err
-            },
-            'Te peaking': {
-                'comment': 'мера пикированности профиля температуры = (Te central) / <Te>',
-                'unit': 'пикированность(1)',
-                'x': timestamps,
-                'y': t_p
-            },
-            'ne peaking': {
-                'comment': 'мера пикированности профиля концентрации = (ne central) / <ne>',
-                'unit': 'пикированность(1)',
-                'x': timestamps,
-                'y': n_p
+            to_pack = {
+                'nl42 (m^-2)': {
+                    'comment': 'линейная концентрация по хорде R=42',
+                    'unit': 'nl42(m^-2)',
+                    'x': timestamps,
+                    'y': nl42,
+                    'err': nl42_err
+                },
+                '<nl42> (m^-3)': {
+                    'comment': 'средняя концентрация по хорде R=42',
+                    'unit': '<nl42>(m^-3)',
+                    'x': timestamps,
+                    'y': nl_ave,
+                    'err': nl_ave_err
+                },
+                '<ne> (m^-3)': {
+                    'comment': 'средняя по объёму концентрация',
+                    'unit': '<n>(m^-3)',
+                    'x': timestamps,
+                    'y': n_ave,
+                    'err': n_ave_err
+                },
+                '<Te>': {
+                    'comment': 'средняя по объёму температура',
+                    'unit': '<Te>(eV)',
+                    'x': timestamps,
+                    'y': t_ave,
+                    'err': t_ave_err
+                },
+                'We': {
+                    'comment': 'энергозапас в электронном компоненте',
+                    'unit': 'We(J)',
+                    'x': timestamps,
+                    'y': we,
+                    'err': we_err
+                },
+                'dWe/dt': {
+                    'comment': 'производная энергозапаса в электронном компоненте',
+                    'unit': 'dWe/dt(kW)',
+                    'x': timestamps,
+                    'y': dwe
+                },
+                'plasma volume': {
+                    'comment': 'объём плазмы внутри сепаратрисы',
+                    'unit': 'V(m^-3)',
+                    'x': timestamps,
+                    'y': vol
+                },
+                'Te central': {
+                    'comment': 'температура в ближайшей к центру точке',
+                    'unit': 'Te(eV)',
+                    'x': timestamps,
+                    'y': t_c,
+                    'err': t_c_err
+                },
+                'ne central (m^-3)': {
+                    'comment': 'концентрация в ближайшей к центру точке',
+                    'unit': 'ne(m^-3)',
+                    'x': timestamps,
+                    'y': n_c,
+                    'err': n_c_err
+                },
+                'Te peaking': {
+                    'comment': 'мера пикированности профиля температуры = (Te central) / <Te>',
+                    'unit': 'пикированность(1)',
+                    'x': timestamps,
+                    'y': t_p
+                },
+                'ne peaking': {
+                    'comment': 'мера пикированности профиля концентрации = (ne central) / <ne>',
+                    'unit': 'пикированность(1)',
+                    'x': timestamps,
+                    'y': n_p
+                }
             }
-        }
+
+        serialised = [{
+            'x': [],
+            't': [],
+            'te': [],
+            'n': [],
+            'ne': []
+        } for poly in self.result['config']['poly']]
+
+        for event_ind in range(len(self.result['events'])):
+            if 'timestamp' in self.result['events'][event_ind]:
+                if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
+                    for poly_ind in range(len(self.result['events'][event_ind]['T_e'])):
+                        poly = self.result['events'][event_ind]['T_e'][poly_ind]
+                        if poly['error'] is None and not ('hidden' in poly and poly['hidden']):
+                            serialised[poly_ind]['x'].append(self.result['events'][event_ind]['timestamp'])
+                            serialised[poly_ind]['t'].append(poly['T'])
+                            serialised[poly_ind]['te'].append(poly['Terr'])
+                            serialised[poly_ind]['n'].append(poly['n'])
+                            serialised[poly_ind]['ne'].append(poly['n_err'])
+        for poly_ind in range(len(serialised)):
+            to_pack['Te R%d' % (self.result['config']['poly'][poly_ind]['R'] / 10)] = {
+                    'comment': 'локальная температура электронов',
+                    'unit': 'Te(eV)',
+                    'x': serialised[poly_ind]['x'],
+                    'y': serialised[poly_ind]['t'],
+                    'e': serialised[poly_ind]['te']
+                }
+            to_pack['ne R%d' % (self.result['config']['poly'][poly_ind]['R'] / 10)] = {
+                'comment': 'm^-3, локальная концентрация электронов',
+                'unit': 'ne(m^-3)',
+                'x': serialised[poly_ind]['x'],
+                'y': serialised[poly_ind]['n'],
+                'e': serialised[poly_ind]['ne']
+            }
 
         packed = shtRipper.ripper.write(path='%s%s%05d/' % (self.prefix, self.RESULT_FOLDER, self.shotn),
                                         filename='TS_%05d.sht' % self.shotn, data=to_pack)
@@ -642,16 +678,6 @@ class Processor:
                                                       event['T_e'][poly_ind]['n_err'] * correction)
             dens_prof += line[:-2] + '\n'
 
-        if aux_data is None:
-            return {
-                'ok': True,
-                'Tt': temp_evo,
-                'TR': temp_prof,
-                'nt': dens_evo,
-                'nR': dens_prof,
-                'aux': ''
-            }
-
         dynamics = self.dump_dynamics(correction, aux_data, x_from, x_to)
         return {
             'ok': True,
@@ -732,16 +758,6 @@ class Processor:
                             line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * correction * 1e-6,
                                                       event['T_e'][poly_ind]['n_err'] * correction * 1e-6)
             dens_prof += line[:-2] + '\n'
-
-        if aux_data is None:
-            return {
-                'ok': True,
-                'Tt': temp_evo,
-                'TR': temp_prof,
-                'nt': dens_evo,
-                'nR': dens_prof,
-                'aux': ''
-            }
 
         dynamics = self.dump_dynamics(correction, aux_data, x_from, x_to)
         return {
