@@ -511,7 +511,7 @@ class Processor:
                 'err': we_err
             },
             'dWe/dt': {
-                'comment': 'энергозапас в электронном компоненте',
+                'comment': 'производная энергозапаса в электронном компоненте',
                 'unit': 'dWe/dt(kW)',
                 'x': timestamps,
                 'y': dwe
@@ -537,13 +537,13 @@ class Processor:
                 'err': n_c_err
             },
             'Te peaking': {
-                'comment': 'мера пикированности профиля температуры',
+                'comment': 'мера пикированности профиля температуры = (Te central) / <Te>',
                 'unit': 'пикированность(1)',
                 'x': timestamps,
                 'y': t_p
             },
             'ne peaking': {
-                'comment': 'мера пикированности профиля концентрации',
+                'comment': 'мера пикированности профиля концентрации = (ne central) / <ne>',
                 'unit': 'пикированность(1)',
                 'x': timestamps,
                 'y': n_p
