@@ -22,33 +22,44 @@
 <script src="js/jquery.js"></script>
 <script src="js/bootstrap.min.js"></script>
 <script type="text/javascript" src="js/jquery.canvasjs.stock.min.js"></script>
-<script type="text/javascript" src="js/d3.v4.min.js"></script>
-<script type="text/javascript" src="js/d3-scale-chromatic.v1.min.js"></script>
+<link rel="stylesheet" href="js/bootstrap-select.min.css">
+<script type="text/javascript" src="js/bootstrap-select.min.js"></script>
 
 <div>
-    <ul class="nav nav-tabs">
-      <li><a data-toggle="tab" href="#tab1">Configuration</a></li>
-      <li class="active"><a data-toggle="tab" href="#tab2">Acquisition</a></li>
-      <li><a data-toggle="tab" href="#tab3">View</a></li>
-      <li><a data-toggle="tab" href="#tab4">Calibration</a></li>
-    </ul>
+    <div class="tab-content container-fluid" id="container">
+    </div>
 
-    <div class="tab-content container-fluid">
-      <div id="tab1" class="tab-pane fade"></div>
-      <div id="tab2" class="tab-pane fade in active"></div>
-      <div id="tab3" class="tab-pane fade"></div>
-      <div id="tab4" class="tab-pane fade"></div>
+    <div class="row">
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <label for="pass_input">Password</label>
+                        <input type="text" id="pass_input">
+        </div>
+        <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1">
+            <button class="btn btn-danger" id="private_button">Private TS site</button>
+        </div>
     </div>
 </div>
 
-
 <script>
+    let message = 'sad'
+
     $(document).ready(
         function () {
-            $('#tab1').load('js/configSection.html');
-            $('#tab2').load('js/acquisitionSection.html');
-            $('#tab3').load('js/viewSection.html');
-            $('#tab4').load('js/calibrSection.html');
+            $('#container').load('js/database.html');
+
+            $('#private_button').on('click', this, function () {
+                $.post('/api', JSON.stringify({
+                    subsystem: 'diag',
+                    reqtype: 'auth',
+                    pass: $('#pass_input').val()
+                }), function (resp) {
+                    if (!resp['ok']) {
+                        alert('Authentication failed. \n ' + message);
+                    } else {
+                        window.location.href = 'https://' + location.host + '/private.html';
+                    }
+                }, 'json');
+            });
         }
     )
 </script>

@@ -1,0 +1,3774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View section</title>
+</head>
+<style>
+    .hide{
+        display:none;
+    }
+    #timestamp_chart .canvasjs-chart-tooltip,#T_evo_chart .canvasjs-chart-tooltip,#n_evo_chart .canvasjs-chart-tooltip{
+        pointer-events: auto !important;
+        right: auto !important;
+        left: 100% !important;
+        top: 0 !important;
+        bottom: auto !important;
+    }
+    #radius_chart .canvasjs-chart-tooltip,
+    #T_profile_chart .canvasjs-chart-tooltip, #n_profile_chart .canvasjs-chart-tooltip,
+    #fitting_chart .canvasjs-chart-tooltip, #raw_chart .canvasjs-chart-tooltip{
+        pointer-events: auto !important;
+        right: 100% !important;
+        left: auto !important;
+        top: 0 !important;
+        bottom: auto !important;
+    }
+
+    /*draggable*/
+    .draggable {
+        position: absolute;
+        z-index: 9;
+        background-color: #f1f1f1;
+        border: 1px solid #d3d3d3;
+        text-align: center;
+    }
+
+    .draggable-header {
+        padding: 10px;
+        cursor: move;
+        z-index: 10;
+        background-color: #2196F3;
+        color: #fff;
+    }
+
+    .resizer-right {
+        width: 5px;
+        height: 100%;
+        background: transparent;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: e-resize;
+    }
+
+    .resizer-bottom {
+        width: 100%;
+        height: 5px;
+        background: transparent;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: n-resize;
+    }
+
+    .resizer-both {
+        width: 5px;
+        height: 5px;
+        background: transparent;
+        z-index: 10;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: nw-resize;
+    }
+
+    /* context menu */
+    .context-menu {
+        display: none;
+        position: absolute;
+        z-index: 10;
+        padding: 12px 0;
+        width: 240px;
+        background-color: #fff;
+        border: solid 1px #dfdfdf;
+        box-shadow: 1px 1px 2px #cfcfcf;
+    }
+
+    .context-menu--active {
+        display: block;
+    }
+
+    .context-menu__items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .context-menu__item {
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .context-menu__item:last-child {
+        margin-bottom: 0;
+    }
+
+    .context-menu__link {
+        display: block;
+        padding: 4px 12px;
+        color: #0066aa;
+        text-decoration: none;
+    }
+
+    .context-menu__link:hover {
+        color: #fff;
+        background-color: #0066aa;
+    }
+</style>
+<body>
+    <div id="focus-all" tabindex="0">
+        <div class="row" id="db_row" style="
+            margin-left: 0;
+            margin-right: 0;
+            ">
+            <button class="btn btn-success" id="shotModal_button">Load Shot</button>
+            <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
+            <label for="export_old">Include old format?</label>
+                <input type="checkbox" id="export_old">
+        </div>
+
+        <hr>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                    <div id="timestamp_chart" style="width:100%; height:200px;" class="context-target" las evo></div>
+                </div>
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div id="radius_chart" style="width:100%; height:200px;"></div>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                    <div id="T_evo_chart" style="width:100%; height:400px;" class="context-target" te evo></div>
+                    <div id="n_evo_chart" style="width:100%; height:400px;" class="context-target" ne evo></div>
+                </div>
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div id="T_profile_chart" style="width:100%; height:400px;" class="context-target" te prof></div>
+                    <div id="n_profile_chart" style="width:100%; height:400px;" class="context-target" ne prof></div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="nl_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="w_evo_chart" style="width:100%; height:400px;" class="context-target" evo ccm></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="shotSelectModal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Select tokamak shot</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                    <div style="background-color: #FF5733;">Raw data not processed</div>
+                    <div style="background-color: #F9FF33;">Not verified</div>
+                    <div style="background-color: #4FFF33;">Verified</div>
+                    </div>
+                    <select class="selectpicker" id="shot_select" data-live-search="true" title="Select shot №" data-width="fit"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button id='loadShot_button' type="button" class="btn btn-primary">Load shot</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="singleEventPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <label for="poly_input_1">Poly</label><input id="poly_input_1" type="number" class="poly_input" value="0" min="0" maxlength="1">
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p class="poly_radius"></p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <p id="event_timestamp"></p>
+                </div>
+                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                    <label for="is_show">Show</label><input type="checkbox" id="is_show" checked>
+                </div>
+            </div>
+        </div>
+        <div id="fitting_chart" style="width:100%; height:400px;" class="context-target" single expected></div>
+        <div id="raw_chart" style="width:100%; height:400px;" class="context-target" single raw></div>
+
+    </div>
+    <div id="chiPopup" class="draggable" hidden tabindex="1" style="width: 400px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+                <div class="row">
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <label for="poly_input_2">Poly</label><input id="poly_input_2" class="poly_input" type="number" value="0" min="0" maxlength="1">
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p class="poly_radius"></p>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p id="chi_pointCount"></p>
+                    </div>
+                    <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                        <p id="chi_offscale"></p>
+                    </div>
+            </div>
+            <div id="chi_chart" style="width:100%; height:400px;" class="context-target"></div>
+        </div>
+    </div>
+    <div id="chordPopup" class="draggable" hidden tabindex="1" style="width: 900px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1">
+                    <p id="chord_time"></p>
+                </div>
+                <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1">
+                    <p id="chord_len"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_n"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_nl"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <p id="chord_edge"></p>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <label for="chord_divided">Divided by l?</label>
+                        <input type="checkbox" id="chord_divided" checked>
+                </div>
+                <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                    <label for="nl_correction">correction mult.</label>
+                    <input id="nl_correction" type="number" value="1" min="0.1" step="0.1">
+                </div>
+
+            </div>
+        </div>
+        <div id="chord_evo_chart" style="width:100%; height:400px;" class="context-target"></div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                    <div id="poloidal_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                    <div id="chord_profile_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="ccmPopup" class="draggable" hidden tabindex="1" style="width: 600px;">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div class="draggable-header" tabindex="2">Hold here to move</div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <button class="btn btn-danger hide_btn">Hide window</button>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="ccm_surf_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                    <div id="ccm_chord_chart" style="width:100%; height:400px;" class="context-target"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <nav id="context-menu" class="context-menu"></nav>
+</body>
+<script>
+    function Main () {
+        this.EnRu = {
+            "q": "й",
+            "w": "ц",
+            "e": "у",
+            "r": "к",
+            "t": "е",
+            "y": "н",
+            "u": "г",
+            "i": "ш",
+            "o": "щ",
+            "p": "з",
+            "[": "х",
+            "{": "Х",
+            "]": "ъ",
+            "}": "Ъ",
+            "|": "/",
+            "`": "ё",
+            "~": "Ё",
+            "a": "ф",
+            "s": "ы",
+            "d": "в",
+            "f": "а",
+            "g": "п",
+            "h": "р",
+            "j": "о",
+            "k": "л",
+            "l": "д",
+            ";": "ж",
+            ":": "Ж",
+            "'": "э",
+            "\"": "Э",
+            "z": "я",
+            "x": "ч",
+            "c": "с",
+            "v": "м",
+            "b": "и",
+            "n": "т",
+            "m": "ь",
+            ",": "б",
+            "<": "Б",
+            ".": "ю",
+            ">": "Ю",
+            "/": ".",
+            "?": ",",
+            "@": "\"",
+            "#": "№",
+            "$": ";",
+            "^": ":",
+            "&": "?"
+        };
+
+        this.m_keypress_timestep = 3;
+        this.m_defaults = {
+            time_min: 105,
+            time_max: 250,
+            timestamp_title: ' laser energy',
+            radius_title: ' spatial points',
+            T_evo_title: ' electron temperature evolution',
+            T_prof_title: ' electron temperature profile',
+            n_evo_title: ' electron density evolution',
+            n_prof_title: ' electron density profile',
+            w_evo_title: ' electron stored energy evolution',
+            nl_evo_title: ' electron density evolution integrated along R=42 chord',
+            line_thickness_base: 2,
+            line_thickness_high: 4
+        };
+        this.m_currentShot = {};
+        this.m_current_event_raw = {};
+        this.m_current_event_sig = {};
+        this.m_expected = {};
+        this.m_current_chord = {};
+        this.m_current_ccm = {};
+        this.m_current_sht = {};
+        this.m_selected_event_ind = 0;
+        this.palette = [
+            '#181818',
+            '#FF0000',
+            '#0000FF',
+            '#00FF00',
+            '#8A2BE2',
+            '#00FFFF',
+            '#006400',
+            '#DC143C',
+            '#008b8b',
+            '#4B0082',
+            '#FF8C00',
+            '#ADFF2F',
+            '#FF00FF',
+            '#808000',
+            '#FF4500',
+            '#FFFF00',
+        ];
+        this.m_current_channels = [
+            true,
+            true,
+            true,
+            true,
+            true,
+            false,
+            true
+        ];
+        this.m_poloidal_poly = [];
+
+        this.selectors = {
+            ccmPopup: $('#ccmPopup')[0],
+            chordPopup: $('#chordPopup')[0],
+            chiPopup: $('#chiPopup')[0],
+            singleEventPopup: $('#singleEventPopup')[0],
+            draggables: $('.draggable'),
+            polyInputs: $('.poly_input'),
+            isShowSingleEvent: $('#is_show'),
+            chi_count: $('#chi_pointCount'),
+            chi_offscale: $('#chi_offscale'),
+            poly_radius: $('.poly_radius'),
+            shotn: $('#shot_select'),
+            chord_time: $('#chord_time'),
+            chord_length: $('#chord_len'),
+            chord_nl: $('#chord_nl'),
+            chord_n: $('#chord_n'),
+            chord_div: $('#chord_divided'),
+            chord_edge: $('#chord_edge'),
+            sht_signals: $('#sht_signal_list'),
+            sht_search: $("#sht_search"),
+            sht_selected_search: $('#sht_selected_search'),
+            sht_selected_signals: $('#sht_selected_list')
+        };
+
+        //header charts
+        this.m_timestamp_chart = new CanvasJS.StockChart("timestamp_chart",{
+            theme: "light2",
+            charts: [{
+                title: {
+                    text: "Shot timeline",
+                    fontFamily: 'arial'
+                },
+                axisY: {
+                    includeZero: true,
+                    title: "Energy, J",
+                    fontFamily: 'arial'
+                },
+                axisX: {
+                    title: "Timestamp, ms",
+                    fontFamily: 'arial',
+                    crosshair: {
+                        enabled: true,
+                        snapToDataPoint: true,
+                        labelFormatter: function(e) {
+                            return e.value.toFixed(1);
+                        },
+                        updated: function(e){
+                            this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
+                            this.UpdateCCMPopup(e.value);
+                        }.bind(this),
+                        hidden: function (e){
+                            this.m_n_evo_chart.axisX[0].crosshair.hide();
+                            this.m_T_evo_chart.axisX[0].crosshair.hide();
+                            this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                            this.m_w_evo_chart.axisX[0].crosshair.hide();
+                        }.bind(this)
+                    }
+                },
+                toolTip: {
+                    contentFormatter: function(e){
+                        return ('time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms, E = ' +
+                            e.entries[0].dataPoint.y.toFixed(2) + 'J, index=' +
+                            e.entries[0].index);
+                    },
+                    updated: function(e){
+                        this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                        this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                        this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                        this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    }.bind(this),
+                    hidden: function(){
+                        this.m_T_evo_chart.toolTip.hide();
+                        this.m_n_evo_chart.toolTip.hide();
+                        this.m_nl_evo_chart.toolTip.hide();
+                        this.m_w_evo_chart.toolTip.hide();
+                    }.bind(this)
+                },
+                data: []
+            }],
+            navigator: {
+                data: [{
+                    type: 'column',
+                    color: "#B0D0B0",
+                    dataPoints: []
+                }],
+                slider: {
+                    minimum: this.m_defaults.time_min,
+                    maximum: this.m_defaults.time_max,
+                    height: 100
+                }
+            },
+            rangeChanged: function(e){
+                this.RangeChanged(e);
+            }.bind(this),
+        });
+        this.m_radius_chart = new CanvasJS.Chart("radius_chart", {
+            title: {
+                text: "Spatial points",
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                fontFamily: 'arial',
+                titleFontSize: 12,
+                includeZero: true,
+                minimum: -10,
+                maximum: 10
+            },
+            axisX: {
+                title: "R, mm",
+                titleFontSize: 12,
+                interval: 20,
+                fontFamily: 'arial'
+            },
+            data: []
+        });
+        this.m_radius_chart.render();
+
+        //main charts
+        this.m_T_evo_chart = new CanvasJS.Chart("T_evo_chart", {
+            title: {
+                text: 'Electron temperature evolution',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron temperature, eV',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                //backgroundColor: "rgba(255,255,255,.2)",
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries){
+
+                        if(typeof entry.dataPoint.y == 'number'){
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', T<sub>e</sub> = ' + entry.dataPoint.y.toFixed(1);
+                        }else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toFixed(1) + ' eV</p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                }.bind(this),
+                updated: function(e){
+                    this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                }.bind(this)
+            },
+            legend: {
+                cursor: "pointer",
+                itemmouseover: function(e) {
+                    if(e.dataSeries.visible) {
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_T_evo_chart.render();
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_n_evo_chart.render();
+                    }
+                }.bind(this),
+                itemmouseout: function(e) {
+                    if(e.dataSeries.visible) {
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_T_evo_chart.render();
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_n_evo_chart.render();
+                    }
+                }.bind(this),
+                itemclick: function (e) {
+                    e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+                    this.m_T_evo_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
+                    this.m_T_evo_chart.render();
+
+                    this.m_n_evo_chart.options.data[e.dataSeriesIndex].visible = e.dataSeries.visible;
+                    this.m_n_evo_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
+                    this.m_n_evo_chart.render();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_T_evo_chart.render();
+        this.m_n_evo_chart = new CanvasJS.Chart("n_evo_chart", {
+            title: {
+                text: 'Electron density evolution',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                },
+                updated: function(e){
+                    this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_n_evo_chart.render();
+
+        this.m_T_profile_data = [];
+        this.m_T_profile_chart = new CanvasJS.Chart("T_profile_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
+            title: {
+                text: 'Electron temperature profile',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron temperature, eV',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "R, mm",
+                titleFontSize: 12,
+                minimum: 400,
+                maximum: 610,
+                interval: 20,
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ('R = ' + e.entries[0].dataPoint.x.toFixed(0) + ' mm ');
+                },
+            },
+            data: this.m_T_profile_data
+        });
+        this.m_T_profile_chart.render();
+        this.m_n_profile_data = [];
+        this.m_n_profile_chart = new CanvasJS.Chart("n_profile_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
+            title: {
+                text: 'Electron density profile',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m⁻³',
+                titleFontSize: 12,
+                minimum: 0,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "R, mm",
+                titleFontSize: 12,
+                minimum: 400,
+                maximum: 610,
+                interval: 20,
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    return ('R = ' + e.entries[0].dataPoint.x.toFixed(0) + 'mm');
+                },
+            },
+            data: this.m_n_profile_data
+        });
+        this.m_n_profile_chart.render();
+
+        //ccm charts
+        this.m_nl_evo_chart = new CanvasJS.Chart("nl_evo_chart", {
+            title: {
+                text: 'Electron density evolution integrated along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'nl₄₂ , m⁻²',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_w_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_w_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
+                    let chord_length = (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile.length - 1].z));
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">nl<sub>42</sub> = ' + e.entries[0].dataPoint.y.toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_err * this.m_currentShot.proc.absCorr).toExponential(2) + ' [m<sup>-2</sup>]</p>';
+                    text += '<p style="color: #000000;">Chord length = ' +
+                        chord_length.toFixed(2) + ' [m]</p>';
+                    text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt = ' +
+                        (e.entries[0].dataPoint.y / chord_length).toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_err * this.m_currentShot.proc.absCorr / chord_length).toExponential(2) +
+                        ' [m<sup>-3</sup>]</p>';
+                    text += '<p style="color: #000000;"> &ltn<sub>e</sub>&gt<sub>V</sub> = ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol * this.m_currentShot.proc.absCorr).toExponential(2) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.n_vol_err * this.m_currentShot.proc.absCorr).toExponential(2) +
+                        ' [m<sup>-3</sup>]</p>';
+                    text += '<p style="color: #000000;"> &ltT<sub>e</sub>&gt<sub>V</sub> = ' +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol.toFixed(1) + ' ± ' +
+                        this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.t_vol_err.toFixed(1) +
+                        ' [eV]</p>';
+                    return text;
+                }.bind(this),
+                updated: function(e){
+                    this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_w_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_w_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_nl_evo_chart.render();
+        this.m_w_evo_chart = new CanvasJS.Chart("w_evo_chart", {
+            title: {
+                text: 'Electron stored energy evolution',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Wₑ, J',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_nl_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateCCMPopup(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_nl_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.m_currentShot.proc.absCorr).toFixed(0) + ' [J]</p>';
+                    text += '<p style="color: #000000;">Plasma volume = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.vol.toFixed(3) + ' [m<sup>3</sup>]</p>';
+                    text += '<p style="color: #000000;">Separatrix area = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.area.toFixed(3) + ' [m<sup>2</sup>]</p>';
+                    return text;
+                }.bind(this),
+                updated: function(e){
+                    this.m_T_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_nl_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_n_evo_chart.toolTip.showAtX(e.entries[0].xValue);
+                    this.m_timestamp_chart.charts[0].toolTip.showAtX(e.entries[0].xValue);
+                }.bind(this),
+                hidden: function(){
+                    this.m_T_evo_chart.toolTip.hide();
+                    this.m_nl_evo_chart.toolTip.hide();
+                    this.m_n_evo_chart.toolTip.hide();
+                    this.m_timestamp_chart.charts[0].toolTip.hide();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_w_evo_chart.render();
+
+        //single event popup charts
+        this.m_fitting_chart = new CanvasJS.Chart("fitting_chart", {
+            zoomEnabled: true,
+            title: {
+                text: 'Spectrum fitting',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Signal, a.u.',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial',
+                crosshair: {
+                    enabled: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(2);
+                    }
+                }
+            },
+            axisX: {
+                title: "Electron temperature, eV",
+                titleFontSize: 12,
+                minimum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(){
+                    let poly_ind = this.selectors.polyInputs.val();
+                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) +
+                        '±' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].Terr.toFixed(1) + 'eV</p>' +
+                        '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
+                    for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                        text += '<p style="color:' + this.palette[ch] + ';">' +
+                            'ch ' + (ch + 1) + ', S = ' +
+                            ((this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el - this.m_currentShot.config.poly[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
+                            '±' + (this.m_current_event_sig.poly[poly_ind].ch[ch].err / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) + ' a.u.</p>'
+                    }
+                    return text;
+                }.bind(this),
+            },
+            legend: {
+                cursor: "pointer",
+                itemmouseover: function(e) {
+                    if(e.dataSeries.visible) {
+                        let poly_ind = this.selectors.polyInputs.val();
+                        // fuck up
+                        let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
+
+                        let series_index = 0;
+                        let ch = 0;
+                        for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                            if(series_index === e.dataSeriesIndex){
+                                break;
+                            }
+                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                                series_index += 1;
+                            }else{
+                                series_index += 3;
+                            }
+                        }
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_fitting_chart.render();
+
+                        this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_high;
+                        this.m_raw_chart.options.axisX.stripLines = [{
+                            startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.starts[ch]) * dt,
+                            endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.starts[ch]) * dt,
+                            color: this.palette[ch],
+                            opacity: .2
+                        }];
+                        this.m_raw_chart.render();
+
+                    }
+                }.bind(this),
+                itemmouseout: function(e) {
+                    if(e.dataSeries.visible) {
+                        let poly_ind = this.selectors.polyInputs.val();
+                        let series_index = 0;
+                        let ch = 0;
+                        for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                            if(series_index === e.dataSeriesIndex){
+                                break;
+                            }
+                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                                series_index += 1;
+                            }else{
+                                series_index += 3;
+                            }
+                        }
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_fitting_chart.render();
+
+                        this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_raw_chart.options.axisX.stripLines = [];
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
+                itemclick: function (e) {
+                    e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+                    let poly_ind = this.selectors.polyInputs.val();
+                    let series_index = 0;
+                    let ch = 0;
+                    for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                        if(series_index === e.dataSeriesIndex){
+                            break;
+                        }
+                        if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                            series_index += 1;
+                        }else{
+                            series_index += 3;
+                        }
+                    }
+                    this.m_current_channels[ch] = e.dataSeries.visible;
+                    this.m_fitting_chart.options.data[e.dataSeriesIndex].visible = e.dataSeries.visible;
+                    if(this.m_current_event_sig.poly[poly_ind].ch[ch].error === null) {
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
+                        this.m_fitting_chart.options.data[e.dataSeriesIndex + 2].visible = e.dataSeries.visible;
+                    }
+                    this.m_fitting_chart.render();
+
+                    this.m_raw_chart.options.data[ch].visible = e.dataSeries.visible;
+                    this.m_raw_chart.options.axisX.stripLines = [];
+                    this.m_raw_chart.render();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_fitting_chart.render();
+        this.m_raw_chart = new CanvasJS.Chart("raw_chart", {
+            zoomEnabled: true,
+            title: {
+                text: 'Raw signals',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Signal, mv',
+                titleFontSize: 12,
+                //minimum: 0,
+                fontFamily: 'arial',
+                crosshair: {
+                    enabled: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                }
+            },
+            axisX: {
+                title: "time, ns",
+                titleFontSize: 12,
+                minimum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial',
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let poly_ind = this.selectors.polyInputs.val();
+                    let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns; cell = ' + e.entries[0].index + '</p>';
+                    let ch = 0;
+                    for(; ch < this.m_current_event_raw.data.length; ch++){
+                        if(this.m_current_channels[ch]) {
+                            text += '<p style="color:' + this.palette[ch] + ';">' +
+                                'ch ' + (ch + 1) + ', ';
+                            if ('pre_std' in this.m_current_event_sig.poly[poly_ind].ch[ch]) {
+                                text += 'std = ' + this.m_current_event_sig.poly[poly_ind].ch[ch].pre_std.toFixed(1) + ' mV' +
+                                    '<p style="color:' + this.palette[ch] + ';">' +
+                                    'int. = ' + this.m_current_event_sig.poly[poly_ind].ch[ch].int.toFixed(1) + ' mV*ns</p>' +
+                                    '<p style="color:' + this.palette[ch] + ';">S = ' +
+                                    this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el.toFixed(1) + '±' +
+                                    this.m_current_event_sig.poly[poly_ind].ch[ch].err.toFixed(1) + ' ph.el.</p>';
+                            }
+                            text += '</p>';
+                        }
+
+                    }
+                    if(this.m_current_channels[ch]) {
+                        text += '<p style="color:#B0D0B0;">' +
+                            'laser ' + ', ' +
+                            'std = ' + this.m_current_event_sig.laser.ave.pre_std.toFixed(1) + ' mV</p>' +
+                            '<p style="color:#B0D0B0;">' +
+                            'int = ' + this.m_current_event_sig.laser.ave.int.toFixed(1) + ' mV*ns</p>';
+                    }
+
+                    return text;
+                }.bind(this),
+            },
+            legend: {
+                cursor: "pointer",
+                itemmouseover: function(e) {
+                    if(e.dataSeries.visible) {
+                        let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_high;
+                        if(e.dataSeriesIndex !== 5) {
+                            this.m_raw_chart.options.axisX.stripLines = [{
+                                startValue: -5,
+                                endValue: (this.m_current_event_sig.laser.ave.int_len) * dt,
+                                color: "#B0D0B0",
+                                opacity: .2
+                            }];
+                        }
+
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
+                itemmouseout: function(e) {
+                    if(e.dataSeries.visible) {
+                        this.m_raw_chart.options.data[e.dataSeriesIndex].lineThickness = this.m_defaults.line_thickness_base;
+                        this.m_raw_chart.options.axisX.stripLines = [];
+                        this.m_raw_chart.render();
+                    }
+                }.bind(this),
+                itemclick: function (e) {
+                    this.m_current_channels[e.dataSeriesIndex] = (!(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible));
+                    this.m_raw_chart.options.data[e.dataSeriesIndex].visible = this.m_current_channels[e.dataSeriesIndex];
+                    //this.m_raw_chart.options.data[e.dataSeriesIndex / 2].lineThickness = this.m_raw_chart.data[e.dataSeriesIndex / 2].lineThickness * 0.5;
+                    this.m_raw_chart.options.axisX.stripLines = [];
+                    this.m_raw_chart.render();
+                }.bind(this)
+            },
+            data: []
+        });
+        this.m_raw_chart.render();
+
+        //chi popup
+        this.m_chi_chart = new CanvasJS.Chart("chi_chart", {
+            title: {
+                text: '𝜒\u00B2 distribution.',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'probability density',
+                titleFontSize: 12,
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: '𝜒\u00B2',
+                titleFontSize: 12,
+                minimum: 0,
+                maximum: 8,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial',
+            },
+            data: [{
+                showInLegend: true,
+                legendText: "Experimental",
+                type: 'column',
+                color: "#6D78AD",
+                dataPoints: []
+            }]
+        });
+        this.m_chi_chart.render();
+
+        //chord popup
+        this.m_chord_evo_chart = new CanvasJS.Chart("chord_evo_chart", {
+            title: {
+                text: 'Electron density evolution averaged along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Averaged electron density, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Time, ms",
+                titleFontSize: 12,
+                minimum: 100,
+                maximum: 250,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+                        this.m_chord_profile_chart.options.data = [];
+                        this.m_chord_profile_chart.render();
+                        this.m_poloidal_chart.options.data = [];
+                        Object.assign(this.m_poloidal_chart.options.data, this.m_poloidal_poly);
+                        this.m_poloidal_chart.render();
+                        this.m_T_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_n_evo_chart.axisX[0].crosshair.showAt(e.value);
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(e.value);
+                        this.UpdateChordSubcharts(e.value);
+                    }.bind(this),
+                    hidden: function (){
+                        this.m_T_evo_chart.axisX[0].crosshair.hide();
+                        this.m_n_evo_chart.axisX[0].crosshair.hide();
+                        this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_chord_evo_chart.render();
+        this.m_poloidal_chart = new CanvasJS.Chart("poloidal_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
+            title: {
+                text: "CFM reconstruction",
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                fontFamily: 'arial',
+                titleFontSize: 12,
+                includeZero: true,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true
+                },
+            },
+            axisX: {
+                title: "R, cm",
+                titleFontSize: 12,
+                interval: 20,
+                fontFamily: 'arial',
+                minimum: 0, //12
+                maximum: 65, //62
+                crosshair: {
+                    enabled: true
+                }
+            },
+            data: []
+        });
+        this.m_poloidal_chart.render();
+        this.m_chord_profile_chart = new CanvasJS.Chart("chord_profile_chart", {
+            zoomEnabled: true,
+            title: {
+                text: 'Electron density along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'Electron density, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                title: "Z, cm",
+                titleFontSize: 12,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+
+                    }.bind(this),
+                    hidden: function (){
+
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>Z = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ms</p>';
+                    for(let entry of e.entries) {
+                        if (typeof entry.dataPoint.y == 'number') {
+                            text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', n<sub>e</sub> = ' + entry.dataPoint.y.toExponential(1);
+                        } else {
+                            if (entry.dataPoint.y[0] !== null) {
+                                text += '±' + ((entry.dataPoint.y[1] - entry.dataPoint.y[0]) * 0.5).toExponential(1) + ' m<sup>-3</sup></p>'
+                            } else {
+                                text += '<p style="color:' + entry.dataSeries.color + ';">' + entry.dataSeries.options.name + ', no data';
+                            }
+                        }
+                    }
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_chord_profile_chart.render();
+
+        //ccm popup
+        this.m_ccm_surf_chart = new CanvasJS.Chart("ccm_surf_chart", {
+            zoomEnabled: true,
+            zoomType: 'xy',
+            title: {
+                text: "CFM reconstruction",
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                fontFamily: 'arial',
+                titleFontSize: 12,
+                includeZero: true,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true
+                },
+            },
+            axisX: {
+                title: "R, cm",
+                titleFontSize: 12,
+                interval: 20,
+                fontFamily: 'arial',
+                minimum: 0, //12
+                maximum: 65, //62
+                crosshair: {
+                    enabled: true
+                }
+            },
+            data: []
+        });
+        this.m_ccm_surf_chart.render();
+        this.m_ccm_chord_chart = new CanvasJS.Chart("ccm_chord_chart", {
+            zoomEnabled: true,
+            title: {
+                text: 'Electron density along R=42 chord',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisX: {
+                includeZero: true,
+                title: 'nₑ, m⁻³',
+                titleFontSize: 12,
+                labelFormatter: function ( e ) {
+                    return e.value.toExponential(1);
+                },
+                minimum: 0,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                title: "Z, cm",
+                titleFontSize: 12,
+                minimum: -54,
+                maximum: 54,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    },
+                    updated: function(e){
+
+                    }.bind(this),
+                    hidden: function (){
+
+                    }.bind(this)
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                shared: true,
+                contentFormatter: function(e){
+                    let text = '<p>Z = ' + e.entries[0].dataPoint.y.toFixed(1) + ' cm</p>';
+                    text += '<p style="color:' + e.entries[0].dataSeries.color + ';">, n<sub>e</sub> = ' + e.entries[0].dataPoint.x.toExponential(1) + ' [m<sup>-3</sup>]';
+                    return text;
+                }
+            },
+            data: []
+        });
+        this.m_ccm_chord_chart.render();
+
+        this.RangeChanged = function(e){
+            this.m_T_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_T_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_T_evo_chart.render();
+            this.m_n_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_n_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_n_evo_chart.render();
+            this.UpdateProfiles();
+
+            this.m_nl_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_nl_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_nl_evo_chart.render();
+            this.m_w_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_w_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_w_evo_chart.render();
+
+            this.m_chord_evo_chart.options.axisX.minimum = e.minimum;
+            this.m_chord_evo_chart.options.axisX.maximum = e.maximum;
+            this.m_chord_evo_chart.render();
+
+            if(!this.selectors.chiPopup.hasAttribute("hidden")){
+                this.DrawChi();
+            }
+        };
+
+        this.Request = function (req, callback) {
+            req.subsystem = 'view';
+            $.post('/api', JSON.stringify(req), function(resp){
+                if(!resp['ok']){
+                    alert(resp['description']);
+                }else {
+                    callback(resp);
+                }
+            }, 'json');
+        };
+
+        this.Refresh = function() {
+            this.Request(
+                {
+                    reqtype: 'refresh'
+                }
+                , function (resp) {
+                    this.m_plasma_shots = resp['good'];
+                    this.UpdateShotSelect();
+                }.bind(this)
+            );
+        };
+
+        this.UpdateShotSelect = function() {
+            let options = [];
+            for(let i = 0; i < this.m_plasma_shots.length; i++){
+                if('proc' in this.m_plasma_shots[i]){
+                    options.push("<option data-content=\"<span class='label label-warning'>" + this.m_plasma_shots[i]['#'] + "</span>\"</option>");
+                }else{
+                    options.push("<option data-content=\"<span class='label label-danger'>" + this.m_plasma_shots[i]['#'] + "</span>\"</option>");
+                }
+
+            }
+            // <option data-icon="fa-heart" data-content="<span class='badge badge-success'>Relish</span>">Relish</option>
+            //red = raw adc data
+            //yellow = unverified
+            // white = verified
+            // bold = interesting
+
+
+            this.selectors.shotn.html(options);
+            this.selectors.shotn.selectpicker('refresh');
+        };
+
+        this.DrawMain = function(){
+            this.m_T_evo_chart.options.data = [];
+            this.m_n_evo_chart.options.data = [];
+            this.m_T_profile_data = [];
+            this.m_n_profile_data = [];
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
+                this.m_T_evo_chart.options.data.push(
+                    {
+                        type: "line",
+                        color: this.palette[poly_ind],
+                        visible: true,
+                        markerType: "none",
+                        showInLegend: true,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                        connectNullData: true,
+                        nullDataLineDashType: "dot",
+                        dataPoints: [],
+                        click: function (event) {
+                            this.ShowEvent(event, poly_ind);
+                        }.bind(this)
+                    }
+                );
+                this.m_T_evo_chart.options.data.push(
+                    {
+                        type: "error",
+                        color: this.palette[poly_ind],
+                        visible: true,
+                        showInLegend: false,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                        dataPoints: [],
+                        click: function (event) {
+                            this.ShowEvent(event, poly_ind);
+                        }.bind(this)
+                    }
+                );
+
+                this.m_n_evo_chart.options.data.push(
+                    {
+                        type: "line",
+                        color: this.palette[poly_ind],
+                        visible: true,
+                        markerType: "none",
+                        showInLegend: false,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                        connectNullData: true,
+                        nullDataLineDashType: "dot",
+                        dataPoints: [],
+                        click: function (event) {
+                            this.ShowEvent(event, poly_ind);
+                        }.bind(this)
+                    }
+                );
+                this.m_n_evo_chart.options.data.push(
+                    {
+                        type: "error",
+                        color: this.palette[poly_ind],
+                        visible: true,
+                        showInLegend: false,
+                        name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                        dataPoints: [],
+                        click: function (event) {
+                            this.ShowEvent(event, poly_ind);
+                        }.bind(this)
+                    }
+                );
+            }
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++){
+                this.m_T_profile_data.push({
+                    //color: "#B0D0B0",
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    name: 'time = ' + this.m_currentShot.events[event_ind].timestamp,
+                    connectNullData: true,
+                    nullDataLineDashType:  "dot",
+                    dataPoints: []
+                });
+                this.m_T_profile_data.push(
+                    {
+                        //color: "#B0D0B0",
+                        type: "error",
+                        showInLegend: false,
+                        dataPoints: []
+                    }
+                );
+
+                this.m_n_profile_data.push({
+                    //color: "#B0D0B0",
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    name: 'time = ' + this.m_currentShot.events[event_ind].timestamp,
+                    connectNullData: true,
+                    nullDataLineDashType:  "dot",
+                    dataPoints: []
+                });
+                this.m_n_profile_data.push(
+                    {
+                        //color: "#B0D0B0",
+                        type: "error",
+                        showInLegend: false,
+                        dataPoints: []
+                    }
+                );
+
+                for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
+                    this.MainChartsSetPoint(event_ind, poly_ind);
+                }
+            }
+            this.RangeChanged({
+                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+            });
+        };
+
+        this.DrawTimeline = function(){
+            this.m_timestamp_chart.options.charts[0].data = [{
+                color: "#B0D0B0",
+                type: "column",
+                showInLegend: false,
+                name: 'Laser energy',
+                dataPoints: [],
+                click: function(event){
+                    this.ShowEvent(event, 0);
+                }.bind(this)
+            }];
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if (this.m_currentShot.events[event_ind].error !== null) {
+                    this.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                        {
+                            x: this.m_currentShot.events[event_ind].timestamp,
+                            y: null
+                        }
+                    );
+                } else {
+                    this.m_timestamp_chart.options.charts[0].data[0].dataPoints.push(
+                        {
+                            x: this.m_currentShot.events[event_ind].timestamp,
+                            y: this.m_currentShot.events[event_ind].energy
+                        }
+                    );
+                }
+            }
+            this.m_timestamp_chart.options.navigator.data[0].dataPoints =
+                this.m_timestamp_chart.options.charts[0].data[0].dataPoints;
+            this.m_timestamp_chart.render();
+
+            this.m_timestamp_chart.navigator.slider.set("maximum", this.m_defaults.time_max);
+            this.m_timestamp_chart.navigator.slider.set("minimum", this.m_defaults.time_min);
+        };
+
+        this.DrawPoloidal = function(){
+            this.m_radius_chart.options.data = [];
+            this.m_poloidal_poly = [];
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++){
+                let h05 = this.m_currentShot.config.poly[poly_ind].h * 0.5 * 0.1;
+                this.m_poloidal_poly.push({
+                    type: "rangeArea",
+                    markerType: "none",
+                    color: this.palette[poly_ind],
+                    showInLegend: false,
+                    name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                    dataPoints: [{
+                        x: (this.m_currentShot.config.poly[poly_ind].R - this.m_currentShot.config.poly[poly_ind].l05) * 0.1,
+                        y: [-h05, h05]
+                    },
+                        {
+                            x: (this.m_currentShot.config.poly[poly_ind].R + this.m_currentShot.config.poly[poly_ind].l05) * 0.1,
+                            y: [-h05, h05]
+                        }]
+                });
+                this.m_radius_chart.options.data.push({
+                    type: "rangeArea",
+                    markerType: "none",
+                    color: this.palette[poly_ind],
+                    showInLegend: true,
+                    name: 'R = ' + this.m_currentShot.config.poly[poly_ind].R,
+                    dataPoints: [{
+                        x: this.m_currentShot.config.poly[poly_ind].R - this.m_currentShot.config.poly[poly_ind].l05,
+                        y: [-h05, h05]
+                    },
+                        {
+                            x: this.m_currentShot.config.poly[poly_ind].R + this.m_currentShot.config.poly[poly_ind].l05,
+                            y: [-h05, h05]
+                        }]
+                });
+            }
+            this.m_radius_chart.render();
+            this.m_poloidal_chart.options.data = [];
+        };
+
+        this.Select = function(){
+            let shotn = parseInt(this.m_plasma_shots[this.selectors.shotn[0].selectedIndex - 1]['#']);
+            $('#shotSelectModal').modal('hide');
+            for (let member in this.m_currentShot) delete this.m_currentShot[member];
+            for (let member in this.m_current_ccm) delete this.m_current_ccm[member];
+            for (let member in this.m_current_sht) delete this.m_current_ccm[member];
+
+            $.post('/api', JSON.stringify({
+                subsystem: 'db',
+                reqtype: 'get_shot',
+                is_plasma: true,
+                shotn: shotn
+            }), function(resp){
+                if(!resp['ok']){
+                    alert(resp['description']);
+                }else {
+                    this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.timestamp_title;
+                    this.m_radius_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.radius_title;
+                    this.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.T_evo_title;
+                    this.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.T_prof_title;
+                    this.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.n_evo_title;
+                    this.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
+                        shotn + this.m_defaults.n_prof_title;
+
+                    Object.assign(this.m_currentShot, resp.data);
+                    this.m_currentShot.shotn = shotn;
+
+                    if(!('proc' in this.m_currentShot)){
+                        this.m_currentShot['proc'] = {
+                          absCorr: 1
+                        };
+                    }
+
+                    this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
+                    $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
+
+                    this.DrawTimeline();
+                    this.DrawMain();
+                    this.DrawPoloidal();
+
+                    this.LoadSHT();
+
+                    this.m_ccm_surf_chart.options.data = [];
+
+                    this.DrawCCM();
+                    this.UpdateCCMPopup();
+
+                    this.Draw3D();
+                }
+            }.bind(this), 'json');
+        };
+
+        this.MainChartsSetPoint = function(event_ind, poly_ind){
+            let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
+            if(this.m_currentShot.events[event_ind].error !== null ||
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: null
+                    }
+                );
+                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [null,
+                            null]
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: null
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [null,
+                            null]
+                    }
+                );
+
+                this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: null
+                    }
+                );
+                this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: [null,
+                            null]
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: null
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: [null,
+                            null]
+                    }
+                );
+            }else {
+                this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                    }
+                );
+                this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                    }
+                );
+
+
+                this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * this.m_currentShot.proc.absCorr
+                    }
+                );
+                this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
+                    {
+                        x: this.m_currentShot.events[event_ind].timestamp,
+                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * this.m_currentShot.proc.absCorr,
+                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * this.m_currentShot.proc.absCorr]
+                    }
+                );
+
+                this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                    }
+                );
+                this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * this.m_currentShot.proc.absCorr
+                    }
+                );
+                this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, this.m_currentShot.proc.absCorr,
+                    {
+                        x: this.m_currentShot.config.poly[poly_ind].R,
+                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * this.m_currentShot.proc.absCorr,
+                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * this.m_currentShot.proc.absCorr]
+                    }
+                );
+            }
+        };
+
+        this.ShowEvent = function (ev, poly_ind){
+            //console.log('showing', ev);
+            this.m_selected_event_ind = ev.dataPointIndex;
+            this.selectors.polyInputs.val(poly_ind);
+            this.update_popup_data()
+            this.selectors.singleEventPopup.removeAttribute('hidden');
+        };
+
+        this.update_popup_data = function (){
+            if(jQuery.isEmptyObject(this.m_expected) || this.m_expected.name === this.m_currentShot.spectral_name){
+                this.Request(
+                    {
+                        reqtype: '_get_expected',
+                        shot: Object.assign({}, this.m_currentShot, {events: undefined})
+                    }
+                    , function (resp) {
+                        Object.assign(this.m_expected, resp);
+                        this.m_expected['name'] = this.m_currentShot.spectral_name;
+                        this.draw_popup();
+                    }.bind(this)
+                );
+            }else{
+                this.draw_popup();
+            }
+        };
+
+        this.draw_popup = function(){
+            let poly_ind = this.selectors.polyInputs.val();
+
+            //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind]);
+            if(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden){
+                this.selectors.isShowSingleEvent.prop('checked', false);
+                //console.log('unchecked');
+            }else{
+                this.selectors.isShowSingleEvent.prop('checked', true);
+                //console.log('checked');
+            }
+
+            $('#event_timestamp').html(this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(2) + ' ms');
+
+            this.m_T_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_n_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_nl_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_w_evo_chart.axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+            this.m_timestamp_chart.charts[0].axisX[0].crosshair.showAt(this.m_currentShot.events[this.m_selected_event_ind].timestamp);
+
+            this.update_fitting_chart(poly_ind, this.m_currentShot.shotn);
+            this.update_raw_chart(poly_ind, this.m_currentShot.shotn);
+        };
+
+        this.update_fitting_chart = function(poly_ind, shotn){
+            this.m_fitting_chart.options.data = [];
+            this.m_current_event_sig = {};
+            this.Request(
+                {
+                    reqtype: '_get_event_sig',
+                    event: this.m_selected_event_ind,
+                    is_plasma: true,
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined})
+                }
+                , function (resp) {
+                    Object.assign(this.m_current_event_sig, resp);
+                    //console.log(this.m_current_event_sig);
+                    for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                        let data = [];
+                        for(let temp_ind = 0; temp_ind < this.m_expected.T_arr.length; temp_ind++){
+                            data.push(
+                                {
+                                    x: this.m_expected.T_arr[temp_ind],
+                                    y: this.m_expected.poly[poly_ind].expected[ch][temp_ind]
+                                });
+                        }
+                        this.m_fitting_chart.options.data.push({
+                            type: "line",
+                            visible: this.m_current_channels[ch],
+                            markerType: "none",
+                            color: this.palette[ch],
+                            showInLegend: true,
+                            name: 'ch ' + (ch + 1),
+                            dataPoints: data
+                        });
+                        if(resp.poly[poly_ind].ch[ch].error === null) {
+                            let signal = resp.poly[poly_ind].ch[ch].ph_el;
+                            if(this.m_currentShot.config.poly[poly_ind].stray[ch] > 100){
+                                signal -= this.m_currentShot.config.poly[poly_ind].stray[ch];
+                            }
+                            this.m_fitting_chart.options.data.push({
+                                type: "scatter",
+                                visible: this.m_current_channels[ch],
+                                color: this.palette[ch],
+                                showInLegend: false,
+                                name: 'measured ' + (ch + 1),
+                                dataPoints: [{
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
+                                    y: signal / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
+                                }]
+                            });
+                            this.m_fitting_chart.options.data.push({
+                                type: "error",
+                                visible: this.m_current_channels[ch],
+                                color: this.palette[ch],
+                                showInLegend: false,
+                                name: 'measured ' + (ch + 1),
+                                dataPoints: [{
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
+                                    y: [
+                                        (signal - resp.poly[poly_ind].ch[ch].err) /
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult,
+                                        (signal + resp.poly[poly_ind].ch[ch].err) /
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
+                                    ]
+                                }]
+                            });
+                        }
+                    }
+                    this.m_fitting_chart.options.axisX.minimum = 0;
+                    this.m_fitting_chart.options.axisX.maximum =
+                        Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2,
+                            this.m_expected.T_arr[this.m_expected.T_arr.length - 1]);
+                    this.m_fitting_chart.render();
+
+                }.bind(this)
+            );
+        };
+
+        this.update_raw_chart = function(poly_ind, shotn){
+            this.m_raw_chart.options.data = [];
+            this.m_current_event_raw = {};
+            this.Request(
+                {
+                    reqtype: '_get_event_raw',
+                    event: this.m_selected_event_ind,
+                    is_plasma: true,
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined}),
+                    poly: poly_ind
+                }
+                , function (resp) {
+                    Object.assign(this.m_current_event_raw, resp);
+                    let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
+                    this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
+                    this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
+                        this.m_current_event_raw.starts[0]) * dt;
+                    for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
+                        let data = [];
+                        for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
+                            if(this.m_current_event_sig.poly[poly_ind]['ch'][ch].error !== 'skip') {
+                                data.push(
+                                    {
+                                        x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
+                                        y: this.m_current_event_raw.data[ch][time_ind] -
+                                            this.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
+                                    });
+                            }else{
+                                data.push(
+                                    {
+                                        x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
+                                        y: this.m_current_event_raw.data[ch][time_ind]
+                                    });
+                            }
+                        }
+                        this.m_raw_chart.options.data.push({
+                            type: "line",
+                            color: this.palette[ch],
+                            markerType: "none",
+                            showInLegend: ch === 5,
+                            name: 'ch ' + (ch + 1),
+                            dataPoints: data,
+                            ch_ind: ch,
+                            visible: this.m_current_channels[ch]
+                        });
+                    }
+                    let data = [];
+                    for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
+                        data.push(
+                            {
+                                x: (time_ind - this.m_current_event_raw.laser_start) * dt,
+                                y: this.m_current_event_raw.laser[time_ind] -
+                                    this.m_current_event_sig.laser.boards[0].zero_lvl
+                            });
+                    }
+                    this.m_raw_chart.options.data.push({
+                        color: "#B0D0B0",
+                        type: "line",
+                        markerType: "none",
+                        showInLegend: true,
+                        name: 'laser',
+                        dataPoints: data,
+                        visible: this.m_current_channels[6]
+                    });
+                    this.m_raw_chart.render();
+                }.bind(this)
+            );
+        };
+
+        this.ToggleShow = function(){
+            let poly_ind = this.selectors.polyInputs.val();
+            if(this.selectors.isShowSingleEvent[0].checked){
+                //console.log('display', poly_ind, this.m_selected_event_ind);
+                delete this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden;
+            }else{
+                this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden = true;
+                //console.log('hide', poly_ind, this.m_selected_event_ind);
+            }
+            this.MainChartsSetPoint(this.m_selected_event_ind, poly_ind);
+            this.m_T_evo_chart.render();
+            this.m_n_evo_chart.render();
+            this.UpdateProfiles();
+        };
+
+        this.UpdateProfiles = function(){
+            this.m_T_profile_chart.options.data = [];
+            this.m_n_profile_chart.options.data = [];
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if(this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.minimum &&
+                    this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.maximum){
+                    let r = 255 -
+                        Math.floor(255 * (this.m_currentShot.events[event_ind].timestamp - this.m_timestamp_chart.navigator.slider.minimum)/
+                                   (this.m_timestamp_chart.navigator.slider.maximum - this.m_timestamp_chart.navigator.slider.minimum));
+                    let g = 255 * (1 - 2 * Math.abs(this.m_currentShot.events[event_ind].timestamp - 0.5 * (this.m_timestamp_chart.navigator.slider.minimum + this.m_timestamp_chart.navigator.slider.maximum)) /
+                        (this.m_timestamp_chart.navigator.slider.maximum - this.m_timestamp_chart.navigator.slider.minimum));
+                    let b = Math.floor(255 * (this.m_currentShot.events[event_ind].timestamp - this.m_timestamp_chart.navigator.slider.minimum)/
+                        (this.m_timestamp_chart.navigator.slider.maximum - this.m_timestamp_chart.navigator.slider.minimum));
+                    let color = `rgb(${r},${g},${b})`
+                    this.m_T_profile_data[event_ind * 2].color = color;
+                    this.m_T_profile_chart.options.data.push(this.m_T_profile_data[event_ind * 2]);
+                    this.m_T_profile_data[event_ind * 2 + 1].color = color;
+                    this.m_T_profile_chart.options.data.push(this.m_T_profile_data[event_ind * 2 + 1]);
+
+                    this.m_n_profile_data[event_ind * 2].color = color;
+                    this.m_n_profile_chart.options.data.push(this.m_n_profile_data[event_ind * 2]);
+                    this.m_n_profile_data[event_ind * 2 + 1].color = color;
+                    this.m_n_profile_chart.options.data.push(this.m_n_profile_data[event_ind * 2 + 1]);
+                }
+            }
+            this.m_T_profile_chart.render();
+            this.m_n_profile_chart.render();
+        };
+
+        this.Export = function(){
+            console.log('Export called');
+            this.Request(
+                {
+                    reqtype: '_export_shot',
+                    is_plasma: true,
+                    shot: this.m_currentShot,
+                    from: this.m_T_evo_chart.options.axisX.minimum,
+                    to: this.m_T_evo_chart.options.axisX.maximum,
+                    correction: this.m_currentShot.proc.absCorr,
+                    aux: this.m_current_ccm.data,
+                    old: $('#export_old')[0].checked
+                }, function (resp) {
+                    this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
+                    this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
+                    this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
+                    this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
+                    this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
+                    let info = {
+                        config_name: this.m_currentShot.config_name,
+                        spectral_name: this.m_currentShot.spectral_name,
+                        absolute_name: this.m_currentShot.absolute_name,
+                        process_timestamp: this.m_currentShot.timestamp,
+                        absolute_correction: this.m_currentShot.proc.absCorr
+                    };
+                    this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
+                    if('old' in resp){
+                        this.DownloadFile(resp.old.TR, (this.m_currentShot.shotn + '_T(R)_old.csv'));
+                        this.DownloadFile(resp.old.Tt, (this.m_currentShot.shotn + '_T(t)_old.csv'));
+                        this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
+                        this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
+                    }
+                    this.DownloadSHT();
+
+                }.bind(this)
+            );
+        };
+
+        this.DownloadFile = function(text, filename){
+            const textToBLOB = new Blob([text], {type : 'text/html'});
+
+            let newLink = document.createElement("a");
+            newLink.download = filename;
+
+            if (window.webkitURL != null) {
+                newLink.href = window.webkitURL.createObjectURL(textToBLOB);
+            }
+            else {
+                newLink.href = window.URL.createObjectURL(textToBLOB);
+                newLink.style.display = "none";
+                document.body.appendChild(newLink);
+            }
+
+            newLink.click();
+            newLink.remove();
+        };
+
+        this.DownloadSHT = function(){
+            let oReq = new XMLHttpRequest();
+            oReq.open("GET",'/sht/' + this.m_currentShot.shotn, true);
+            oReq.responseType = "arraybuffer";
+            oReq.onload = function() {
+                this.DownloadFile(oReq.response, ('TS_' + this.m_currentShot.shotn + '.sht'));
+            }.bind(this);
+
+            oReq.send();
+        };
+
+        this.DrawChi = function(){
+            let firstTime = this.selectors.chiPopup.hasAttribute("hidden");
+            this.selectors.chiPopup.removeAttribute('hidden');
+            let start_ind = null;
+            let end_ind = null;
+            let pointCount = 0;
+            let poly_ind = this.selectors.polyInputs.val();
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if(this.m_currentShot.events[event_ind].error === null &&
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden &&
+                    this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.get("minimum") &&
+                    this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.get("maximum")){
+                    if(!start_ind){
+                        start_ind = event_ind;
+                    }
+                    end_ind = event_ind;
+                    pointCount++;
+                }
+            }
+            let binCount = Math.floor(Math.sqrt(pointCount));
+            let width = this.m_chi_chart.options.axisX.maximum / binCount;
+            let bins = new Array(binCount).fill(0);
+            let offscale = 0;
+            for(let event_ind = start_ind; event_ind <= end_ind; event_ind++){
+                if(this.m_currentShot.events[event_ind].error === null &&
+                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
+                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+
+                    let bin_ind = Math.floor(this.m_currentShot.events[event_ind].T_e[poly_ind].chi2 / width);
+                    if(bin_ind < binCount){
+                        bins[bin_ind]++;
+                    }else{
+                        offscale++;
+                    }
+                }
+            }
+            this.m_chi_chart.options.data[0].dataPoints = [];
+            for(let bin_ind = 0; bin_ind < binCount; bin_ind++){
+                this.m_chi_chart.options.data[0].dataPoints.push({
+                    x: width * (bin_ind + 0.5),
+                    y: bins[bin_ind] / pointCount
+                });
+            }
+            this.m_chi_chart.options.dataPointWidth = 0.9 * this.m_chi_chart.axisX[0].bounds.width / binCount;
+            this.m_chi_chart.render();
+            this.selectors.chi_count.html('Total: ' + pointCount);
+            this.selectors.chi_offscale.html('Offscale: ' + offscale);
+            if(firstTime){
+                this.m_chi_chart.options.dataPointWidth = 0.9 * this.m_chi_chart.axisX[0].bounds.width / binCount;
+                this.m_chi_chart.render();
+            }
+        };
+
+        this.DrawSurf = function(){
+
+            this.selectors.ccmPopup.removeAttribute('hidden');
+            this.UpdateCCMPopup();
+        };
+
+        this.Dump = function(targetAttr){
+            let res = {};
+            if(targetAttr.getNamedItem('evo') !== null || targetAttr.getNamedItem('prof') !== null){
+                res.m_currentShot = this.m_currentShot;
+            }
+            if(targetAttr.getNamedItem('single') !== null){
+                res.m_selected_event_ind = this.m_selected_event_ind;
+                res.m_current_event_sig = this.m_current_event_sig;
+                res.m_current_event_sig.poly_ind = this.selectors.polyInputs.val();
+                res.m_current_event_sig.poly_R = this.selectors.poly_radius.html();
+                res.m_currentShotEntry = this.m_currentShot.events[this.m_selected_event_ind];
+                //event #
+            }
+            if(targetAttr.getNamedItem('expected') !== null) {
+                res.m_expected = this.m_expected;
+                res.m_expected.poly_ind = this.selectors.polyInputs.val();
+                res.m_expected.poly_R = this.selectors.poly_radius.html();
+            }
+            if(targetAttr.getNamedItem('raw') !== null) {
+                res.m_current_event_raw = this.m_current_event_raw;
+                res.m_current_event_raw.poly_ind = this.selectors.polyInputs.val();
+                res.m_current_event_raw.poly_R = this.selectors.poly_radius.html();
+            }
+            console.log(res);
+        };
+
+        this.SavePNG = function(targetId){
+            if(targetId === 'timestamp_chart'){
+                this.m_timestamp_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_las'
+                });
+            }else if(targetId === 'T_evo_chart'){
+                this.m_T_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_Te_evo'
+                });
+            }else if(targetId === 'n_evo_chart'){
+                this.m_n_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_ne_evo'
+                });
+            }else if(targetId === 'T_profile_chart'){
+                this.m_T_profile_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_Te_prof'
+                });
+            }else if(targetId === 'n_profile_chart'){
+                this.m_n_profile_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_ne_prof'
+                });
+            }else if(targetId === 'fitting_chart'){
+                this.m_fitting_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_fit_' +
+                        this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
+                        this.selectors.polyInputs.val()
+                });
+            }else if(targetId === 'raw_chart'){
+                this.m_raw_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_raw_' +
+                        this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' +
+                        this.selectors.polyInputs.val()
+                });
+            }else if(targetId === 'chi_chart') {
+                this.m_chi_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_chi_' +
+                        'polyInd' + this.selectors.polyInputs.val()
+                });
+            }else if(targetId === 'poloidal_chart'){
+                    this.m_poloidal_chart.exportChart({
+                        format: 'png',
+                        fileName: this.m_currentShot.shotn + '_pol_' + this.selectors.chord_time.html()
+                    });
+            }else if(targetId === 'ccm_surf_chart'){
+                this.m_ccm_surf_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_surf_' + this.selectors.chord_time.html()
+                });
+            }else if(targetId === 'ccm_chord_chart'){
+                this.m_ccm_chord_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_chord_' + this.selectors.chord_time.html()
+                });
+            }else if(targetId === 'nl_evo_chart'){
+                this.m_nl_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_nl_' + this.selectors.chord_time.html()
+                });
+            }else if(targetId === 'w_evo_chart'){
+                this.m_w_evo_chart.exportChart({
+                    format: 'png',
+                    fileName: this.m_currentShot.shotn + '_We_' + this.selectors.chord_time.html()
+                });
+            }else{
+                console.log('Wtf? Unknown target: ', targetId);
+            }
+        };
+
+        this.SaveOsc = function(){
+            let fileName = this.m_currentShot.shotn + '_osc_' + this.m_currentShot.events[this.m_selected_event_ind].timestamp.toFixed(1) + 'ms_polyInd' + this.selectors.polyInputs.val() + '.csv';
+            let data = 'time, las, ch1, ch2, ch3, ch4, ch5\n';
+            data += 'ns, mv, mv, mv, mv, mv, mv\n'
+            //console.log(this.m_current_event_raw);
+            for(let cell_ind = 0; cell_ind < 1024; cell_ind++){
+                let line = ((cell_ind - this.m_current_event_raw.laser_start) * 0.3125).toFixed(1) + ', ';
+                line += this.m_current_event_raw.laser[cell_ind].toFixed(2);
+                for(let ch_ind = 0; ch_ind < 5; ch_ind++){
+                    line += ', ' + this.m_current_event_raw.data[ch_ind][cell_ind].toFixed(2);
+                }
+                data += line + '\n';
+            }
+            this.DownloadFile(data, (fileName))
+        };
+
+        this.Draw3D = function(){
+            return;
+
+            console.log('draw called');
+            var margin = {top: 80, right: 25, bottom: 30, left: 40},
+                width = 450 - margin.left - margin.right,
+                height = 200 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+            var svg = d3.select("#n_3d_chart")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+            console.log(this.m_currentShot);
+
+            // Labels of row and columns -> unique identifier of the column called 'timestamp' and 'radius'
+            let indexes = [];
+            let x_ticks = [];
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                x_ticks.push(this.m_currentShot.events[event_ind].timestamp);
+                for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
+                    indexes.push({
+                        x: event_ind,
+                        y: poly_ind
+                    });
+                }
+            }
+            let y_ticks = [];
+            for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
+                y_ticks.push(this.m_currentShot.config.poly[poly_ind].R);
+            }
+
+            // Build X scales and axis:
+            var x = d3.scaleBand()
+                .range([ 0, width ])
+                .domain(x_ticks)
+                .padding(0.05);
+            svg.append("g")
+                .style("font-size", 15)
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x).tickSize(0))
+                .select(".domain").remove()
+
+            // Build Y scales and axis:
+            var y = d3.scaleBand()
+                .range([ height, 0 ])
+                .domain(y_ticks)
+                .padding(0.05);
+            svg.append("g")
+                .style("font-size", 15)
+                .call(d3.axisLeft(y).tickSize(0))
+                .select(".domain").remove()
+
+            // Build color scale
+            var myColor = d3.scaleSequential()
+                .interpolator(d3.interpolateTurbo)
+                .domain([1,100])
+
+            // create a tooltip
+            var tooltip = d3.select("#n_3d_chart")
+                .append("div")
+                .style("opacity", 0)
+                .attr("class", "tooltip")
+                .style("background-color", "white")
+                .style("border", "solid")
+                .style("border-width", "2px")
+                .style("border-radius", "5px")
+                .style("padding", "5px")
+
+            // Three function that change the tooltip when user hover / move / leave a cell
+            var mouseover = function(d) {
+                tooltip
+                    .style("opacity", 1)
+                d3.select(this)
+                    .style("stroke", "black")
+                    .style("opacity", 1)
+            }
+            var mousemove = function(d) {
+                tooltip
+                    .html("The exact value of<br>this cell is: " + d.value)
+                    .style("left", (d3.mouse(this)[0]+70) + "px")
+                    .style("top", (d3.mouse(this)[1]) + "px")
+            }
+            var mouseleave = function(d) {
+                tooltip
+                    .style("opacity", 0)
+                d3.select(this)
+                    .style("stroke", "none")
+                    .style("opacity", 0.8)
+            }
+
+            svg.selectAll()
+                .data(indexes)
+                .enter()
+                .append("rect")
+                .attr("x", function(entry) {
+                        return x(this.m_currentShot.events[entry.x].timestamp);
+                    }.bind(this))
+                .attr("y", function(entry) {
+                        return y(this.m_currentShot.config.poly[entry.y].R);
+
+                    }.bind(this))
+                .attr("rx", 4)
+                .attr("ry", 4)
+                .attr("width", x.bandwidth() )
+                .attr("height", y.bandwidth() )
+                .style("fill", function(entry) { return myColor(entry.x)} )
+                .style("stroke-width", 4)
+                .style("stroke", "none")
+                .style("opacity", 0.8)
+                .on("mouseover", mouseover)
+                .on("mousemove", mousemove)
+                .on("mouseleave", mouseleave)
+
+
+// Add subtitle to graph
+            svg.append("text")
+                .attr("x", 0)
+                .attr("y", -20)
+                .attr("text-anchor", "left")
+                .style("font-size", "14px")
+                .style("fill", "grey")
+                .style("max-width", 400)
+                .text("Electron density");
+
+        }.bind(this);
+
+        this.LoadCCM = function(){
+            this.Request(
+                {
+                    reqtype: '_load_ccm',
+                    shot: Object.assign({}, this.m_currentShot, {events: undefined}),
+                    r: 42,
+                    start: this.m_timestamp_chart.navigator.slider.minimum,
+                    stop: this.m_timestamp_chart.navigator.slider.maximum
+                }
+                , function (resp) {
+                    Object.assign(this.m_current_ccm, resp);
+                    this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
+                        this.m_currentShot.shotn + this.m_defaults.nl_evo_title;
+                    this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
+                        this.m_currentShot.shotn + this.m_defaults.w_evo_title;
+                    if(this.m_current_ccm.ok){
+                        this.DrawCCM();
+                    }else{
+                        alert('CFM data error! See console for details.');
+                    }
+                }.bind(this)
+            );
+        };
+
+        this.DrawCCM = function(){
+            let nl_points = [];
+            let nl_errors = [];
+            let w_points = [];
+            let w_errors = [];
+            if(this.m_current_ccm.ok){
+                for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
+                    if('error' in this.m_current_ccm.data[arr_ind]){
+                        nl_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: null,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [null, null]
+                        });
+
+                        w_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: null,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        w_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [null, null]
+                        });
+                    } else {
+                        nl_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: this.m_current_ccm.data[arr_ind].data.nl * this.m_currentShot.proc.absCorr,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [
+                                (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
+                                this.m_currentShot.proc.absCorr,
+                                (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
+                                this.m_currentShot.proc.absCorr
+                            ]
+                        });
+
+                        w_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: this.m_current_ccm.data[arr_ind].data.vol_w * this.m_currentShot.proc.absCorr,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        w_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [
+                                (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
+                                this.m_currentShot.proc.absCorr,
+                                (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
+                                this.m_currentShot.proc.absCorr
+                            ]
+                        });
+                    }
+                }
+            }
+            this.m_nl_evo_chart.options.data = [
+                {
+                    color: this.palette[0],
+                    type: "line",
+                    markerType: "none",
+                    dataPoints: nl_points
+                }, {
+                    color: this.palette[0],
+                    type: "error",
+                    dataPoints: nl_errors
+                }
+            ];
+            this.m_nl_evo_chart.render();
+
+            this.m_w_evo_chart.options.data = [
+                {
+                    color: this.palette[0],
+                    type: "line",
+                    markerType: "none",
+                    dataPoints: w_points
+                }, {
+                    color: this.palette[0],
+                    type: "error",
+                    dataPoints: w_errors
+                }
+            ];
+            this.m_w_evo_chart.render();
+        };
+
+        this.UpdateCCMPopup = function(time=0){
+            this.m_ccm_surf_chart.options.data = [];
+            this.m_ccm_chord_chart.options.data = [];
+            if(this.selectors.ccmPopup.hasAttribute("hidden")){
+                return;
+            }
+            Object.assign(this.m_ccm_surf_chart.options.data, this.m_poloidal_poly);
+            let index = 0;
+            let eps = 0.05;
+            let found = false;
+            for(; index < this.m_current_ccm.data.length; index++){
+                if(time - eps <= this.m_currentShot.events[this.m_current_ccm.data[index].event_index].timestamp &&
+                    time + eps >= this.m_currentShot.events[this.m_current_ccm.data[index].event_index].timestamp){
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                console.log('requested time not found! ' + time);
+                console.log(this.m_current_ccm);
+                console.log(this.m_currentShot);
+                return;
+            }
+            for(let poly_ind = 0; poly_ind < this.m_current_ccm.data[index].data.surfaces.length - 1; poly_ind++){
+                let points = [];
+                for(let param = 0; param < this.m_current_ccm.data[index].data.surfaces[poly_ind].r.length; param++){
+                    points.push({
+                        x: this.m_current_ccm.data[index].data.surfaces[poly_ind].r[param],
+                        y: this.m_current_ccm.data[index].data.surfaces[poly_ind].z[param]
+                    })
+                }
+                let color = '#000000';
+                if(poly_ind !== 0){
+                    color = this.palette[this.m_current_ccm.data[index].data.surfaces[poly_ind].ind];
+                }
+                this.m_ccm_surf_chart.options.data.push({
+                    color: color,
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    dataPoints: points
+                });
+            }
+
+            this.m_ccm_surf_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_ccm.data[index].data.surfaces[this.m_current_ccm.data[index].data.surfaces.length - 1].r_min,
+                    color: '#FF0000',
+                    label : "Magn",
+                    labelFontColor: "#FF0000",
+                    labelPlacement:"outside",
+                },
+                {
+                    value:12,
+                    color:'#000000'
+                },
+                {
+                    value:61,
+                    color:'#000000'
+                },
+                {
+                    value:42,
+                    color:'#00FF00'
+                }
+
+            ]
+            this.m_ccm_surf_chart.options.axisY.stripLines = [
+                {
+                    value: this.m_current_ccm.data[index].data.surfaces[this.m_current_ccm.data[index].data.surfaces.length - 1].z,
+                    color: '#FF0000'
+                }
+            ]
+            this.m_ccm_surf_chart.render();
+
+            let points = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_ccm.data[index].data.nl_profile.length; arr_ind++){
+                points.push({
+                    x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne * this.m_currentShot.proc.absCorr,
+                    y: this.m_current_ccm.data[index].data.nl_profile[arr_ind].z,
+                    surf: this.m_current_ccm.data[index].data.nl_profile[arr_ind].surf_ind
+                });
+            }
+            this.m_ccm_chord_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                dataPoints: points
+            });
+            this.m_ccm_chord_chart.render();
+        };
+
+        this.DrawNL = function (){
+            let signals = [
+                'nl 42 cm (1.5мм) 64pi',
+                'Nl_42_УПЧ',
+                'NL_42_No_Filtr'
+            ];
+            let y_mult = [
+                1e18,
+                1e4,
+                1e4
+            ];
+
+            for(let ind in signals){
+                this.Request(
+                    {
+                        reqtype: 'get_sht_signal',
+                        shotn: this.m_currentShot.shotn,
+                        name: signals[ind]
+                    }
+                    , function (resp) {
+                        this.m_current_sht.data[signals[ind]] = {};
+                        Object.assign(this.m_current_sht.data[signals[ind]], resp);
+                        if(resp.ok) {
+                            let points = [];
+                            for(let i = 0; i < resp.signal.x.length; i ++){
+                                points.push({
+                                    x: resp.signal.x[i] * 1000,
+                                    y: resp.signal.y[i] * y_mult[ind]
+                                });
+                            }
+
+                            this.m_nl_evo_chart.options.data.push(
+                                {
+                                    color: this.palette[parseInt(ind) + 1],
+                                    type: "line",
+                                    markerType: "none",
+                                    dataPoints: points,
+                                    showInLegend: true,
+                                    legendText: signals[ind]
+                                }
+                            );
+                            this.m_nl_evo_chart.render();
+                        }
+                    }.bind(this)
+                );
+            }
+        };
+
+        this.LoadSHT = function (){
+            this.selectors.sht_signals.html('');
+            Object.assign(this.m_current_sht, {});
+            this.Request(
+                {
+                    reqtype: 'load_sht',
+                    shotn: this.m_currentShot.shotn,
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                        console.log('Bad response!');
+                        return;
+                    }
+                    Object.assign(this.m_current_sht, resp);
+
+                    let options = [];
+                    this.m_current_sht.data = {};
+                    this.m_current_sht.names.forEach(signal => options.push("<option>" + signal + "</option>"));
+                    this.selectors.sht_signals.html(options);
+
+                    this.DrawNL();
+                }.bind(this)
+            );
+        };
+
+        this.AddSHTSignals = function(){
+            let signals = [];
+
+            $('#sht_signal_list > option').each(function () {
+                if(!$(this).hasClass( "hide") && $(this)[0].selected){
+                    signals.push($(this).text())
+                }
+            });
+
+            for(let ind in signals){
+                this.LoadSHTSignal(signals[ind]);
+            }
+            let options = this.selectors.sht_selected_signals.html();
+            signals.forEach(signal => options += ("<option>" + signal + "</option>"));
+            this.selectors.sht_selected_signals.html(options);
+        };
+
+        this.LoadSHTSignal = function (name){
+            this.Request(
+                {
+                    reqtype: 'get_sht_signal',
+                    shotn: this.m_currentShot.shotn,
+                    name: name
+                }
+                , function (resp) {
+                    this.m_current_sht.data[name] = {};
+                    Object.assign(this.m_current_sht.data[name], resp);
+                    console.log(this.m_current_sht);
+                }.bind(this)
+            );
+        };
+
+        this.RequestChord = function(){
+            this.m_chord_evo_chart.options.data = [];
+            this.Request(
+                {
+                    reqtype: '_chord_int',
+                    shotn: this.m_currentShot.shotn,
+                    r: 42,
+                    start: this.m_timestamp_chart.navigator.slider.minimum,
+                    stop: this.m_timestamp_chart.navigator.slider.maximum
+                }
+                , function (resp) {
+                    Object.assign(this.m_current_chord, resp);
+                    console.log(this.m_current_chord);
+                    this.DrawChord();
+                }.bind(this)
+            );
+        };
+
+        this.DrawChord = function(){
+            this.selectors.chordPopup.removeAttribute('hidden');
+            let points = [];
+            let err = [];
+            console.log('check closest time is not too far & no errors');
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data.length; arr_ind++){
+                let chord_len = 1;
+                if(this.selectors.chord_div[0].checked){
+                    chord_len = (this.m_current_chord.data[arr_ind].z_up - this.m_current_chord.data[arr_ind].z_down) *
+                        0.01;
+                }
+
+                points.push({
+                    x: this.m_current_chord.data[arr_ind].closest_time,
+                    y: this.m_current_chord.data[arr_ind].int / chord_len
+
+                });
+                err.push({
+                    x: this.m_current_chord.data[arr_ind].closest_time,
+                    y: [(this.m_current_chord.data[arr_ind].int - this.m_current_chord.data[arr_ind].int_err)/ chord_len,
+                        (this.m_current_chord.data[arr_ind].int + this.m_current_chord.data[arr_ind].int_err)/ chord_len
+                    ]
+                })
+            }
+            if(this.selectors.chord_div[0].checked){
+                this.m_chord_evo_chart.options.axisY.title = 'Averaged electron density (n), m⁻³'
+            }else{
+                this.m_chord_evo_chart.options.axisY.title = 'Integrated electron density (nl), m⁻²'
+            }
+
+            this.m_chord_evo_chart.options.data = [
+                {
+                    color: this.palette[0],
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: true,
+                    name: 'TS',
+                    dataPoints: points
+                },
+                {
+                    color: this.palette[0],
+                    type: "error",
+                    showInLegend: false,
+                    dataPoints: err
+                }
+            ];
+            this.m_chord_evo_chart.render();
+        }
+
+        this.UpdateChordSubcharts = function(time){
+            this.selectors.chord_time.html('t: ' + time.toFixed(1) + 'ms');
+
+            let index = 0;
+            for(; index < this.m_current_chord.data.length; index++){
+                if(time === this.m_current_chord.data[index].closest_time){
+                    break;
+                }
+            }
+            let chord_len = this.m_current_chord.data[index].z_up - this.m_current_chord.data[index].z_down;
+            this.selectors.chord_length.html('l: ' + chord_len.toFixed(1) + 'cm');
+            this.selectors.chord_nl.html('nl: ' + this.m_current_chord.data[index].int.toExponential(1) + 'm^-2');
+            this.selectors.chord_n.html('&lt;n&gt;: ' +
+                (this.m_current_chord.data[index].int / (chord_len * 0.01)).toExponential(1) + 'm^-3');
+            this.selectors.chord_edge.html('edge_nl: ' +
+                (this.m_current_chord.data[index].edge.down.val +
+                this.m_current_chord.data[index].edge.up.val).toExponential(1) + 'm^-2');
+            let points = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].last_surf.R.length; arr_ind++){
+                points.push({
+                    x: this.m_current_chord.data[index].last_surf.R[arr_ind],
+                    y: this.m_current_chord.data[index].last_surf.z[arr_ind]
+                });
+            }
+            this.m_poloidal_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                showInLegend: true,
+                name: 'last',
+                dataPoints: points
+            });
+            for(let poly_ind = 0; poly_ind < this.m_current_chord.data[index].polys.length; poly_ind++){
+                points = [];
+                for(let param = 0; param < this.m_current_chord.data[index].polys[poly_ind].r.length; param++){
+                    points.push({
+                        x: this.m_current_chord.data[index].polys[poly_ind].r[param],
+                        y: this.m_current_chord.data[index].polys[poly_ind].z[param]
+                    })
+                }
+                this.m_poloidal_chart.options.data.push({
+                    color: this.palette[this.m_current_chord.data[index].polys[poly_ind].ind],
+                    type: "line",
+                    markerType: "none",
+                    showInLegend: false,
+                    dataPoints: points
+                });
+            }
+            this.m_poloidal_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.r,
+                    color: '#0000FF',
+                    label : "Geom",
+                    labelFontColor: "#0000FF"
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.r,
+                    color: '#FF0000',
+                    label : "Magn",
+                    labelFontColor: "#FF0000",
+                    labelPlacement:"outside",
+                },
+                {
+                    value:12,
+                    color:'#000000'
+                },
+                {
+                    value:62,
+                    color:'#000000'
+                },
+                {
+                    value:42,
+                    color:'#00FF00'
+                }
+
+            ]
+            this.m_poloidal_chart.options.axisY.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].geom_center.z,
+                    color: '#0000FF'
+                },
+                {
+                    value: this.m_current_chord.data[index].curr_center.z,
+                    color: '#FF0000'
+                }
+            ]
+            this.m_poloidal_chart.render();
+
+            points = [];
+            errors = [];
+            for(let arr_ind = 0; arr_ind < this.m_current_chord.data[index].profile.z.length; arr_ind++){
+                points.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: this.m_current_chord.data[index].profile.val[arr_ind]
+                });
+                errors.push({
+                    x: this.m_current_chord.data[index].profile.z[arr_ind],
+                    y: [this.m_current_chord.data[index].profile.val[arr_ind] - this.m_current_chord.data[index].profile.err[arr_ind],
+                        this.m_current_chord.data[index].profile.val[arr_ind] + this.m_current_chord.data[index].profile.err[arr_ind]
+                    ]
+                })
+            }
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "line",
+                markerType: "none",
+                dataPoints: points
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#000000',
+                type: "error",
+                //markerType: "none",
+                dataPoints: errors
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_down,
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].z_down +
+                            this.m_current_chord.data[index].edge.down.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[0],
+                        y: this.m_current_chord.data[index].edge.down.a * this.m_current_chord.data[index].profile.z[0] +
+                            this.m_current_chord.data[index].edge.down.b
+                    }
+                ]
+            });
+            this.m_chord_profile_chart.options.data.push({
+                color: '#0000ff',
+                type: "line",
+                markerType: "none",
+                dataPoints: [
+                    {
+                        x: this.m_current_chord.data[index].z_up,
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].z_up +
+                            this.m_current_chord.data[index].edge.up.b
+                    },
+                    {
+                        x: this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1],
+                        y: this.m_current_chord.data[index].edge.up.a * this.m_current_chord.data[index].profile.z[this.m_current_chord.data[index].profile.z.length - 1] +
+                            this.m_current_chord.data[index].edge.up.b
+                    }
+                ]
+            });
+
+            this.m_chord_profile_chart.options.axisX.stripLines = [
+                {
+                    value: this.m_current_chord.data[index].z_down,
+                    color: '#00FF00'
+                },
+                {
+                    value: this.m_current_chord.data[index].z_up,
+                    color: '#00FF00'
+                }
+            ]
+            this.m_chord_profile_chart.render();
+        };
+
+        this.UpdatePopups = function () {
+            this.selectors.poly_radius.html(this.m_currentShot.config.poly[this.selectors.polyInputs.val()].R + ' mm');
+            if(!this.selectors.singleEventPopup.hasAttribute("hidden")){
+                this.draw_popup();
+            }
+            if(!this.selectors.chiPopup.hasAttribute("hidden")){
+                this.DrawChi();
+            }
+        };
+
+        this.UpdateDens = function(){
+            this.selectors.ccmPopup.setAttribute('hidden', true);
+            this.DrawMain();
+            this.DrawCCM();
+        };
+
+        this.Filter = function(list, request){
+            let value = request.toLowerCase();
+            let val_ru = '';
+            let val_eng = '';
+            for(let symbolInd in value){
+                val_ru += this.EnRu[value[symbolInd]];
+                val_eng += Object.keys(this.EnRu).find(key => this.EnRu[key] === value[symbolInd]);
+            }
+            $(list + ' > option').each(function () {
+                let candidate = $(this).text().toLowerCase();
+                if(candidate.indexOf(value) <= -1 && candidate.indexOf(val_ru) <= -1 && candidate.indexOf(val_eng) <= -1){
+                    $(this)[0].selected = false;
+                    $(this).toggleClass( "hide", true);
+                }else{
+                    $(this).toggleClass( "hide", false);
+                }
+            });
+        };
+
+        this.ConnectControls = function () {
+            $('#loadShot_button').on('click', this, this.Select.bind(this));
+            $(document).keydown(function(event){
+                if(this.selectors.singleEventPopup.contains(document.activeElement)){
+                    this.KeydownSingleEventPopup(event);
+                }else if(this.selectors.chiPopup.contains(document.activeElement)){
+                    this.KeydownChiPopup(event);
+                }else{
+                    this.KeydownMain(event);
+                }
+            }.bind(this));
+
+            $('#shot_select').selectpicker();
+            $('#shotModal_button').on('click', this, function () {
+                this.Refresh();
+                $('#shotSelectModal').modal('show');
+            }.bind(this));
+
+            $('#export').on('click', this, this.Export.bind(this));
+
+
+            this.initDragElement(this.selectors.draggables);
+            this.initResizeElement(this.selectors.draggables);
+
+            $('.hide_btn').each(function(){
+                this.addEventListener('click', function () {
+                    $(this).parents('.draggable').attr('hidden', true);
+                });
+            });
+
+            this.selectors.polyInputs.on('change', this, function(e){
+                this.selectors.polyInputs.val(e.target.value);
+                this.UpdatePopups();
+            }.bind(this));
+            this.selectors.isShowSingleEvent.on('change', this, this.ToggleShow.bind(this));
+            this.contextMenu();
+
+            $('#T_evo_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#n_evo_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#timestamp_chart')[0].addEventListener('mouseleave', function () {
+                this.HideMainRightTooltips();
+            }.bind(this));
+            $('#radius_chart')[0].addEventListener('mouseleave', function () {
+                this.m_radius_chart.toolTip.hide();
+            }.bind(this));
+            $('#T_profile_chart')[0].addEventListener('mouseleave', function () {
+                this.m_T_profile_chart.toolTip.hide();
+            }.bind(this));
+            $('#n_profile_chart')[0].addEventListener('mouseleave', function () {
+                this.m_n_profile_chart.toolTip.hide();
+            }.bind(this));
+            $('#fitting_chart')[0].addEventListener('mouseleave', function () {
+                this.m_fitting_chart.toolTip.hide();
+            }.bind(this));
+            $('#raw_chart')[0].addEventListener('mouseleave', function () {
+                this.m_raw_chart.toolTip.hide();
+            }.bind(this));
+            $('#chi_chart')[0].addEventListener('mouseleave', function () {
+                this.m_chi_chart.toolTip.hide();
+            }.bind(this));
+
+            this.selectors.chord_div.on('change', this, this.DrawChord.bind(this));
+
+            this.selectors.sht_search.on("keyup", function() {
+                this.Filter('#sht_signal_list', this.selectors.sht_search.val());
+            }.bind(this));
+
+            $("#sht_selected_search").on("keyup", function() {
+                this.Filter('#sht_selected_list', this.selectors.sht_selected_search.val());
+            }.bind(this))
+
+            $('#show_signal').on('click', this, this.AddSHTSignals.bind(this));
+        };
+
+        this.HideMainRightTooltips = function(){
+            this.m_timestamp_chart.charts[0].toolTip.hide();
+            this.m_T_evo_chart.toolTip.hide();
+            this.m_n_evo_chart.toolTip.hide();
+        };
+
+        //can be optimised by disabling auto-render
+        this.KeydownMain = function(event){
+            let resized = false;
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.altKey) {
+                    if (event.ctrlKey) {
+                        console.log('fuck off');
+                        return;
+                    }
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else if (event.ctrlKey) {
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else {
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") - this.m_keypress_timestep);
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") - this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                }
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.altKey) {
+                    if (event.ctrlKey) {
+                        console.log('fuck off');
+                        return;
+                    }
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else if (event.ctrlKey) {
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                } else {
+                    this.m_timestamp_chart.navigator.slider.set("maximum",
+                        this.m_timestamp_chart.navigator.slider.get("maximum") + this.m_keypress_timestep);
+                    this.m_timestamp_chart.navigator.slider.set("minimum",
+                        this.m_timestamp_chart.navigator.slider.get("minimum") + this.m_keypress_timestep);
+                    this.RangeChanged({
+                        minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                        maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                    });
+                    resized = true;
+                }
+            } else if (event.key === 'f') {
+                event.preventDefault();
+                event.stopPropagation();
+                if('labelBackgroundColor' in this.m_timestamp_chart.options.charts[0].axisY){
+                    //console.log('release');
+                    delete this.m_timestamp_chart.options.charts[0].axisY.maximum;
+                    delete this.m_timestamp_chart.options.charts[0].axisY.labelBackgroundColor;
+                    delete this.m_timestamp_chart.options.charts[0].axisY.labelFontColor;
+
+                    delete this.m_T_evo_chart.options.axisY.maximum;
+                    delete this.m_T_evo_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_T_evo_chart.options.axisY.labelFontColor;
+
+                    delete this.m_n_evo_chart.options.axisY.maximum;
+                    delete this.m_n_evo_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_n_evo_chart.options.axisY.labelFontColor;
+
+                    delete this.m_T_profile_chart.options.axisY.maximum;
+                    delete this.m_T_profile_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_T_profile_chart.options.axisY.labelFontColor;
+
+                    delete this.m_n_profile_chart.options.axisY.maximum;
+                    delete this.m_n_profile_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_n_profile_chart.options.axisY.labelFontColor;
+                }else{
+                    //console.log('fix');
+                    this.m_timestamp_chart.options.charts[0].axisY.maximum = this.m_timestamp_chart.charts[0].axisY[0].viewportMaximum;
+                    this.m_timestamp_chart.options.charts[0].axisY.labelBackgroundColor = "gray";
+                    this.m_timestamp_chart.options.charts[0].axisY.labelFontColor = "white";
+
+                    this.m_T_evo_chart.options.axisY.maximum = this.m_T_evo_chart.axisY[0].viewportMaximum;
+                    this.m_T_evo_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_T_evo_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_n_evo_chart.options.axisY.maximum = this.m_n_evo_chart.axisY[0].viewportMaximum;
+                    this.m_n_evo_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_n_evo_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_T_profile_chart.options.axisY.maximum = this.m_T_profile_chart.axisY[0].viewportMaximum;
+                    this.m_T_profile_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_T_profile_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_n_profile_chart.options.axisY.maximum = this.m_n_profile_chart.axisY[0].viewportMaximum;
+                    this.m_n_profile_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_n_profile_chart.options.axisY.labelFontColor = "white";
+                }
+                this.m_timestamp_chart.render();
+                this.m_T_evo_chart.render();
+                this.m_n_evo_chart.render();
+                this.m_T_profile_chart.render();
+                this.m_n_profile_chart.render();
+            }
+            if (resized) {
+                this.m_T_evo_chart.toolTip.hide();
+                this.m_n_evo_chart.toolTip.hide();
+                this.m_timestamp_chart.charts[0].toolTip.hide();
+
+                this.m_T_evo_chart.axisX[0].crosshair.hide();
+                this.m_n_evo_chart.axisX[0].crosshair.hide();
+                this.m_timestamp_chart.charts[0].axisX[0].crosshair.hide();
+            }
+        };
+
+        this.KeydownSingleEventPopup = function(event){
+            if (event.key === 'ArrowRight') {
+                this.m_selected_event_ind = Math.min(this.m_selected_event_ind + 1,
+                    this.m_currentShot.events.length - 1);
+                this.draw_popup();
+            }else if (event.key === 'ArrowLeft') {
+                event.stopPropagation();
+                this.m_selected_event_ind = Math.max(0, this.m_selected_event_ind - 1);
+                this.draw_popup();
+            }else if (event.key === 'ArrowUp') {
+                if(this.selectors.polyInputs.val() < this.selectors.polyInputs.attr('max')){
+                    this.selectors.polyInputs.each(function(){
+                        $(this)[0].stepUp();
+                    });
+                    this.UpdatePopups();
+                }
+            }else if (event.key === 'ArrowDown') {
+                if(this.selectors.polyInputs.val() > this.selectors.polyInputs.attr('min')){
+
+                    this.selectors.polyInputs.each(function(){
+                      $(this)[0].stepDown();
+                    });
+                    this.UpdatePopups();
+                }
+            }else if (event.key === 'f') {
+                if('labelBackgroundColor' in this.m_fitting_chart.options.charts[0].axisY){
+                    //console.log('release');
+                    delete this.m_fitting_chart.options.charts[0].axisY.maximum;
+                    delete this.m_fitting_chart.options.charts[0].axisY.labelBackgroundColor;
+                    delete this.m_fitting_chart.options.charts[0].axisY.labelFontColor;
+
+                    delete this.m_raw_chart.options.axisY.maximum;
+                    delete this.m_raw_chart.options.axisY.labelBackgroundColor;
+                    delete this.m_raw_chart.options.axisY.labelFontColor;
+                }else{
+                    //console.log('fix');
+                    this.m_fitting_chart.options.axisY.maximum = this.m_fitting_chart.axisY[0].viewportMaximum;
+                    this.m_fitting_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_fitting_chart.options.axisY.labelFontColor = "white";
+
+                    this.m_raw_chart.options.axisY.maximum = this.m_raw_chart.axisY[0].viewportMaximum;
+                    this.m_raw_chart.options.axisY.labelBackgroundColor = "gray";
+                    this.m_raw_chart.options.axisY.labelFontColor = "white";
+                }
+                this.m_fitting_chart.render();
+                this.m_raw_chart.render();
+            }else{
+                return;
+            }
+            event.stopPropagation();
+            event.preventDefault();
+        };
+
+        this.KeydownChiPopup = function(event){
+            if (event.key === 'ArrowRight') {
+                this.KeydownMain(event);
+            }else if (event.key === 'ArrowLeft') {
+                this.KeydownMain(event);
+            }else if (event.key === 'ArrowUp') {
+                if(this.selectors.polyInputs.val() < this.selectors.polyInputs.attr('max')){
+                    this.selectors.polyInputs.each(function(){
+                        $(this)[0].stepUp();
+                    });
+                    this.UpdatePopups();
+                }
+            }else if (event.key === 'ArrowDown') {
+
+                if(this.selectors.polyInputs.val() > this.selectors.polyInputs.attr('min')){
+                    this.selectors.polyInputs.each(function(){
+                      $(this)[0].stepDown();
+                    });
+                    this.UpdatePopups();
+                }
+            }else{
+                return;
+            }
+            event.stopPropagation();
+            event.preventDefault();
+        };
+
+        this.initDragElement = function(elements) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let current;
+
+            $(elements).each(function(){
+                $(this).find('.draggable-header')[0].onmousedown = dragMouseDown;
+                this.style.top = 10 + '%';
+                this.style.left = 70 + '%'
+            })
+
+            function dragMouseDown(e) {
+                current = $(e.target).parents('.draggable')[0];
+                //e.preventDefault();
+                // get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                // call a function whenever the cursor moves:
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e.stopPropagation();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                current.style.top = (current.offsetTop - pos2) + "px";
+                current.style.left = (current.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        };
+
+        //render only child charts
+        this.initResizeElement = function(elements) {
+            let startX, startY, startWidth, startHeight;
+            let current;
+
+            this.doDrag = function(e) {
+
+                e.stopPropagation();
+                current.style.width = startWidth + e.clientX - startX + "px";
+                current.style.height = startHeight + e.clientY - startY + "px";
+            };
+
+            this.stopDrag = function() {
+                document.documentElement.removeEventListener("mousemove", this.doDrag, false);
+                document.documentElement.removeEventListener("mouseup", this.stopDrag, false);
+                //render only child charts
+
+                this.m_fitting_chart.render();
+                this.m_raw_chart.render();
+                this.m_chi_chart.render();
+            }.bind(this);
+
+            this.initDrag = function(e) {
+                e.stopPropagation();
+                startX = e.clientX;
+                startY = e.clientY;
+                current = e.target.parentPopup;
+                startWidth = parseInt(
+                    document.defaultView.getComputedStyle(current).width,
+                    10
+                );
+                startHeight = parseInt(
+                    document.defaultView.getComputedStyle(current).height,
+                    10
+                );
+                document.documentElement.addEventListener("mousemove", this.doDrag, false);
+                document.documentElement.addEventListener("mouseup", this.stopDrag, false);
+            }.bind(this);
+
+            for(let ind = 0; ind < elements.length; ind++){
+                let dragElmnt = elements[ind];
+
+                let right = document.createElement("div");
+                right.className = "resizer-right";
+                dragElmnt.appendChild(right);
+                right.addEventListener("mousedown", this.initDrag, false);
+                right.parentPopup = dragElmnt;
+
+                let bottom = document.createElement("div");
+                bottom.className = "resizer-bottom";
+                dragElmnt.appendChild(bottom);
+                bottom.addEventListener("mousedown", this.initDrag, false);
+                bottom.parentPopup = dragElmnt;
+
+                let both = document.createElement("div");
+                both.className = "resizer-both";
+                dragElmnt.appendChild(both);
+                both.addEventListener("mousedown", this.initDrag, false);
+                both.parentPopup = dragElmnt;
+            }
+        };
+
+        this.contextMenu = function() {
+            function clickInsideElement( e, className ) {
+                let el = e.srcElement || e.target;
+
+                if ( el.classList.contains(className) ) {
+                    return el;
+                } else {
+                    while ( el = el.parentNode ) {
+                        if ( el.classList && el.classList.contains(className) ) {
+                            return el;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            function getPosition(e) {
+                if (!e){
+                    console.log('Warning! getPosition from null event!');
+                    e = window.event;
+                }
+
+                if (e.pageX || e.pageY) {
+                    return {
+                        x: e.pageX,
+                        y: e.pageY
+                    }
+                }
+                if (e.clientX || e.clientY) {
+                    return {
+                        x: e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft,
+                        y: e.clientY + document.body.scrollTop + document.documentElement.scrollTop
+                    }
+                }
+                console.log('getPosition warning! zeroes:', e);
+                return {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+
+            const contextMenuLinkClassName = "context-menu__link";
+            const contextMenuActive = "context-menu--active";
+
+            const taskItemClassName = "context-target";
+            let taskItemInContext;
+
+            let clickCoords;
+            let clickCoordsX;
+            let clickCoordsY;
+
+            const menu = document.querySelector("#context-menu");
+
+            let menuState = false;
+            let menuWidth;
+            let menuHeight;
+
+            let windowWidth;
+            let windowHeight;
+
+            this.init = function() {
+                this.contextListener();
+                this.clickListener();
+                keyupListener();
+                resizeListener();
+            }.bind(this);
+
+            this.contextListener = function() {
+                document.addEventListener("contextmenu", function(e) {
+                    let prev = taskItemInContext;
+                    taskItemInContext = clickInsideElement(e, taskItemClassName );
+
+                    if (taskItemInContext) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if(prev !== taskItemInContext){
+                            toggleMenuOff();
+                        }
+                        this.toggleMenuOn();
+                        positionMenu(e);
+                    } else {
+                        taskItemInContext = null;
+                        toggleMenuOff();
+                    }
+                }.bind(this));
+            }.bind(this)
+
+            this.clickListener = function() {
+                document.addEventListener("click", function(e) {
+                    let clickeElIsLink = clickInsideElement( e, contextMenuLinkClassName);
+                    if (clickeElIsLink) {
+                        e.preventDefault();
+                        this.menuItemListener(clickeElIsLink);
+                        e.stopPropagation();
+                    } else {
+                        let button = e.which || e.button;
+                        if ( button === 1 ) {
+                            toggleMenuOff();
+                        }
+                    }
+                }.bind(this));
+            }.bind(this);
+
+            function keyupListener() {
+                window.onkeyup = function(e) {
+                    if ( e.keyCode === 27 ) {
+                        toggleMenuOff();
+                        e.stopPropagation();
+                    }
+                }
+            }
+
+            function resizeListener() {
+                window.onresize = function(e) {
+                    toggleMenuOff();
+                };
+            }
+
+            this.toggleMenuOn = function(){
+                if (!menuState) {
+                    let html = `
+<ul class="context-menu__items">
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="chi">Chi-squared distribution</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="dump">Dump to console</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="save">Save as png</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="ccm">Load CFM data</a>
+    </li>
+                    `;
+
+                    if(taskItemInContext.attributes.getNamedItem('ccm') != null){
+                        html += `
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="surf">Show CFM reconstruction & Surfaces</a>
+    </li>
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="sht">Load sht file</a>
+    </li>
+                        `;
+                    }
+
+                    if(taskItemInContext.attributes.getNamedItem('ne') !== null){
+                        html += `
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="nl42">N_e integral along R=42 chord.</a>
+    </li>
+                        `;
+                    }
+
+                    if(taskItemInContext.attributes.getNamedItem('raw') !== null){
+                        html += `
+    <li class="context-menu__item">
+        <a href="#" class="context-menu__link" data-action="osc">Save oscillogram.</a>
+    </li>
+                        `;
+                    }
+                    menu.innerHTML = html + '\n</ul>';
+                    menuState = true;
+                    menu.classList.add( contextMenuActive );
+                }
+            }.bind(this);
+
+            function toggleMenuOff() {
+                if (menuState) {
+                    menu.innerHTML = 'Nothing to see here.';
+                    menuState = false;
+                    menu.classList.remove( contextMenuActive );
+                }
+            }
+
+            function positionMenu(e) {
+                clickCoords = getPosition(e);
+                clickCoordsX = clickCoords.x;
+                clickCoordsY = clickCoords.y;
+
+                menuWidth = menu.offsetWidth + 4;
+                menuHeight = menu.offsetHeight + 4;
+
+                windowWidth = window.innerWidth + window.scrollX;
+                windowHeight = window.innerHeight + window.scrollY;
+
+                if ((windowWidth - clickCoordsX) < menuWidth) {
+                    menu.style.left = windowWidth - menuWidth + "px";
+                } else {
+                    menu.style.left = clickCoordsX + "px";
+                }
+
+                if ((windowHeight - clickCoordsY) < menuHeight ) {
+                    menu.style.top = windowHeight - menuHeight + "px";
+                } else {
+                    menu.style.top = clickCoordsY + "px";
+                }
+            }
+
+            this.menuItemListener = function( link ) {
+                toggleMenuOff();
+                if(link.getAttribute("data-action") === 'chi'){
+                    this.DrawChi();
+                }else if(link.getAttribute("data-action") === 'dump'){
+                    this.Dump(taskItemInContext.attributes);
+                }else if(link.getAttribute("data-action") === 'save') {
+                    this.SavePNG(taskItemInContext.id);
+                }else if(link.getAttribute("data-action") === 'ccm'){
+                    this.LoadCCM();
+                }else if(link.getAttribute("data-action") === 'surf') {
+                    this.DrawSurf();
+                }else if(link.getAttribute("data-action") === 'sht'){
+                    this.LoadSHT();
+                }else if(link.getAttribute("data-action") === 'nl42') {
+                    this.RequestChord();
+                }else if(link.getAttribute("data-action") === 'osc'){
+                        this.SaveOsc();
+                }else{
+                    console.log( "Target attr-s:", taskItemInContext.attributes,  ", Task action - " + link.getAttribute("data-action"), link);
+                }
+            }.bind(this);
+
+            this.init();
+
+        };
+
+        this.staticChi = function(){
+            function gamma(z) {
+                return Math.sqrt(2 * Math.PI / z) * Math.pow((1 / Math.E) * (z + 1 / (12 * z - 1 / (10 * z))), z);
+            }
+
+            function density(chi, k){
+                return Math.pow(0.5, k * 0.5) * Math.pow(chi, (k * 0.5) - 1) * Math.exp(- chi * 0.5) / gamma(k * 0.5)
+            }
+
+            let step = 0.2
+
+            for(let degreesOfFreedom = 2; degreesOfFreedom < 5; degreesOfFreedom++){
+                let line = {
+                    showInLegend: true,
+                    legendText: "K = " + degreesOfFreedom,
+                    type: 'line',
+                    color: this.palette[degreesOfFreedom],
+                    dataPoints: []
+                };
+                for(let chi = 0; chi < this.m_chi_chart.options.axisX.maximum; chi += step){
+                    line.dataPoints.push({
+                        x: chi,
+                        y: density(chi, degreesOfFreedom)
+                    });
+                }
+                this.m_chi_chart.options.data.push(line);
+            }
+        };
+
+        this.ConnectControls();
+        this.staticChi();
+    }
+
+
+    $(document).ready(
+        function () {
+            let viewer = new Main();
+            //viewer.Refresh();
+        }
+    );
+</script>
+</html>
