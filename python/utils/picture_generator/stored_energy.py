@@ -5,15 +5,9 @@ db_path = 'd:/data/db/plasma/result/'
 
 shots = [
     {
-        'shotn': 40796,
+        'shotn': 40703,
         'start_i': 39,
-        'stop_i': 91,
-        'corr': 1.15
-    },
-    {
-        'shotn': 40797,
-        'start_i': 39,
-        'stop_i': 89,
+        'stop_i': 70,
         'corr': 1.15
     }
 ]

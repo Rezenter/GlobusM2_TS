@@ -24,6 +24,7 @@ SPECTRAL_CAL = 'calibration/expected/'
 ABS_CAL = 'calibration/abs/processed/'
 #EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
+RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
@@ -39,13 +40,20 @@ format = "%(asctime)s: %(message)s"
 logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
 
+def authenticate(req):
+    if 'pass' not in req or req['pass'] != '******':
+        return {'ok': False}
+    return {'ok': True}
+
+
 class Handler:
     def __init__(self):
         self.HandlingTable = {
             'diag': {
                 'arm': self.arm_all,
                 'status': self.diag_status,
-                'get_conf': self.get_configs
+                'get_conf': self.get_configs,
+                'auth': authenticate
             },
             'adc': {
                 'status': self.fast_status,
@@ -71,7 +79,7 @@ class Handler:
                 'load_sht': self.sht_names,
                 'get_sht_signal': self.sht_signal,
             },
-            'db':{
+            'db': {
                 'get_shot': self.get_db_shot
             }
         }
@@ -116,8 +124,19 @@ class Handler:
             resp['ok'] = False
             resp['description'] = 'Directory for debug shots "%s" does not exist.' % (self.debug_path + RAW_FOLDER)
             return resp
+
         resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
+        resp['processed'] = sorted(os.listdir(self.plasma_path + RES_FOLDER), reverse=True)
         resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
+
+        resp['good'] = []
+        for shotn in sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True):
+            entry = {
+                '#': shotn,
+            }
+            if shotn in resp['processed']:
+                entry['proc'] = True
+            resp['good'].append(entry)
 
         tmp = sorted(os.listdir(self.config_path), reverse=True)
         resp['config'] = []
@@ -262,7 +281,6 @@ class Handler:
             }
 
     def export_shot(self, req):
-        print('export called')
         if 'shot' not in req:
             return {
                 'ok': False,
@@ -308,8 +326,6 @@ class Handler:
                 'ok': False,
                 'description': '"old" field is missing from request.'
             }
-        print('\n\n\ncorrection = ', float(req['correction']), '\n\n\n')
-
         if 'aux' not in req:
             resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']))
             if req['old']:
@@ -581,12 +597,7 @@ class Handler:
             resp['description'] = '"shotn" field is missing from request.'
             return resp
         shotn = int(req['shotn'])
-        if self.sht is not None and self.sht.shotn != shotn:
-            return {
-                'ok': False,
-                'description': 'server has another sht shotn loaded'
-            }
-        if self.sht is None:
+        if self.sht is None or self.sht.shotn != shotn:
             self.sht = sht.sht(shotn)
         resp['names'] = self.sht.get_names()
         resp['ok'] = True
@@ -820,7 +831,8 @@ class Handler:
         if 'ok' not in data:
             return {
                 'ok': False,
-                'description':'Internal db error.'
+                'description': 'Internal db error.',
+                'aux': data
             }
         return data
 
@@ -846,3 +858,4 @@ class Handler:
                 resp['abs_cal'].append(entry[:-5])
         resp['ok'] = True
         return resp
+

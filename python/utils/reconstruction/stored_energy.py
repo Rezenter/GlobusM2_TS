@@ -155,6 +155,7 @@ class StoredCalculator:
 
     def calc_laser_shot(self, requested_time, nl_r):
         t_ind = 0
+        print(t_ind, requested_time, 'CALC shot')
         for t_ind in range(len(self.ccm_data.timestamps) - 1):
             if self.ccm_data.timestamps[t_ind] <= requested_time < self.ccm_data.timestamps[t_ind + 1]:
                 if (requested_time - self.ccm_data.timestamps[t_ind]) >= (self.ccm_data.timestamps[t_ind + 1] - requested_time):
@@ -222,6 +223,7 @@ class StoredCalculator:
                     poly['ne'] = event['T_e'][poly['ind']]['n']
                     poly['Te_err'] = event['T_e'][poly['ind']]['Terr']
                     poly['ne_err'] = event['T_e'][poly['ind']]['n_err']
+                print('calc dynamics', event['timestamp'])
                 result.append({
                     'event_index': event_ind,
                     'data': copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
