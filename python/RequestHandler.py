@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import time
+import requests
 
 import shtRipper
 
@@ -859,3 +860,26 @@ class Handler:
         resp['ok'] = True
         return resp
 
+    def request_cfm_calc(self, req):
+        resp = requests.post('http://192.168.101.222:8050/_dash-update-component', json={
+            'changedPropIds': ["btn-2.n_clicks"],
+            'inputs': [
+                {
+                    'id': "btn-2",
+                    'property': "n_clicks",
+                    'value': 1
+                }
+            ],
+            'output': "my-output1.children",
+            'outputs': {
+                'id': "my-output1",
+                'property': "children"
+            },
+            'state': [
+                {
+                    'id': "shot_number_input",
+                    'property': "value",
+                    'value': "40703"}
+            ]
+        })
+        print(resp.text)

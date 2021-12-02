@@ -407,7 +407,7 @@ class CCM:
         self.calculated = [{'calculated': False} for t in self.timestamps]
 
     def clockwise(self, r, z, t_ind):  # called multiple times for one time?
-        print('clockwize', t_ind, self.data['time']['variable'][t_ind])
+        #print('clockwize', t_ind, self.data['time']['variable'][t_ind])
         params = self.get_surface_parameters(t_ind)
 
         count = len(r) // 10
@@ -420,7 +420,7 @@ class CCM:
                 direction = 1
             else:
                 direction = -1
-        print(t_ind, a1, a0, direction)
+        #print(t_ind, a1, a0, direction)
         if direction < 0:
             r = [v for v in reversed(r)]
             z = [v for v in reversed(z)]
