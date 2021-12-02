@@ -396,9 +396,11 @@ class Processor:
             n_c_err = []
             t_p = []
             n_p = []
+            r_sep_arr = []
+            cfm_timestamps = []
 
-            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking\n'
-            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1\n'
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm\n'
             for event_ind_aux in range(len(data)):
                 event = data[event_ind_aux]
 
@@ -458,7 +460,18 @@ class Processor:
                         t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
                         n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
-                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f\n' % \
+                        surf = event['data']['surfaces'][0]
+                        for surf_ind in range(len(surf['z']) - 1):
+                            if surf['z'][surf_ind] >= 0 > surf['z'][surf_ind + 1] and surf['r'][surf_ind] > 40:
+                                r_sep_val = surf['r'][surf_ind]
+                                r_sep_arr.append(r_sep_val)
+                                cfm_timestamps.append(timestamps[-1])
+                                break
+                            else:
+                                r_sep_val = -1
+
+
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f\n' % \
                                (event_ind, self.result['events'][event_ind]['timestamp'],
                                 event['data']['nl'] * correction, event['data']['nl_err'] * correction,
                                 length,
@@ -471,9 +484,10 @@ class Processor:
                                 event['data']['surfaces'][-1]['ne'] * correction,
                                 event['data']['surfaces'][-1]['ne_err'] * correction,
                                 event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
-                                event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
+                                event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'],
+                                r_sep_val)
                     else:
-                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, self.result['events'][event_ind]['timestamp'])
             to_pack = {
                 'nl42 (m^-2)': {
@@ -548,6 +562,12 @@ class Processor:
                     'unit': 'пикированность(1)',
                     'x': timestamps,
                     'y': n_p
+                },
+                'R_sep положение сепаратрисы': {
+                    'comment': 'Большой радиус сепаратрисы в экваториальной плоскости вакуумной камеры на стороне слабого поля',
+                    'unit': 'R_sep (cm)',
+                    'x': cfm_timestamps,
+                    'y': r_sep_arr
                 }
             }
 
