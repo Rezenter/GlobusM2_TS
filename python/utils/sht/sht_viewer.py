@@ -6,7 +6,11 @@ SHT_LOCATION = 'Z:/'
 class sht:
     def __init__(self, shotn: int):
         self.shotn: int = shotn
-        self.data = shtRipper.ripper.read('%ssht%d.SHT' % (SHT_LOCATION, shotn))
+        self.data = shtRipper.ripper.read('%ssht%d.SHT' % (SHT_LOCATION, shotn), [
+                'nl 42 cm (1.5мм) 64pi',
+                'Nl_42_УПЧ',
+                'NL_42_No_Filtr'
+            ])
 
     def get_names(self):
         return list(self.data.keys())

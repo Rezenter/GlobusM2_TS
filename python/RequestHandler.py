@@ -2,8 +2,7 @@ import json
 import os
 import logging
 import time
-
-import shtRipper
+import requests
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -28,6 +27,7 @@ RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
+CFM_ADDR = 'http://192.168.101.222:8050/_dash-update-component'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'
 
@@ -78,6 +78,7 @@ class Handler:
                 'load_ccm': self.load_ccm,
                 'load_sht': self.sht_names,
                 'get_sht_signal': self.sht_signal,
+                'calc_cfm': self.calc_cfm
             },
             'db': {
                 'get_shot': self.get_db_shot
@@ -375,6 +376,7 @@ class Handler:
             if self.fine_processor.get_error() is not None:
                 self.get_integrals_shot(req)
                 self.fine_processor.load()
+
         return ccm.get_integrals(int(req['shotn']),
                                  self.fine_processor.get_data(),
                                  float(req['r']),
@@ -859,3 +861,31 @@ class Handler:
         resp['ok'] = True
         return resp
 
+    def calc_cfm(self, req):
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+
+        return requests.post(CFM_ADDR, json={
+            'changedPropIds': ["btn-2.n_clicks"],
+            'inputs': [
+                {
+                    'id': "btn-2",
+                    'property': "n_clicks",
+                    'value': 1
+                }
+            ],
+            'output': "my-output1.children",
+            'outputs': {
+                'id': "my-output1",
+                'property': "children"
+            },
+            'state': [
+                {
+                    'id': "shot_number_input",
+                    'property': "value",
+                    'value': req['shotn']}
+            ]
+        }).text
