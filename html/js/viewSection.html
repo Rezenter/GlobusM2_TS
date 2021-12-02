@@ -127,6 +127,7 @@
             <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
             <label for="export_old">Include old format?</label>
                 <input type="checkbox" id="export_old">
+            <button class="btn btn-success" id="calc_cfm">Ask CFM</button>
         </div>
 
         <hr>
@@ -202,7 +203,6 @@
                 </div>
             </div>
         </div>
-        <button id="calc_cfm">Request CFM calculation</button>
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
@@ -3196,20 +3196,14 @@
             }.bind(this));
             $('#save_shot').on('click', this, this.Save.bind(this));
             $('#export').on('click', this, this.Export.bind(this));
-
             $('#calc_cfm').on('click', this, function(){
-                let req = {
-                   changedPropIds: ["btn-2.n_clicks"],
-                   inputs: [{id: "btn-2", property: "n_clicks", value: 1}],
-                   output: "my-output1.children",
-                   outputs: {id: "my-output1", property: "children"},
-                   state: [{id: "shot_number_input", property: "value", value: "386544"}]
-                };
-
-                $.post('http://192.168.101.202:8050/_dash-update-component', JSON.stringify(req), function(resp){
+                this.Request({
+                    reqtype: 'calc_cfm',
+                    shotn: this.m_currentShot.shotn
+                }, function(resp){
                     console.log(resp);
-                }, 'json');
-            });
+                })
+            }.bind(this));
 
             this.initDragElement(this.selectors.draggables);
             this.initResizeElement(this.selectors.draggables);

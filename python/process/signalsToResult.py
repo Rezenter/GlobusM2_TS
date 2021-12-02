@@ -421,6 +421,7 @@ class Processor:
                                     'vol_w']) * correction / (self.result['events'][
                                                                   data[event_ind_aux - 1]['event_index']]['timestamp'] -
                                                               self.result['events'][event_ind]['timestamp'])
+
                             elif len(data) > 2:
                                 we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
                                                  data[event_ind_aux - 1]['data']['vol_w']) * correction / \
@@ -474,7 +475,6 @@ class Processor:
                     else:
                         aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, self.result['events'][event_ind]['timestamp'])
-
             to_pack = {
                 'nl42 (m^-2)': {
                     'comment': 'линейная концентрация по хорде R=42',
@@ -603,7 +603,7 @@ class Processor:
         temp_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in self.result['config']['poly']:
-            line += 'eV, eV,'
+            line += 'eV, eV, '
         temp_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if 'timestamp' in self.result['events'][event_ind]:
@@ -644,7 +644,7 @@ class Processor:
         dens_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in self.result['config']['poly']:
-            line += 'm-3, m-3,'
+            line += 'm-3, m-3, '
         dens_evo += line[:-2] + '\n'
         for event_ind in range(len(self.result['events'])):
             if 'timestamp' in self.result['events'][event_ind]:

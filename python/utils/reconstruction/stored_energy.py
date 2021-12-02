@@ -223,7 +223,7 @@ class StoredCalculator:
                     poly['ne'] = event['T_e'][poly['ind']]['n']
                     poly['Te_err'] = event['T_e'][poly['ind']]['Terr']
                     poly['ne_err'] = event['T_e'][poly['ind']]['n_err']
-                print('calc dynamics', event['timestamp'])
+                #print('calc dynamics', event['timestamp'])
                 result.append({
                     'event_index': event_ind,
                     'data': copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
