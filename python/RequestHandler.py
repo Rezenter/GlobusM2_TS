@@ -867,7 +867,6 @@ class Handler:
                 'ok': False,
                 'description': '"shotn" field is missing from request.'
             }
-
         return requests.post(CFM_ADDR, json={
             'changedPropIds': ["btn-2.n_clicks"],
             'inputs': [
