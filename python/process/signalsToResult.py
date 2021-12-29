@@ -413,18 +413,22 @@ class Processor:
 
                         we_derivative = 0
                         if len(data) > 1:
-                            if event_ind_aux == 0:
-                                we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] - event['data'][
-                                    'vol_w']) * correction / (self.result['events'][
-                                                                  data[event_ind_aux + 1]['event_index']]['timestamp'] -
-                                                              self.result['events'][event_ind]['timestamp'])
+                            if 'error' in data[event_ind_aux]:
+                                we_derivative = 0
+                            elif event_ind_aux == 0:
+                                if 'error' not in data[event_ind_aux + 1]:
+                                    we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] - event['data'][
+                                        'vol_w']) * correction / (self.result['events'][
+                                                                      data[event_ind_aux + 1]['event_index']]['timestamp'] -
+                                                                  self.result['events'][event_ind]['timestamp'])
                             elif event_ind_aux == len(data) - 1:
-                                we_derivative = (data[event_ind_aux - 1]['data']['vol_w'] - event['data'][
-                                    'vol_w']) * correction / (self.result['events'][
-                                                                  data[event_ind_aux - 1]['event_index']]['timestamp'] -
-                                                              self.result['events'][event_ind]['timestamp'])
+                                if 'error' not in data[event_ind_aux - 1]:
+                                    we_derivative = (data[event_ind_aux - 1]['data']['vol_w'] - event['data'][
+                                        'vol_w']) * correction / (self.result['events'][
+                                                                      data[event_ind_aux - 1]['event_index']]['timestamp'] -
+                                                                  self.result['events'][event_ind]['timestamp'])
 
-                            elif len(data) > 2:
+                            elif len(data) > 2 and 'error' not in data[event_ind_aux - 1] and 'error' not in data[event_ind_aux + 1]:
                                 we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
                                                  data[event_ind_aux - 1]['data']['vol_w']) * correction / \
                                                 (self.result['events'][data[event_ind_aux + 1]['event_index']][
