@@ -2257,10 +2257,41 @@
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
 
-                    this.DownloadSHT();
+                    //this.DownloadSHT();
 
                 }.bind(this)
             );
+
+            console.log('request?');
+            var oReq = new XMLHttpRequest();
+            oReq.open("POST", "/api", true);
+            oReq.responseType = "blob";
+
+            oReq.onload = function(oEvent) {
+                console.log('RESPONSE?');
+                console.log(oReq.response);
+
+                let newLink = document.createElement("a");
+                newLink.download = 'TS_' + this.m_currentShot.shotn + '.sht';
+
+                if (window.webkitURL != null) {
+                    newLink.href = window.webkitURL.createObjectURL(oReq.response);
+                }
+                else {
+                    newLink.href = window.URL.createObjectURL(oReq.response);
+                    newLink.style.display = "none";
+                    document.body.appendChild(newLink);
+                }
+
+                newLink.click();
+                console.log('Loaded');
+                newLink.remove();
+            }.bind(this);
+
+            oReq.send(JSON.stringify({
+                req: 'sht',
+                shotn: this.m_currentShot.shotn
+            }));
         };
 
         this.DownloadFile = function(text, filename){
@@ -2280,19 +2311,6 @@
 
             newLink.click();
             newLink.remove();
-        };
-
-        this.DownloadSHT = function(){
-            let oReq = new XMLHttpRequest();
-            oReq.open("GET",'/sht/' + this.m_currentShot.shotn, true);
-            //oReq.responseType = "arraybuffer";
-            oReq.responseType = "blob";
-            oReq.onload = function() {
-                console.log('Do not remove this line!', oReq.response);
-                this.DownloadFile(oReq.response, ('TS_' + this.m_currentShot.shotn + '.sht'));
-            }.bind(this);
-
-            oReq.send();
         };
 
         this.DrawChi = function(){

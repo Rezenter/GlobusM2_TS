@@ -31,13 +31,31 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
 
         bodyLength = int(self.headers.get('content-length', 0))
         body = self.rfile.read(bodyLength).decode('utf-8')
-        parsedBody = []
+        parsedBody = {}
         try:
             parsedBody = json.loads(body)
         except:
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b'Error 400: Not a JSON request')
+            return
+
+        if 'req' in parsedBody and parsedBody['req'] == 'sht':
+            if 'shotn' not in parsedBody:
+                self.send_error(404, 'Shotn was not specified!')
+                return
+            shotn = parsedBody['shotn']
+            path = Path('D:/data/db/plasma/result/%s/TS_%s.sht' % (shotn, shotn))
+            if not path.is_file():
+                self.send_error(404, 'File Not Found: %s ' % path)
+                return
+            with open(path, 'rb') as file:
+                self.send_response(200)
+                self.send_header('Content-type', 'application/octet-stream')
+                self.end_headers()
+                for s in file:
+                    self.wfile.write(s)
+            return
 
         resp = handler.handle_request(parsedBody)
 
@@ -54,23 +72,6 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
                 filepath = "index.html"
             else:
                 filepath = self.path.lstrip("/")
-                if filepath.startswith('sht'):
-                    shotn = filepath[4:]
-                    path = Path('D:/data/db/plasma/result/%s/TS_%s.sht' % (shotn, shotn))
-                    if not path.is_file():
-                        self.send_error(404, 'File Not Found: %s ' % path)
-                        return
-                    with open(path, 'rb') as file:
-                        self.send_response(200)
-                        # this part handles the mimetypes for you.
-                        mimetype, _ = mimetypes.guess_type(filepath)
-                        # print(mimetype)
-                        self.send_header('Content-type', mimetype)
-                        self.end_headers()
-                        for s in file:
-                            self.wfile.write(s)
-                    return
-
             f = open('html/%s' % filepath, "rb")
         except IOError:
             self.send_error(404, 'File Not Found: %s ' % filepath)
