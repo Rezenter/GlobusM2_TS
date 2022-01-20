@@ -401,7 +401,7 @@ class Handler:
         if not os.path.isdir(shot_path):
             resp['ok'] = False
             print(shot_path)
-            resp['description'] = 'Requested shotn is missing.'
+            resp['description'] = 'Requested shotn is missing: %s.' % shot_path
             return resp
         if 'config' not in req:
             resp['ok'] = False
@@ -506,10 +506,10 @@ class Handler:
                 'description': 'server has shot loaded with another absolute calibration'
             }
 
-        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, self.fine_processor.shotn)
+        shot_path = '%s%s%05d' % (self.plasma_path, RAW_FOLDER, self.fine_processor.shotn)
         if not os.path.isdir(shot_path):
             resp['ok'] = False
-            resp['description'] = 'Requested shotn is missing.'
+            resp['description'] = 'Requested shotn is missing: %s.' % shot_path
             return resp
         if self.raw_processor is None:
             self.raw_processor = raw_proc.Integrator(DB_PATH, self.fine_processor.shotn, True, req['shot']['config_name'])
@@ -523,15 +523,22 @@ class Handler:
         starts = []
 
         for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
-            adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
-            event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
+            if self.raw_processor.version == 1:
+                adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
+                event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
+            else:
+                event.append(self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']])
             starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
 
         board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
-        adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
+        if self.raw_processor.version == 1:
+            adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
+            las = self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch]
+        else:
+            las = self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]
         resp = {
             'data': event,
-            'laser': self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch],
+            'laser': las,
             'starts': starts,
             'laser_start': self.raw_processor.processed[int(req['event'])]['laser']['boards'][board_ind]['sync_ind'],
             'ok': True

@@ -83,4 +83,5 @@ possible_signals = ['Горизонтальный поток',
 for shotn in range(40000, 41055):
     print(shotn)
     sht = shtRipper.ripper.read('%ssht%d.SHT' % (SHT_LOCATION, shotn), ['Ip внутр.(Пр2ВК) (инт.18)'])
+    debug = 5678
 

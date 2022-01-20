@@ -3,6 +3,7 @@ import ijson
 import json
 import statistics
 import math
+import msgpack
 
 
 def find_front_findex(signal, threshold, rising=True):
@@ -24,7 +25,8 @@ class Integrator:
     SIGNAL_FOLDER = 'signal/'
     CONFIG_FOLDER = 'config/'
     HEADER_FILE = 'header'
-    FILE_EXT = '.json'
+    JSON_EXT = '.json'
+    BINARY_EXT = '.msgpk'
 
 
     # move to config!
@@ -49,7 +51,7 @@ class Integrator:
         if not os.path.isdir('%s%s' % (self.db_path, self.CONFIG_FOLDER)):
             self.error = 'Configuration path not found.'
             return
-        config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.FILE_EXT)
+        config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.JSON_EXT)
         if not os.path.isfile(config_full_name):
             self.error = 'Configuration file not found.'
             return
@@ -59,18 +61,8 @@ class Integrator:
             for k, v in obj:
                 self.config[k] = v
 
-        missing = [[] for board in range(len(self.config['adc']['sync']))]
-        '''
-        missing = [
-            [78],
-            [],
-            [],
-            []
-        ]
-        '''
-        #self.missing = missing
-
         self.header = {}
+        self.version = 1
         self.data = []
         self.laser_count = 0
         self.time_step = 0
@@ -109,7 +101,7 @@ class Integrator:
         if not os.path.isdir(shot_folder):
             print('Requested %d shotn is missing: %s' % (self.shotn, shot_folder))
             return False
-        header_path = '%s%s%s' % (shot_folder, self.HEADER_FILE, self.FILE_EXT)
+        header_path = '%s%s%s' % (shot_folder, self.HEADER_FILE, self.JSON_EXT)
         if not os.path.isfile(header_path):
             print('Shot is missing header file.')
             return False
@@ -118,7 +110,10 @@ class Integrator:
             for k, v in obj:
                 self.header[k] = v
 
-        signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        if 'version' in self.header:
+            self.version = self.header['version']
+
+        signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
         if os.path.isfile(signal_path):
             print('Loading existing processed signals.')
             with open(signal_path, 'rb') as signal_file:
@@ -147,21 +142,28 @@ class Integrator:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.PLASMA_FOLDER, self.RAW_FOLDER, self.shotn)
         else:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
-        for board_ind in range(len(self.header['boards'])):
-            if not os.path.isfile('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT)):
-                print('Requested shot is missing requested board file.')
+        for board_ind in range(len(self.config['adc']['sync'])):
+            extension = self.JSON_EXT
+            if self.version == 2:
+                extension = self.BINARY_EXT
+
+            if not os.path.isfile('%s%d%s' % (shot_folder, board_ind, extension)):
+                print('Requested shot is missing requested board file %s.' % '%s%d%s' % (shot_folder, board_ind, extension))
                 return False
-            with open('%s/%d%s' % (shot_folder, board_ind, self.FILE_EXT), 'rb') as board_file:
+            with open('%s/%d%s' % (shot_folder, board_ind, extension), 'rb') as board_file:
                 self.data.append([])
-                for event in ijson.items(board_file, 'item', use_float=True):
-                    self.data[board_ind].append(event['groups'])
+                if self.version == 1:
+                    for event in ijson.items(board_file, 'item', use_float=True):
+                        self.data[board_ind].append(event['groups'])
+                else:
+                    self.data[board_ind] = msgpack.unpackb(board_file.read())
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
         return self.check_raw_integrity()
 
     def check_raw_integrity(self):
         self.laser_count = len(self.data[0])
-        for board_ind in range(1, len(self.data)):
+        for board_ind in range(len(self.config['adc']['sync'])):
             if len(self.data[board_ind]) != self.laser_count:
                 print('Boards recorded different number of events! %d vs %d' %
                       (len(self.data[board_ind]), self.laser_count))
@@ -175,19 +177,31 @@ class Integrator:
 
     def process_shot(self):
         print('Processing shot...')
-        combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
+        if self.version == 1:
+            combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
+        else:
+            combiscope_zero = self.data[0][0]['t'] - self.config['adc']['first_shot']
         expect_sync = True
         for event_ind in range(self.laser_count):
             # print('Event %d' % event_ind)
             laser, error = self.process_laser_event(event_ind, expect_sync)
             if 'sync' in laser and laser['sync']:
-                combiscope_zero = self.data[0][event_ind][1]['timestamp']
+                if self.version == 1:
+                    combiscope_zero = self.data[0][event_ind][1]['timestamp']
+                else:
+                    combiscope_zero = self.data[0][event_ind]['t']
                 for correction_ind in range(event_ind):
-                    self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
+                    if self.version == 1:
+                        self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
+                    else:
+                        self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind]['t'] - combiscope_zero
                 expect_sync = False
             if self.laser_count > 1:
                 #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
-                timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
+                if self.version == 1:
+                    timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
+                else:
+                    timestamp = self.data[0][event_ind]['t'] - combiscope_zero
             else:
                 timestamp = -999
             proc_event = {
@@ -206,7 +220,7 @@ class Integrator:
 
     def save_processed(self):
         print('Saving processed data...')
-        filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.FILE_EXT)
+        filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
         with open(filepath, 'w') as file:
             file.write('{\n "common": ')
             common = {
@@ -260,17 +274,13 @@ class Integrator:
         }
         board_count = 0
         sync_event = []
-        for board_ind in range(len(self.data)):
+        for board_ind in range(len(self.config['adc']['sync'])):
             # print('Board %d' % board_ind)
-            if 'captured_bad' in self.data[board_ind][event_ind] and \
-                    self.data[board_ind][event_ind]['captured_bad']:
-                laser['boards'].append({
-                    'captured_bad': True
-                })
-                error = 'bad captured'
-                continue
-            adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
-            signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            if self.version == 1:
+                adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
+                signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            else:
+                signal = self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]
             maximum = float('-inf')
             minimum = float('inf')
             for cell in signal:
@@ -319,7 +329,7 @@ class Integrator:
             #laser['ave']['int_len'] += stop_ind
             board_count += 1
         sync = True
-        for board_ind in range(len(self.data)):
+        for board_ind in range(len(self.config['adc']['sync'])):
             if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                 continue
             if not sync_event[board_ind]:
@@ -336,7 +346,7 @@ class Integrator:
             laser['ave']['int'] /= board_count
             #laser['ave']['int_len'] /= board_count
             laser['ave']['int_len'] = math.ceil(self.config['common']['integrationTime'] / self.time_step)
-            for board_ind in range(len(self.data)):
+            for board_ind in range(len(self.config['adc']['sync'])):
                 if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                     continue
                 if laser['boards'][board_ind]['pre_std'] > self.laser_prehistory_residual_pc:
@@ -356,18 +366,17 @@ class Integrator:
             error = None
             sp_ch = poly['channels'][ch_ind]
             board_ind = sp_ch['adc']
-            if 'captured_bad' in self.data[board_ind][event_ind] and self.data[board_ind][event_ind]['captured_bad']:
-                res['ch'].append({
-                    'error': 'bad captured'
-                })
-                continue
+
             if 'skip' in sp_ch and sp_ch['skip']:
                 res['ch'].append({
                     'error': 'skip'
                 })
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
-            signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            if self.version == 1:
+                signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            else:
+                signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]
             integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
                                           (poly['delay'] + self.config['common']['ch_delay'] * ch_ind) / self.time_step)
             integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)

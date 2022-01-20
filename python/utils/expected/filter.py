@@ -29,6 +29,18 @@ class Filters:
                     filter['t'].append(float(splitted[1]))
             self.trans.append(filter)
 
+    def dump(self):
+        with open('filters.csv', 'w') as file:
+            wl = 700
+            file.write('wl, ch1, ch2, ch3, ch4, ch5\n')
+            while wl < 1070:
+                line = '%.1f, ' % wl
+                for ch in range(5):
+                    line += '%.3e, ' % self.transmission(ch + 1, wl)
+                file.write(line[:-2] + '\n')
+                wl += 0.1
+        print('filters written to file')
+
     def transmission(self, ch, wl):
         res = 1
         curr = 1
@@ -37,3 +49,7 @@ class Filters:
             curr += 1
         res *= interpol(self.trans[ch - 1]['wl'], self.trans[ch - 1]['t'], wl)
         return res
+
+
+d = Filters()
+d.dump()
