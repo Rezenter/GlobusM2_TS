@@ -2235,11 +2235,6 @@
                     aux: this.m_current_ccm.data,
                     old: $('#export_old')[0].checked
                 }, function (resp) {
-                    this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
-                    this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
-                    this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
-                    this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
-                    this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
                     let info = {
                         config_name: this.m_currentShot.config_name,
                         spectral_name: this.m_currentShot.spectral_name,
@@ -2248,16 +2243,55 @@
                         absolute_correction: this.selectors.abs_mult.val()
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
+
+                    this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
+                    this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
+                    this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
+                    this.DownloadFile(resp.nt, (this.m_currentShot.shotn + '_n(t).csv'));
+                    this.DownloadFile(resp.aux, (this.m_currentShot.shotn + '_dynamics.csv'));
+
                     if('old' in resp){
                         this.DownloadFile(resp.old.TR, (this.m_currentShot.shotn + '_T(R)_old.csv'));
                         this.DownloadFile(resp.old.Tt, (this.m_currentShot.shotn + '_T(t)_old.csv'));
                         this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
-                    this.DownloadSHT();
+
+                    //this.DownloadSHT();
 
                 }.bind(this)
             );
+
+            console.log('request?');
+            var oReq = new XMLHttpRequest();
+            oReq.open("POST", "/api", true);
+            oReq.responseType = "blob";
+
+            oReq.onload = function(oEvent) {
+                console.log('RESPONSE?');
+                console.log(oReq.response);
+
+                let newLink = document.createElement("a");
+                newLink.download = 'TS_' + this.m_currentShot.shotn + '.sht';
+
+                if (window.webkitURL != null) {
+                    newLink.href = window.webkitURL.createObjectURL(oReq.response);
+                }
+                else {
+                    newLink.href = window.URL.createObjectURL(oReq.response);
+                    newLink.style.display = "none";
+                    document.body.appendChild(newLink);
+                }
+
+                newLink.click();
+                console.log('Loaded');
+                newLink.remove();
+            }.bind(this);
+
+            oReq.send(JSON.stringify({
+                req: 'sht',
+                shotn: this.m_currentShot.shotn
+            }));
         };
 
         this.DownloadFile = function(text, filename){
@@ -2277,17 +2311,6 @@
 
             newLink.click();
             newLink.remove();
-        };
-
-        this.DownloadSHT = function(){
-            let oReq = new XMLHttpRequest();
-            oReq.open("GET",'/sht/' + this.m_currentShot.shotn, true);
-            oReq.responseType = "arraybuffer";
-            oReq.onload = function() {
-                this.DownloadFile(oReq.response, ('TS_' + this.m_currentShot.shotn + '.sht'));
-            }.bind(this);
-
-            oReq.send();
         };
 
         this.DrawChi = function(){
