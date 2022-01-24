@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Acquisition Section</title>
+</head>
+<body>
+    <div class="row">
+        <p>VME crate control</p>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="crate_state">No connection</p>
+            <button class="btn btn-info" id="crate_reconnect_button">Reconnect</button>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <label for="crate_fan_temp">Fan temp:</label><output id="crate_fan_temp"></output>
+            <label for="crate_psu_temp">PSU temp:</label><output id="crate_psu_temp"></output>
+            <label for="crate_error">Error:</label><output id="crate_error"></output>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <button class="btn btn-success" id="crate_on_button">Power On</button>
+            <button class="btn btn-danger" id="crate_off_button">Power Off</button>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <p>ADC control</p>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="ADC_state">No connection</p>
+            <button class="btn btn-info" id="ADC_refresh_button">Reconnect</button>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <label for="next_shot_number">Next shot №:</label><output id="next_shot_number"></output>
+
+            <label for="is_plasma">Is plasma?</label><input type="checkbox" id="is_plasma" checked>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <button class="btn btn-success" id="ADC_arm_button">Arm</button>
+            <button class="btn btn-danger" id="ADC_disarm_button">Disarm</button>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <p>Laser frequency generator control</p>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="generator_state">No connection</p>
+            <button class="btn btn-info" id="generator_reconnect_button">Reconnect</button>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <label for="generator_frequency_output">Frequency:</label><output id="generator_frequency_output"></output>
+            <label for="generator_phase_output">First shot delay:</label><output id="generator_phase_output"></output>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <button class="btn btn-danger" id="generator_sw_start_button">Software start</button>
+        </div>
+    </div>
+    <hr>
+    <div id="laser_row">
+        <p>Laser control</p>
+        <div class="row">
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_state">Unknown state</p>
+                <button class="btn btn-info" id="laser_reconnect_button">Reconnect</button>
+                <p id="laser_connection">No connection</p>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_enable">Disabled</p>
+                <p id="laser_sync">internal</p>
+                <p id="laser_remote">Local control</p>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <button class="btn btn-success" id="laser_idle_button">Idle</button>
+                <button class="btn btn-danger" id="laser_fire_button">Fire</button>
+                <label for="laser_energy_output">E las:</label><output id="laser_energy_output"></output>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <p>Coolant display</p>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="coolant_state">No connection</p>
+            <button class="btn btn-info" id="coolant_reconnect_button">Reconnect</button>
+        </div>
+    </div>
+    <div class="row">
+        <div id="coolant_chart" style="width:100%; height:200px;" class="context-target"></div>
+    </div>
+    <hr>
+    <div id="diag_row">
+        <p>Diagnostics control</p>
+        <button class="btn btn-success" id="diag_on_button">Turn On</button>
+        <button class="btn btn-danger" id="diag_off_button">Turn Off</button>
+        <label for="config_select">Configuration:</label><select id="config_select" class="configs"></select>
+        <label for="spectral_select">Spectral calibr.:</label>
+            <select id="spectral_select" class="sp_calibrations"></select>
+        <label for="abs_select">Abs. calibr.:</label><select id="abs_select" class="abs_calibrations"></select>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" id="diag_fullManual_switch" name="diagArmMode">
+            <label class="form-check-label" for="diag_fullManual_switch">
+                Fully manual
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" id="diag_manual_switch" name="diagArmMode" checked>
+            <label class="form-check-label" for="diag_manual_switch">
+                Manual arm
+            </label>
+            <button class="btn btn-danger" id="diag_arm_button">Arm ADC and fire laser.</button>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" id="diag_auto_switch" name="diagArmMode">
+            <label class="form-check-label" for="diag_auto_switch">
+                Automatic
+            </label>
+            <input class="form-check-input" type="checkbox" id="diag_fire_lock_switch" checked disabled>
+            <label class="form-check-label" for="diag_fire_lock_switch">Automatic fire lock</label>
+        </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    function Main () {
+        this.m_status = {};
+        this.m_laser_warm = null;
+        this.m_laser_warming = null;
+        this.m_lasWatchdog = null;
+
+        this.m_coolant_chart = new CanvasJS.Chart("coolant_chart", {
+            title: {
+                text: 'Laser coolant temperature',
+                fontSize: 14,
+                fontFamily: 'arial'
+            },
+            axisY: {
+                includeZero: true,
+                title: 'coolant temperature (°C)',
+                titleFontSize: 12,
+                minimum: 22,
+                maximum: 30,
+                fontFamily: 'arial',
+                stripLines: [
+                    {
+                        value: 26.5,
+                        color: '#00FF00',
+                        label : "Optimal",
+                        labelFontColor: "#00FF00",
+                        labelPlacement:"inside",
+                    },
+                    {
+                        value:29,
+                        color:'#FF0000',
+                        label : "CRITICAL",
+                        labelFontColor: "#FF0000",
+                        labelPlacement:"inside",
+                    }
+
+                ]
+            },
+            axisX: {
+                title: "Time s",
+                titleFontSize: 12,
+                minimum: -900,
+                maximum: 0,
+                crosshair: {
+                    enabled: true,
+                    snapToDataPoint: true,
+                    labelFormatter: function(e) {
+                        return e.value.toFixed(1);
+                    }
+                },
+                fontFamily: 'arial'
+            },
+            toolTip: {
+                contentFormatter: function(e){
+                    return ('time = ' + e.entries[0].dataPoint.x.toFixed(0) + 's\n Temperature = ' +
+                        e.entries[0].dataPoint.y.toFixed(1) + ' °C');
+                    }
+                },
+            data: [
+                {
+                    type: "line",
+                    color: '#000000',
+                    visible: true,
+                    markerType: "none",
+                    connectNullData: true,
+                    nullDataLineDashType: "dot",
+                    dataPoints: []
+                }
+            ]
+        });
+        this.m_coolant_chart.render();
+
+        this.Request = function (req, callback) {
+            req.subsystem = 'diag';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
+
+        this.DiagOn = function(){
+            this.crateConnect();
+            this.ADCConnect();
+            this.genConnect();
+            this.LasConnect();
+            this.coolConnect();
+            this.UpdateSelects();
+            //connect everything
+            //check state timer
+        }.bind(this);
+
+        //crate
+        this.crateConnect = function(){
+            this.Request(
+                {
+                    reqtype: 'crate_connect',
+                }
+                , function (resp) {
+                    console.log(resp);
+                    this.m_status["crate"] = resp;
+                    if(!resp.ok){
+                        console.log(resp);
+                    }
+                }
+            );
+        }
+
+        this.ADCRefresh = function(){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let shotn = $('#shotn_man').val();
+            this.RequestADC(
+                {
+                    reqtype: 'status',
+                    //shotn: shotn
+                }
+                , function (resp) {
+                    //console.log(resp);
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Connected');
+                        $('#next_shot_number').val(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.ADCArm = function(ev) {
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let shotn = $('#shotn_man').val();
+            let req = {
+                reqtype: 'arm',
+                isPlasma: $('#is_plasma')[0].checked,
+                header: {
+                    config: $('#config_select').val(),
+                    abs_cal: $('#abs_select').val(),
+                    spectral_cal: $('#spectral_select').val()
+                }
+                //shotn: shotn
+            }
+            this.RequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','yellow');
+                        state.html('Armed');
+                        alert(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.ADCDisarm = function(ev){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let req = {
+                reqtype: 'disarm'
+            }
+            this.RequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Disarmed');
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.LasConnect = function(ev){
+            if(this.m_lasWatchdog){
+                clearTimeout(this.m_lasWatchdog);
+            }
+            this.RequestLas(
+                {
+                    reqtype: 'connect'
+                }
+                , function (resp) {
+                    if(resp.ok) {
+                        this.m_lasWatchdog = setInterval(this.LasStatus, 500);
+                    }else{
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasStatus = function(ev){
+            let conn = $('#laser_connection');
+            conn.css('background-color','grey');
+            conn.html('Requesting...');
+
+            this.RequestLas(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    conn.css('background-color','green');
+                    conn.html('Connected');
+
+                    let state = $('#laser_state');
+                    if(resp.ok){
+                        //console.log(resp);
+                        let string = '';
+                        switch (resp.state){
+                            case -1:
+                                console.log(resp)
+                                state.css('background-color','red');
+                                state.html('Аварийная остановка!');
+                                alert('Аварийная остановка лазера!');
+                                break;
+                            case 0:
+                                state.css('background-color','blue');
+                                string = 'Power off. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 1:
+                                state.css('background-color','white');
+                                string = 'Idle. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 2:
+                                state.css('background-color','yellow');
+                                string = 'Warming-up... ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 2.5:
+                                state.css('background-color','green');
+                                string = 'Ready. Time left ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 3:
+                                state.css('background-color','red');
+                                string = 'Firing... Time left' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                        }
+
+                        let sync = $('#laser_sync')
+                        if(resp.flags[2]){
+                            sync.css('background-color','yellow');
+                            sync.html('Internal sync.');
+                        }else{
+                            sync.css('background-color','white');
+                            sync.html('External sync.');
+                        }
+                        let remote = $('#laser_remote')
+                        if(resp.flags[14]){
+                            remote.css('background-color','white');
+                            remote.html('Remote control.');
+                        }else{
+                            remote.css('background-color','yellow');
+                            remote.html('Local control.');
+                        }
+                        let enable = $('#laser_enable')
+                        if(resp.flags[15]){
+                            enable.css('background-color','white');
+                            enable.html('Generation allowed.');
+                        }else{
+                            enable.css('background-color','yellow');
+                            enable.html('Generation blocked.');
+                        }
+
+
+                    }else{
+                        console.log(resp)
+                        conn.css('background-color','red');
+                        conn.html(resp.description);
+
+                        state.css('background-color','grey');
+                        state.html('Unknown');
+                    }
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasFire = function(ev){
+            let state = $('#laser_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.RequestLas(
+                {
+                    reqtype: 'fire'
+                }
+                , function (resp) {
+                    if(resp.ok){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = Date.now();
+                            return;
+                        }
+                    }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasIdle = function(ev){
+            let state = $('#laser_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.RequestLas(
+                {
+                    reqtype: 'idle'
+                }
+                , function (resp) {
+                    if(resp.ok ){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = null;
+                            this.m_laser_warm = null;
+                            return
+                        }
+                    }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
+                    alert('Failed to turn off laser!');
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.UpdateSelects = function() {
+            this.RequestDiag(
+                {
+                    reqtype: 'get_conf'
+                }
+                , function (resp) {
+                    this.m_config_list = resp['config'];
+                    this.m_spectralConf_list = resp['spectral_cal'];
+                    this.m_absConf_list = resp['abs_cal'];
+                    //options = ['<option>2020.12.10</option>'];
+                    let options = [];
+                    this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#config_select').html(options);
+
+                    options = [];
+                    this.m_absConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#abs_select').html(options);
+
+                    options = [];
+                    this.m_spectralConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
+                    $('#spectral_select').html(options);
+                }.bind(this)
+            );
+        };
+
+        this.DiagArm = function(ev){
+            let stateADC = $('#ADC_state');
+            stateADC.css('background-color','grey');
+            stateADC.html('Requesting...');
+            let stateLas = $('#laser_state');
+            stateLas.css('background-color','grey');
+            stateLas.html('Requesting...');
+            this.RequestDiag(
+                {
+                    reqtype: 'arm',
+                    header: {
+                        config: $('#config_select').val(),
+                        abs_cal: $('#abs_select').val(),
+                        spectral_cal: $('#spectral_select').val()
+                    }
+                }
+                , function (resp) {
+                    if(resp.ok){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = Date.now();
+                            return;
+                        }
+                    }
+                    console.log('diagArm', resp);
+                    stateLas.css('background-color','red');
+                    stateLas.html(resp.description);
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.DiagStatus = function(ev){
+            this.RequestDiag(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    console.log('diagStatus new', resp);
+                    this.m_coolant_chart.options.data[0].dataPoints = [];
+
+                    resp.coolant.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
+                        y: entry.temperature,
+                        x: entry.time_f - resp.coolant[resp.coolant.length - 1].time_f
+                    }));
+                    this.m_coolant_chart.render();
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.ConnectControls = function () {
+            $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
+            $('#ADC_arm_button').on('click', this, this.ADCArm);
+            $('#ADC_disarm_button').on('click', this, this.ADCDisarm);
+
+            $('#laser_reconnect_button').on('click', this, this.LasConnect);
+            $('#laser_fire_button').on('click', this, this.LasFire);
+            $('#laser_idle_button').on('click', this, this.LasIdle);
+
+            $('#diag_arm_button').on('click', this, this.DiagArm);
+
+            $('#diag_on_button').on('click', this, this.DiagOn);
+        };
+
+        this.ConnectControls();
+    }
+
+    $(document).ready(
+        function () {
+            let viewer = new Main();
+        }
+    )
+</script>
+</html>
