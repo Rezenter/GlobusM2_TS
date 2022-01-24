@@ -219,9 +219,9 @@
                     if(!resp.ok){
                         console.log(resp);
                     }
-                }
+                }.bind(this)
             );
-        }
+        }.bind(this);
 
         this.ADCRefresh = function(){
             let state = $('#ADC_state');
@@ -538,6 +538,8 @@
         }.bind(this);
 
         this.ConnectControls = function () {
+            $('#crate_reconnect_button').on('click', this, this.crateConnect);
+
             $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.ADCArm);
             $('#ADC_disarm_button').on('click', this, this.ADCDisarm);

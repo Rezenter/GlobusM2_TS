@@ -1,0 +1,1 @@
+julia ./julia/server.jl -threads=12
