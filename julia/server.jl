@@ -40,7 +40,7 @@ end
 
 using HTTP
 
-HTTP.serve("172.16.12.130", 8081) do request::HTTP.Request
+HTTP.serve(Sockets.localhost, 8081) do request::HTTP.Request
     try
         return handler(request)
     catch e

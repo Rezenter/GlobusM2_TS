@@ -1,3 +1,5 @@
+using Sockets
+
 module RequestHandler
     export handle
 
@@ -31,7 +33,7 @@ module RequestHandler
         @debug "call"
         resp = Dict{String, Dict}()
         # async here!, but status must be immediate
-        socket = Sockets.connect("192.168.10.43", 8100)
+        socket::TCPSocket = connect("192.168.10.43", 8100)
         #TcpSocket(open, 0 bytes waiting)
 
         resp["ok"] = true
