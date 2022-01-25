@@ -6,9 +6,11 @@ include("requestHandler.jl")
 
 ENV["JULIA_DEBUG"] = "all"
 
-@info "startup"
 @debug "Debug is enabled!"
-@debug "Thread count for Julia = ", Threads.nthreads()
+
+if Threads.nthreads() == 1
+    @warn "Julia is running on a single thread!"
+end
 
 function handler(req::HTTP.Request)
     if req.method == "GET"
@@ -30,7 +32,7 @@ function handler(req::HTTP.Request)
     
 
     if size(HTTP.payload(req)) == 0
-        @debug req
+        #@debug req
         return HTTP.Response(404, "No payload found in request.")
     else
         return HTTP.Response(200, JSON3.write(RequestHandler.handle(JSON3.read(HTTP.payload(req)))))
@@ -38,9 +40,8 @@ function handler(req::HTTP.Request)
     
 end
 
-using HTTP
-
-HTTP.serve(Sockets.localhost, 8081) do request::HTTP.Request
+@info "serving..."
+HTTP.serve(ip"172.16.12.130", 8081) do request::HTTP.Request
     try
         return handler(request)
     catch e

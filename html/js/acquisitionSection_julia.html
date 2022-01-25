@@ -125,6 +125,7 @@
         this.m_laser_warm = null;
         this.m_laser_warming = null;
         this.m_lasWatchdog = null;
+        this.m_status_timer = null;
 
         this.m_coolant_chart = new CanvasJS.Chart("coolant_chart", {
             title: {
@@ -198,13 +199,33 @@
 
         this.DiagOn = function(){
             this.crateConnect();
-            this.ADCConnect();
-            this.genConnect();
-            this.LasConnect();
-            this.coolConnect();
-            this.UpdateSelects();
+            //this.ADCConnect();
+            //this.genConnect();
+            //this.LasConnect();
+            //this.coolConnect();
+            //this.UpdateSelects();
+
             //connect everything
             //check state timer
+
+            let delay = 5000;
+
+            this.m_status_timer = setTimeout(function request() {
+                this.DiagStatus();
+              //if (ошибка запроса из-за перегрузки сервера) {
+                // увеличить интервал для следующего запроса
+              //  delay *= 2;
+              //}
+
+                this.m_status_timer = setTimeout(request.bind(this), delay);
+
+            }.bind(this), delay);
+        }.bind(this);
+
+        this.DiagOff = function(){
+            //turn off everything
+
+            clearTimeout(this.m_status_timer);
         }.bind(this);
 
         //crate
@@ -520,12 +541,14 @@
         }.bind(this);
 
         this.DiagStatus = function(ev){
-            this.RequestDiag(
+            this.Request(
                 {
                     reqtype: 'status'
                 }
                 , function (resp) {
                     console.log('diagStatus new', resp);
+
+                    /*
                     this.m_coolant_chart.options.data[0].dataPoints = [];
 
                     resp.coolant.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
@@ -533,6 +556,8 @@
                         x: entry.time_f - resp.coolant[resp.coolant.length - 1].time_f
                     }));
                     this.m_coolant_chart.render();
+
+                     */
                 }.bind(this)
             );
         }.bind(this);
@@ -551,6 +576,7 @@
             $('#diag_arm_button').on('click', this, this.DiagArm);
 
             $('#diag_on_button').on('click', this, this.DiagOn);
+            $('#diag_off_button').on('click', this, this.DiagOff);
         };
 
         this.ConnectControls();

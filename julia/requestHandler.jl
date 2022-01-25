@@ -1,57 +1,59 @@
-using Sockets
-
 module RequestHandler
-    export handle
+    using Sockets;
+    using Dates;
+    include("subsystems/crate.jl")
+
+    export handle;
 
     function handle(req)
-        @debug req
+        #@debug req
         if !haskey(req, "subsystem")
-            return "Subsystem field is missing!"
+            return "Subsystem field is missing!";
         end
         if !haskey(req, "subsystem")
-            return "Subsystem field is missing!"
+            return "Subsystem field is missing!";
         end
         if !haskey(table, req.subsystem)
-            return "Handling table has no subsystem " + req.subsystem
+            return "Handling table has no subsystem " + req.subsystem;
         end
         if !haskey(req, "reqtype")
-            return "reqtype field is missing!"
+            return "reqtype field is missing!";
         end
         if !haskey(table[req.subsystem], req.reqtype)
-            return "Handling table has no reqtype " + req.reqtype
+            return "Handling table has no reqtype " + req.reqtype;
         end
-        return table[req.subsystem][req.reqtype](req)
+        return table[req.subsystem][req.reqtype](req);
     end
 
     function calc(req)
-        @debug "call"
+        @debug "call";
         # async here!, but status must be immediate
-        return "success"
+        return "success";
     end
 
     function crateConnect(req)
-        @debug "call"
-        resp = Dict{String, Dict}()
-        # async here!, but status must be immediate
-        socket::TCPSocket = connect("192.168.10.43", 8100)
-        #TcpSocket(open, 0 bytes waiting)
+        Crate.connect_crate();
 
-        resp["ok"] = true
-        return resp
+        resp = Dict{String, Int}("ok" => 1);
+        return resp;
     end
 
     function diagStatus(req)
-        @debug "call"
-        
-        return "success"
+        tmp = deepcopy(state);
+        tmp["crate"] = Crate.getStatus();
+        tmp["ok"] = 1;
+        return tmp;
     end
 
-    table = Dict{String, Dict}()
+    table = Dict{String, Dict}();
     table["process"] = Dict{String, Function}([
         ("calc", calc)
-    ])
+    ]);
     table["diag"] = Dict{String, Function}([
         ("crate_connect", crateConnect),
         ("status", diagStatus)
-    ])
+    ]);
+
+    state = Dict{String, Any}();
+    state["operations"] = Dict{Int, Dict}([]);
 end
