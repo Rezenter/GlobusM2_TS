@@ -244,6 +244,36 @@
             );
         }.bind(this);
 
+        this.crateOn = function(){
+            this.Request(
+                {
+                    reqtype: 'crate_power',
+                    state: true
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                        alert(resp);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.crateOff = function(){
+            this.Request(
+                {
+                    reqtype: 'crate_power',
+                    state: false
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                        alert(resp);
+                    }
+                }
+            );
+        }.bind(this);
+
         this.ADCRefresh = function(){
             let state = $('#ADC_state');
             state.css('background-color','grey');
@@ -564,6 +594,8 @@
 
         this.ConnectControls = function () {
             $('#crate_reconnect_button').on('click', this, this.crateConnect);
+            $('#crate_on_button').on('click', this, this.crateOn);
+            $('#crate_off_button').on('click', this, this.crateOff);
 
             $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.ADCArm);

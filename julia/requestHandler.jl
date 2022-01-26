@@ -5,41 +5,40 @@ module RequestHandler
 
     export handle;
 
-    function handle(req)
+    function handle(req)::Dict{String, Any}
         #@debug req
         if !haskey(req, "subsystem")
-            return "Subsystem field is missing!";
-        end
-        if !haskey(req, "subsystem")
-            return "Subsystem field is missing!";
+            return Dict{String, Any}("ok" => 0, "error" => "Subsystem field is missing!")
         end
         if !haskey(table, req.subsystem)
-            return "Handling table has no subsystem " + req.subsystem;
+            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no subsystem " + req.subsystem))
         end
         if !haskey(req, "reqtype")
-            return "reqtype field is missing!";
+            return Dict{String, Any}("ok" => 0, "error" => "reqtype field is missing!")
         end
         if !haskey(table[req.subsystem], req.reqtype)
-            return "Handling table has no reqtype " + req.reqtype;
+            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no reqtype " + req.reqtype))
         end
         return table[req.subsystem][req.reqtype](req);
     end
 
-    function calc(req)
+    function calc(req)::Dict{String, Int}
         @debug "call";
         # async here!, but status must be immediate
-        return "success";
+        return Dict{String, Int}("ok" => 1);
     end
 
-    function crateConnect(req)
-        Crate.connect_crate();
+    crateConnect(req) = Crate.connect_crate()
 
-        resp = Dict{String, Int}("ok" => 1);
-        return resp;
+    function cratePower(req)::Dict{String, Any}
+        if !haskey(req, "state")
+            return Dict{String, Any}("ok" => 0, "error" => "state field is missing!");
+        end
+        return Crate.control_power(req["state"]);
     end
 
-    function diagStatus(req)
-        tmp = deepcopy(state);
+    function diagStatus(req)::Dict{String, Any}
+        tmp::Dict{String, Any} = deepcopy(state);
         tmp["crate"] = Crate.getStatus();
         tmp["ok"] = 1;
         return tmp;
@@ -51,9 +50,9 @@ module RequestHandler
     ]);
     table["diag"] = Dict{String, Function}([
         ("crate_connect", crateConnect),
+        ("crate_power", cratePower),
         ("status", diagStatus)
     ]);
 
     state = Dict{String, Any}();
-    state["operations"] = Dict{Int, Dict}([]);
 end
