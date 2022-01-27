@@ -199,6 +199,7 @@
 
         this.DiagOn = function(){
             this.crateConnect();
+            //run adc.exe
             //this.ADCConnect();
             //this.genConnect();
             //this.LasConnect();
@@ -208,7 +209,7 @@
             //connect everything
             //check state timer
 
-            let delay = 5000;
+            let delay = 3000;
 
             this.m_status_timer = setTimeout(function request() {
                 this.DiagStatus();
@@ -223,7 +224,9 @@
         }.bind(this);
 
         this.DiagOff = function(){
+            this.crateDisconnect();
             //turn off everything
+            //stop adc.exe
 
             clearTimeout(this.m_status_timer);
         }.bind(this);
@@ -235,8 +238,19 @@
                     reqtype: 'crate_connect',
                 }
                 , function (resp) {
-                    console.log(resp);
-                    this.m_status["crate"] = resp;
+                    if(!resp.ok){
+                        console.log(resp);
+                    }
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.crateDisconnect = function(){
+            this.Request(
+                {
+                    reqtype: 'crate_disconnect',
+                }
+                , function (resp) {
                     if(!resp.ok){
                         console.log(resp);
                     }
@@ -578,6 +592,24 @@
                 , function (resp) {
                     console.log('diagStatus new', resp);
 
+                    //process crate operations
+                    for (const operation_id in resp['crate']['operations']) {
+                        let operation = resp['crate']['operations'][operation_id];
+                        console.log("pending", operation);
+                        if(operation['status'] !== 0){
+                            this.Request(
+                                {
+                                    reqtype: 'crate_acknowledge',
+                                    id: operation_id
+                                }
+                                , function (resp) {
+                                })
+                            if(operation['status'] !== 1){
+                                console.log(operation);
+                                alert(operation['error'])
+                            }
+                        }
+                    }
                     /*
                     this.m_coolant_chart.options.data[0].dataPoints = [];
 

@@ -10,14 +10,14 @@ module RequestHandler
         if !haskey(req, "subsystem")
             return Dict{String, Any}("ok" => 0, "error" => "Subsystem field is missing!")
         end
-        if !haskey(table, req.subsystem)
-            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no subsystem " + req.subsystem))
+        if !haskey(table, req.subsystem);
+            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no subsystem " * req.subsystem))
         end
         if !haskey(req, "reqtype")
             return Dict{String, Any}("ok" => 0, "error" => "reqtype field is missing!")
         end
         if !haskey(table[req.subsystem], req.reqtype)
-            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no reqtype " + req.reqtype))
+            return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no reqtype " * req.reqtype))
         end
         return table[req.subsystem][req.reqtype](req);
     end
@@ -28,13 +28,22 @@ module RequestHandler
         return Dict{String, Int}("ok" => 1);
     end
 
-    crateConnect(req) = Crate.connect_crate()
+    crateConnect(req) = Crate.connect_crate();
+
+    crateDisconnect(req) = Crate.disconnect_crate();
 
     function cratePower(req)::Dict{String, Any}
         if !haskey(req, "state")
             return Dict{String, Any}("ok" => 0, "error" => "state field is missing!");
         end
         return Crate.control_power(req["state"]);
+    end
+
+    function crateAcq(req)::Dict{String, Any}
+        if !haskey(req, "id")
+            return Dict{String, Any}("ok" => 0, "error" => "id field is missing!");
+        end
+        return Crate.operation_acknowledge(parse(Int, req["id"]));
     end
 
     function diagStatus(req)::Dict{String, Any}
@@ -51,6 +60,8 @@ module RequestHandler
     table["diag"] = Dict{String, Function}([
         ("crate_connect", crateConnect),
         ("crate_power", cratePower),
+        ("crate_acknowledge", crateAcq),
+        ("crate_disconnect", crateDisconnect),
         ("status", diagStatus)
     ]);
 

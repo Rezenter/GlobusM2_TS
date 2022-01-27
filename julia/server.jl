@@ -42,6 +42,7 @@ end
 
 @info "serving..."
 HTTP.serve(ip"172.16.12.130", 8081) do request::HTTP.Request
+    return handler(request)  # for easy debug
     try
         return handler(request)
     catch e
