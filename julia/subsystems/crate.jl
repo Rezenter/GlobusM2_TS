@@ -18,11 +18,14 @@ module Crate
 
     const addr = ip"192.168.10.43";
     const port = 8100;
+    const request_dt = 5; #seconds
     socket = TCPSocket();
 
     status = Dict{String, Any}([
         ("state", -1),
-        ("timestamp", -1),
+        ("conn", 0),
+        ("time", ""),
+        ("unix", 0),
         ("operations", Dict{Int, Dict}([]))
     ]);
 
@@ -35,6 +38,7 @@ module Crate
     function connect_crate()::Dict{String, Int}
         global socket;
         global t;
+        global status;
         if socket.status == 3
             disconnect_crate();
             socket = TCPSocket();
@@ -44,7 +48,8 @@ module Crate
             connect(socket::TCPSocket, addr::IPAddr, port::Int);
             close(timeout_timer::Timer);
             @debug "connected"
-            t = Timer(update_crate, 1, interval=1);
+            status["conn"] = 1;
+            t = Timer(update_crate, 1, interval=request_dt);
         end
         return Dict{String, Int}("ok" => 1);
     end
@@ -53,7 +58,9 @@ module Crate
         @debug "disconnect"
         global socket;
         global t;
+        global status;
         close(t::Timer);
+        status["conn"] = 0;
         if socket.status == 6
             return Dict{String, Int}("ok" => 1);
         end
@@ -106,7 +113,7 @@ module Crate
         else
             status["state"] = -1;
         end
-        #process state
+
         resp = request(b"$CMD:MON,CH:8,PAR:PSTEMP\r\n");
         if length(resp) != 0
             val = parse(Int16, resp);
@@ -121,7 +128,8 @@ module Crate
         else
             status["fan_temp"] = -1;
         end
-        status["timestamp"] = now();
+        status["time"] = now();
+        status["unix"] = time();
         return
     end
 
@@ -161,7 +169,8 @@ module Crate
             operation["status"] = -1;
             operation["error"] = "bad responce";
         end
-        operation["timestamp"] = now();
+        operation["time"] = now();
+        operation["unix"] = time();
         return
     end
 

@@ -203,7 +203,7 @@
             //this.ADCConnect();
             //this.genConnect();
             //this.LasConnect();
-            //this.coolConnect();
+            this.coolantConnect();
             //this.UpdateSelects();
 
             //connect everything
@@ -285,6 +285,20 @@
                         alert(resp);
                     }
                 }
+            );
+        }.bind(this);
+
+        //coolant
+        this.coolantConnect = function(){
+            this.Request(
+                {
+                    reqtype: 'coolant_connect',
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                    }
+                }.bind(this)
             );
         }.bind(this);
 
