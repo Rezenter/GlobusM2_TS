@@ -1,24 +1,26 @@
 """
-# module crate
+# module laser
 
 - Julia version: 1.7.1
 - Author: ts_group
 - Date: 2022-01-25
 
 """
-module Crate
+module Laser
     using Sockets;
 
-    export connect_crate;
-    export disconnect_crate;
+    export connect_laser;
+    export disconnect_laser;
     export getStatus;
     export control_power;
     export operation_acknowledge;
 
-    const addr = ip"192.168.10.43";
-    const port = 8100;
-    const request_dt = 5; #seconds
+    const addr = ip"192.168.10.44";
+    const port = 4001;
+    const request_dt = 0.5; #seconds
     socket = TCPSocket();
+    const PACKET_END = '\n';
+    const SEPARATOR = ' ';
 
     status = Dict{String, Any}([
         ("state", -1),
@@ -27,18 +29,27 @@ module Crate
         ("operations", Dict{Int, Dict}([]))
     ]);
 
+    #power_off = 'S0004'
+    #idle = 'S0012'
+    #desync = 'S100A'
+    #generation = 'S200A'
+    #pump_delay = 'J0500'
+    #gen_delay = 'J0600'
+    #state = 'J0700'
+    #error = 'J0800'
+
     function timeout(timer::Timer)
         @debug "Socket timeout";
-        disconnect_crate();
+        disconnect_laser();
         return
     end
 
-    function connect_crate()::Dict{String, Int}
+    function connect_laser()::Dict{String, Int}
         global socket;
         global t;
         global status;
         if socket.status == 3
-            disconnect_crate();
+            disconnect_laser();
             socket = TCPSocket();
         end
         @async begin
@@ -47,12 +58,12 @@ module Crate
             close(timeout_timer::Timer);
             @debug "connected"
             status["conn"] = 1;
-            t = Timer(update_crate, 1, interval=request_dt);
+            t = Timer(update_laser, 1, interval=request_dt);
         end
         return Dict{String, Int}("ok" => 1);
     end
 
-    function disconnect_crate()::Dict{String, Int}
+    function disconnect_laser()::Dict{String, Int}
         @debug "disconnect"
         global socket;
         global t;
@@ -72,6 +83,7 @@ module Crate
 
     function read_resp()::String
         resp::String = String(readline(socket::TCPSocket));
+        return resp;
         #@debug bytesavailable(socket::TCPSocket);
         val_pos::Int = findlast(isequal(':'), resp);
         if val_pos == nothing
@@ -84,7 +96,7 @@ module Crate
     function request(string_req::Base.CodeUnits{UInt8, String})::String
         for attempt = 0:3
             if socket.status != 3
-                disconnect_crate();
+                disconnect_laser();
                 return "";
             end
             write(socket::TCPSocket, string_req);
@@ -96,8 +108,12 @@ module Crate
         return "";
     end
 
-    function update_crate(timer::Timer)
-        resp::String = request(b"$CMD:MON,CH:8,PAR:CRST\r\n");
+    function update_laser(timer::Timer)
+        resp::String = request(b"J0700 31\n");
+        @debug resp
+        status["unix"] = time();
+        return #debug
+
         if length(resp) != 0
             val = parse(Int16, resp);
             status["state"] = val;
@@ -112,20 +128,21 @@ module Crate
             status["state"] = -1;
         end
 
-        resp = request(b"$CMD:MON,CH:8,PAR:PSTEMP\r\n");
+        resp = request(b"J0700 31\n");
         if length(resp) != 0
             val = parse(Int16, resp);
             status["psu_temp"] = val;
         else
             status["psu_temp"] = -1;
         end
-        resp = request(b"$CMD:MON,CH:8,PAR:FUTEMP\r\n");
+        resp = request(b"J0700 31\n");
         if length(resp) != 0
             val = parse(Int16, resp);
             status["fan_temp"] = val;
         else
             status["fan_temp"] = -1;
         end
+
         status["unix"] = time();
         return
     end
@@ -172,7 +189,7 @@ module Crate
 
     function control_power(switch::Bool)::Dict{String, Any}
         if socket.status != 3
-            return Dict{String, Any}("ok" => 0, "error" => "Crate is not connected");
+            return Dict{String, Any}("ok" => 0, "error" => "laser is not connected");
         end
 
         id::Int = 0;
@@ -190,6 +207,6 @@ module Crate
 
     getStatus() = status::Dict{String, Any};
 
-    t = Timer(update_crate, 1);
+    t = Timer(update_laser, 1);
     close(t::Timer);
 end

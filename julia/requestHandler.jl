@@ -3,6 +3,7 @@ module RequestHandler
     using Dates;
     include("subsystems/crate.jl")
     include("subsystems/coolant.jl")
+    include("subsystems/laser.jl")
 
     export handle;
 
@@ -37,6 +38,10 @@ module RequestHandler
 
     coolantDisconnect(req) = Coolant.disconnect_coolant();
 
+    laserConnect(req) = Laser.connect_laser();
+
+    laserDisconnect(req) = Laser.disconnect_laser();
+
     function cratePower(req)::Dict{String, Any}
         if !haskey(req, "state")
             return Dict{String, Any}("ok" => 0, "error" => "state field is missing!");
@@ -55,6 +60,7 @@ module RequestHandler
         tmp::Dict{String, Any} = deepcopy(state);
         tmp["crate"] = Crate.getStatus();
         tmp["coolant"] = Coolant.getStatus();
+        tmp["laser"] = Laser.getStatus();
         tmp["ok"] = 1;
         return tmp;
     end
@@ -68,8 +74,13 @@ module RequestHandler
         ("crate_power", cratePower),
         ("crate_acknowledge", crateAcq),
         ("crate_disconnect", crateDisconnect),
+
         ("coolant_connect", coolantConnect),
         ("coolant_disconnect", coolantDisconnect),
+
+        ("laser_connect", laserConnect),
+        ("laser_disconnect", laserDisconnect),
+
         ("status", diagStatus)
     ]);
 

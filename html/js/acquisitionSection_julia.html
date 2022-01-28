@@ -202,7 +202,7 @@
             //run adc.exe
             //this.ADCConnect();
             //this.genConnect();
-            //this.LasConnect();
+            this.laserConnect();
             this.coolantConnect();
             //this.UpdateSelects();
 
@@ -225,6 +225,8 @@
 
         this.DiagOff = function(){
             this.crateDisconnect();
+            this.laserDisconnect();
+            this.coolantDisconnect();
             //turn off everything
             //stop adc.exe
 
@@ -254,7 +256,7 @@
                     if(!resp.ok){
                         console.log(resp);
                     }
-                }.bind(this)
+                }
             );
         }.bind(this);
 
@@ -298,103 +300,47 @@
                     if(!resp.ok){
                         console.log(resp);
                     }
-                }.bind(this)
+                }
             );
         }.bind(this);
 
-        this.ADCRefresh = function(){
-            let state = $('#ADC_state');
-            state.css('background-color','grey');
-            state.html('Requesting...');
-            let shotn = $('#shotn_man').val();
-            this.RequestADC(
+        this.coolantDisconnect = function(){
+            this.Request(
                 {
-                    reqtype: 'status',
-                    //shotn: shotn
+                    reqtype: 'coolant_disconnect',
                 }
                 , function (resp) {
-                    //console.log(resp);
-                    if(resp.ok){
-                        state.css('background-color','green');
-                        state.html('Connected');
-                        $('#next_shot_number').val(resp.shotn);
-                    }else{
-                        state.css('background-color','red');
-                        state.html('No connection');
-                    }
-                }
-            );
-        }.bind(this);
-
-        this.ADCArm = function(ev) {
-            let state = $('#ADC_state');
-            state.css('background-color','grey');
-            state.html('Requesting...');
-            let shotn = $('#shotn_man').val();
-            let req = {
-                reqtype: 'arm',
-                isPlasma: $('#is_plasma')[0].checked,
-                header: {
-                    config: $('#config_select').val(),
-                    abs_cal: $('#abs_select').val(),
-                    spectral_cal: $('#spectral_select').val()
-                }
-                //shotn: shotn
-            }
-            this.RequestADC(
-                req, function (resp) {
-                    if(resp.ok){
-                        state.css('background-color','yellow');
-                        state.html('Armed');
-                        alert(resp.shotn);
-                    }else{
-                        state.css('background-color','red');
-                        state.html('No connection');
+                    if(!resp.ok){
                         console.log(resp);
-                        alert(resp.description);
                     }
                 }
             );
         }.bind(this);
 
-        this.ADCDisarm = function(ev){
-            let state = $('#ADC_state');
-            state.css('background-color','grey');
-            state.html('Requesting...');
-            let req = {
-                reqtype: 'disarm'
-            }
-            this.RequestADC(
-                req, function (resp) {
-                    if(resp.ok){
-                        state.css('background-color','green');
-                        state.html('Disarmed');
-                    }else{
-                        state.css('background-color','red');
-                        state.html('No connection');
-                        console.log(resp);
-                        alert(resp.description);
-                    }
-                }
-            );
-        }.bind(this);
-
-        this.LasConnect = function(ev){
-            if(this.m_lasWatchdog){
-                clearTimeout(this.m_lasWatchdog);
-            }
-            this.RequestLas(
+        //laser
+        this.laserConnect = function(){
+            this.Request(
                 {
-                    reqtype: 'connect'
+                    reqtype: 'laser_connect',
                 }
                 , function (resp) {
-                    if(resp.ok) {
-                        this.m_lasWatchdog = setInterval(this.LasStatus, 500);
-                    }else{
+                    if(!resp.ok){
                         console.log(resp);
-                        alert(resp.description);
                     }
-                }.bind(this)
+                }
+            );
+        }.bind(this);
+
+        this.laserDisconnect = function(){
+            this.Request(
+                {
+                    reqtype: 'laser_disconnect',
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                    }
+                }
             );
         }.bind(this);
 
@@ -543,6 +489,86 @@
             );
         }.bind(this);
 
+        //ADC
+        this.ADCRefresh = function(){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let shotn = $('#shotn_man').val();
+            this.RequestADC(
+                {
+                    reqtype: 'status',
+                    //shotn: shotn
+                }
+                , function (resp) {
+                    //console.log(resp);
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Connected');
+                        $('#next_shot_number').val(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.ADCArm = function(ev) {
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let shotn = $('#shotn_man').val();
+            let req = {
+                reqtype: 'arm',
+                isPlasma: $('#is_plasma')[0].checked,
+                header: {
+                    config: $('#config_select').val(),
+                    abs_cal: $('#abs_select').val(),
+                    spectral_cal: $('#spectral_select').val()
+                }
+                //shotn: shotn
+            }
+            this.RequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','yellow');
+                        state.html('Armed');
+                        alert(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.ADCDisarm = function(ev){
+            let state = $('#ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let req = {
+                reqtype: 'disarm'
+            }
+            this.RequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Disarmed');
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
+
+
+
         this.UpdateSelects = function() {
             this.RequestDiag(
                 {
@@ -647,7 +673,7 @@
             $('#ADC_arm_button').on('click', this, this.ADCArm);
             $('#ADC_disarm_button').on('click', this, this.ADCDisarm);
 
-            $('#laser_reconnect_button').on('click', this, this.LasConnect);
+            $('#laser_reconnect_button').on('click', this, this.laserConnect);
             $('#laser_fire_button').on('click', this, this.LasFire);
             $('#laser_idle_button').on('click', this, this.LasIdle);
 

@@ -8,7 +8,6 @@
 """
 module Coolant
     using Sockets;
-    using Dates;
     using StructTypes
 
     export connect_coolant;
