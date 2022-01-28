@@ -1,6 +1,7 @@
 depends:
 HTTP
 JSON3
+StructTypes
 
 To install:
 1) open Julia in REPL mode:

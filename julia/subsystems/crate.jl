@@ -24,7 +24,6 @@ module Crate
     status = Dict{String, Any}([
         ("state", -1),
         ("conn", 0),
-        ("time", ""),
         ("unix", 0),
         ("operations", Dict{Int, Dict}([]))
     ]);
@@ -128,7 +127,6 @@ module Crate
         else
             status["fan_temp"] = -1;
         end
-        status["time"] = now();
         status["unix"] = time();
         return
     end
@@ -169,7 +167,6 @@ module Crate
             operation["status"] = -1;
             operation["error"] = "bad responce";
         end
-        operation["time"] = now();
         operation["unix"] = time();
         return
     end

@@ -9,7 +9,7 @@
 module Coolant
     using Sockets;
     using Dates;
-
+    using StructTypes
 
     export connect_coolant;
     export disconnect_coolant;
@@ -17,15 +17,27 @@ module Coolant
 
     const addr = ip"192.168.10.47";
     const port = 502;
-
     const request_dt = 1; #seconds
+    const history = ceil(Int16, 15 * 60 * request_dt); # measurements to store
+
     socket = TCPSocket();
+
+    struct Measurement
+        temp::Float32;
+        unix::Float64;
+    end
+
+    StructTypes.StructType(::Type{Measurement}) = StructTypes.Struct()
 
     status = Dict{String, Any}([
         ("conn", 0),
-        ("time", ""),
-        ("unix", 0)
+        ("hist", Array{Measurement, 1}(undef, history)),
+        ("latest", 0)
     ]);
+
+    for i = 1:history
+        status["hist"][i] = Measurement(0.0, 0.0);
+    end
 
     function timeout(timer::Timer)
         @debug "Socket timeout";
@@ -99,9 +111,12 @@ module Coolant
 
     function update_coolant(timer::Timer)
         resp::Float32 = request(b"\xaf\x11\x00\x00\x00\x06\x02\x04\x00\x1e\x00\x02");
-        status["temp"] = resp;
-        status["time"] = now();
-        status["unix"] = time();
+        if status["latest"] == length(status["hist"])
+            status["latest"] = 0;
+        else
+            status["latest"] += 1;
+        end
+        status["hist"][status["latest"]] = Measurement(resp, time());
         return
     end
 
