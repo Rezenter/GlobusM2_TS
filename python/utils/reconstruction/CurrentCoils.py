@@ -7,7 +7,7 @@ CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 theta_count = 180
 gamma_shift = 1
 elong_0 = 1.5
-shaf_shift = 3
+shaf_shift = 5
 linear_count = 3
 
 
@@ -379,11 +379,11 @@ def linearization(x, y):
 class CCM:
     CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/'  # y = \\172.16.12.127
 
-    theta_count = 180
-    gamma_shift = 1
-    elong_0 = 1.5
-    shaf_shift = 3
-    linear_count = 3
+    #theta_count = 180
+    #gamma_shift = 1
+    #elong_0 = 1.5
+    #shaf_shift = 3
+    #linear_count = 3
     data = {}
     timestamps = []
     error = None
@@ -454,9 +454,9 @@ class CCM:
         params = self.get_surface_parameters(t_ind)
         a = ra * (sep_r[0] - params['R'])
         triang = a * params['triag'] / params['a']
-        elong = self.elong_0 + \
-                a * (params['elong'] - self.elong_0) / params['a']
-        shift = self.shaf_shift * math.pow((1 - math.pow(a / params['a'], 2)), self.gamma_shift)
+        elong = elong_0 + \
+                a * (params['elong'] - elong_0) / params['a']
+        shift = shaf_shift * math.pow((1 - math.pow(a / params['a'], 2)), gamma_shift)
 
         r = []
         z = []
@@ -530,7 +530,7 @@ class CCM:
         if equator_r < 0:
             return []
 
-        center_r = params['R'] + self.shaf_shift
+        center_r = params['R'] + shaf_shift
         lfs_poly = []
         hfs_poly = []
         for poly_ind in range(len(polys)):
