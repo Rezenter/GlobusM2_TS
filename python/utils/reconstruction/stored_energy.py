@@ -42,15 +42,21 @@ class StoredCalculator:
                 #print('\n\n----------------')
                 #print(surf)
 
+                correct = r < surfaces[-1]['r_max'] # add asymmetry correction for HFS points
                 for index in range(len(surf['r']) - 1):
                     if (surf['r'][index] - r) * (surf['r'][index + 1] - r) <= 0:
+                        ne = surf['ne']
+                        ne_err = surf['ne_err']
+                        #if correct and surf_ind != 0: # asymmetry
+                        #    ne = surfaces[surf_ind - 1]['ne']
+                        #    ne_err = surfaces[surf_ind - 1]['ne_err']
                         profile.append({
                             'z': surf['z'][index],
                             'surf_ind': surf_ind,
                             'Te': surf['Te'],
-                            'ne': surf['ne'],
+                            'ne': ne,
                             'Te_err': surf['Te_err'],
-                            'ne_err': surf['ne_err']
+                            'ne_err': ne_err
                         })
             else:
                 not_used_surfaces.append(surf_ind)
@@ -98,10 +104,15 @@ class StoredCalculator:
         t_ave_err = 0
         n_ave = 0
         n_ave_err = 0
+        pressure = []
         if len(surfaces) != 0:
             radius = surfaces[0]['r_min']
             while radius < surfaces[0]['r_max']:
                 l_prof = self.get_profile(surfaces, radius)
+                pressure.append({
+                    'R': radius,
+                    'vertical': l_prof
+                })
                 if 0 <= radius - nl_r < r_step:
                     nl_prof = l_prof
                     for point_ind in range(len(l_prof) - 1):
@@ -139,6 +150,7 @@ class StoredCalculator:
             n_ave /= final_vol
             t_ave_err /= final_vol
             n_ave_err /= final_vol
+
         return {
             'area': r_step * area * 1e-4,
             'volume': final_vol,
@@ -150,7 +162,8 @@ class StoredCalculator:
             't_vol': t_ave * r_step * 1e-6 * math.tau,
             't_vol_err': t_ave_err * r_step * 1e-6 * math.tau,
             'n_vol': n_ave * r_step * 1e-6 * math.tau,
-            'n_vol_err': n_ave_err * r_step * 1e-6 * math.tau
+            'n_vol_err': n_ave_err * r_step * 1e-6 * math.tau,
+            'pressure': pressure
         }
 
     def calc_laser_shot(self, requested_time, nl_r):
@@ -189,7 +202,8 @@ class StoredCalculator:
             't_vol': integration['t_vol'],
             't_vol_err': integration['t_vol_err'],
             'n_vol': integration['n_vol'],
-            'n_vol_err': integration['n_vol_err']
+            'n_vol_err': integration['n_vol_err'],
+            'pressure': integration['pressure']
         }
 
     def calc_dynamics(self, t_from, t_to, nl_r):
