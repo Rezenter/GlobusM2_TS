@@ -4,6 +4,7 @@ module RequestHandler
     include("subsystems/crate.jl")
     include("subsystems/coolant.jl")
     include("subsystems/laser.jl")
+    include("subsystems/fastADC.jl")
 
     export handle;
 

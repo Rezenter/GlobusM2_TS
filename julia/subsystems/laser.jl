@@ -19,8 +19,6 @@ module Laser
     const port = 4001;
     const request_dt = 0.5; #seconds
     socket = TCPSocket();
-    const PACKET_END = '\n';
-    const SEPARATOR = ' ';
 
     status = Dict{String, Any}([
         ("state", -1),
@@ -81,66 +79,98 @@ module Laser
         return Dict{String, Int}("ok" => 1);
     end
 
-    function read_resp()::String
-        resp::String = String(readline(socket::TCPSocket));
-        return resp;
-        #@debug bytesavailable(socket::TCPSocket);
-        val_pos::Int = findlast(isequal(':'), resp);
-        if val_pos == nothing
-            @error "Invalid responce!";
-            return "";
+    function crc(packet::Vector{UInt8})
+        res::UInt16 = 0;
+        for byte_ind = 1:length(packet)
+            res += packet[byte_ind];
         end
-        return resp[val_pos + 1 : end];
+        res_str::String = uppercase(string(res, base = 16));
+        return Vector{UInt8}(res_str[end - 1:end]);
     end
 
-    function request(string_req::Base.CodeUnits{UInt8, String})::String
+    function read_resp()::Vector{UInt8}
+        raw_resp::Vector{UInt8} = Vector{UInt8}(readline(socket::TCPSocket));
+        if length(raw_resp) < 3
+            @error("Too short responce")
+            return Vector{UInt8}();
+        end
+        crc_calc::Vector{UInt8} = crc(raw_resp[1:(end - 2)]);
+        if crc_calc[1] != raw_resp[end - 1] || crc_calc[2] != raw_resp[end]
+            @debug(crc_calc)
+            @debug(raw_resp)
+            @error("Bad CRC")
+            return Vector{UInt8}();
+        end
+        if raw_resp[end - 2] != 0x20
+            @error("Bad separator")
+            return Vector{UInt8}();
+        end
+        return raw_resp[1:(end - 3)];
+
+    end
+
+    function request(string_req::Base.CodeUnits{UInt8, String})::Vector{UInt8}
         for attempt = 0:3
             if socket.status != 3
                 disconnect_laser();
-                return "";
+                return Vector{UInt8}();
             end
             write(socket::TCPSocket, string_req);
-            resp::String= read_resp();
-            if length(resp) > 0
+            resp::Vector{UInt8} = read_resp();
+            if length(resp) != 0
                 return resp;
             end
         end
-        return "";
+        return Vector{UInt8}();
     end
 
     function update_laser(timer::Timer)
-        resp::String = request(b"J0700 31\n");
-        @debug resp
-        status["unix"] = time();
-        return #debug
+        resp::Vector{UInt8} = request(b"J0700 31\n");
+        if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0700"
+            @error("Wrong responce on status request");
+            status["state"] = -2;
+        else
+            payload::Vector{UInt8} = resp[begin + 5:end];
 
-        if length(resp) != 0
-            val = parse(Int16, resp);
-            status["state"] = val;
-            status["bits"] = Array{Int8}(undef, 12);
-            for bit_pos=0:11
-                status["bits"][bit_pos + 1] = (val & (1 << bit_pos)) >> bit_pos;
+            if length(payload) == 4
+                value::UInt16 = parse(UInt16, String(payload), base = 16);
+                status["bits"] = Array{UInt8}(undef, 16);
+                for bit_pos=0:15
+                    status["bits"][bit_pos + 1] = (value & (1 << bit_pos)) >> bit_pos;
+                end
+                status["is_on"] = status["bits"][1] == 1;
+                status["is_pumping"] = status["bits"][2] == 1;
+                status["is_gen_internal"] = status["bits"][3] == 1;
+                status["is_psu_ready"] = status["bits"][4] == 1;
+                status["is_temp_ok"] = status["bits"][5] == 1;
+                status["is_unused_6"] = status["bits"][6] == 1;
+                status["is_desync"] = status["bits"][7] == 1;
+                status["is_error"] = status["bits"][8] == 1;
+                status["is_psu_1"] = status["bits"][9] == 1;
+                status["is_psu_2"] = status["bits"][10] == 1;
+                status["is_psu_3"] = status["bits"][11] == 1;
+                status["is_psu_4"] = status["bits"][12] == 1;
+                status["is_5V"] = status["bits"][13] == 1;
+                status["is_ignore_5V"] = status["bits"][14] == 1;
+                status["is_remote_allowed"] = status["bits"][15] == 1;
+                status["is_laser_switch_on"] = status["bits"][16] == 1;
+
+                if status["is_error"] == 1
+                    status["state"] = -1;
+                    @error("Laser emegency!");
+                elseif status["is_on"] == 0
+                    status["state"] = 0;
+                elseif status["is_pumping"] == 0
+                    status["state"] = 1;
+                elseif status["is_desync"] == 0
+                    status["state"] = 2;
+                else
+                    status["state"] = 3;
+                end
+            else
+                @error("Wrong responce on status request: payload size is fucked-up");
+                return
             end
-            status["is_on"] = status["bits"][1] == 1;
-            status["is_fan"] = status["bits"][10] == 1;
-            status["is_error"] = (val - status["bits"][1] - (convert(Int16, status["bits"][10]) << 9)) != 0;
-        else
-            status["state"] = -1;
-        end
-
-        resp = request(b"J0700 31\n");
-        if length(resp) != 0
-            val = parse(Int16, resp);
-            status["psu_temp"] = val;
-        else
-            status["psu_temp"] = -1;
-        end
-        resp = request(b"J0700 31\n");
-        if length(resp) != 0
-            val = parse(Int16, resp);
-            status["fan_temp"] = val;
-        else
-            status["fan_temp"] = -1;
         end
 
         status["unix"] = time();
