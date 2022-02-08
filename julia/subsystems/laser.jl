@@ -124,11 +124,12 @@ module Laser
         return Vector{UInt8}();
     end
 
-    function update_laser(timer::Timer)
+    function get_status()::Bool
         resp::Vector{UInt8} = request(b"J0700 31\n");
         if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0700"
             @error("Wrong responce on status request");
             status["state"] = -2;
+            return false;
         else
             payload::Vector{UInt8} = resp[begin + 5:end];
 
@@ -167,10 +168,63 @@ module Laser
                 else
                     status["state"] = 3;
                 end
+                return true;
             else
                 @error("Wrong responce on status request: payload size is fucked-up");
-                return
+                return false;
             end
+        end
+        return false;
+    end
+
+    function get_delay_pump()::Bool
+        resp::Vector{UInt8} = request(b"J0500 2F\n");
+        if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0500"
+            @error("Wrong responce on pump_delay request");
+            status["state"] = -2;
+            return false;
+        else
+            payload::Vector{UInt8} = resp[begin + 5:end];
+            if length(payload) == 4
+                status["delay_pump"] = parse(UInt16, String(payload), base = 16);
+                return true;
+            else
+                @error("Wrong responce on pump delay request: payload size is fucked-up");
+                return false;
+            end
+        end
+        return false;
+    end
+
+    function get_delay_gen()::Bool
+        resp::Vector{UInt8} = request(b"J0600 30\n");
+        if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0600"
+            @error("Wrong responce on gen_delay request");
+            status["state"] = -2;
+            return false;
+        else
+            payload::Vector{UInt8} = resp[begin + 5:end];
+            if length(payload) == 4
+                status["delay_gen"] = parse(UInt16, String(payload), base = 16);
+                return true;
+            else
+                @error("Wrong responce on gen delay request: payload size is fucked-up");
+                return false;
+            end
+        end
+        return false;
+    end
+
+    function update_laser(timer::Timer)
+        success::Bool = true;
+        if !get_status()
+            return
+        end
+        if !get_delay_pump();
+            return
+        end
+        if !get_delay_gen();
+            return
         end
 
         status["unix"] = time();
