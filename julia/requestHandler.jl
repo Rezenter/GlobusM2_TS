@@ -35,14 +35,6 @@ module RequestHandler
 
     crateDisconnect(req) = Crate.disconnect_crate();
 
-    coolantConnect(req) = Coolant.connect_coolant();
-
-    coolantDisconnect(req) = Coolant.disconnect_coolant();
-
-    laserConnect(req) = Laser.connect_laser();
-
-    laserDisconnect(req) = Laser.disconnect_laser();
-
     function cratePower(req)::Dict{String, Any}
         if !haskey(req, "state")
             return Dict{String, Any}("ok" => 0, "error" => "state field is missing!");
@@ -55,6 +47,28 @@ module RequestHandler
             return Dict{String, Any}("ok" => 0, "error" => "id field is missing!");
         end
         return Crate.operation_acknowledge(parse(Int, req["id"]));
+    end
+
+    coolantConnect(req) = Coolant.connect_coolant();
+
+    coolantDisconnect(req) = Coolant.disconnect_coolant();
+
+    laserConnect(req) = Laser.connect_laser();
+
+    laserDisconnect(req) = Laser.disconnect_laser();
+
+    function laserState(req)::Dict{String, Any}
+        if !haskey(req, "state")
+            return Dict{String, Any}("ok" => 0, "error" => "state field is missing!");
+        end
+        return Laser.control_state(req["state"]);
+    end
+
+    function laserAcq(req)::Dict{String, Any}
+        if !haskey(req, "id")
+            return Dict{String, Any}("ok" => 0, "error" => "id field is missing!");
+        end
+        return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
     function diagStatus(req)::Dict{String, Any}
@@ -81,6 +95,8 @@ module RequestHandler
 
         ("laser_connect", laserConnect),
         ("laser_disconnect", laserDisconnect),
+        ("laser_state", laserState),
+        ("laser_acknowledge", laserAcq),
 
         ("status", diagStatus)
     ]);
