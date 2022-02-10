@@ -3,6 +3,7 @@ import math
 import os.path
 
 CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
+CCM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 
 theta_count = 180
 gamma_shift = 1
@@ -54,12 +55,14 @@ class CCM:
         self.error = None
         filename = '%smcc_%d.json' % (CCM_DB, shotn)
         if not os.path.isfile(filename):
-            self.set_error('No mcc file!')
-            return
+            filename = '%smcc_%d.json' % (CCM_DB_NEW, shotn)
+            if not os.path.isfile(filename):
+                self.set_error('No mcc file found!')
+                return
         with open(filename, 'r') as mcc_file:
             self.data = json.load(mcc_file)
         if self.data is None:
-            self.set_error('No mcc file!')
+            self.set_error('No mcc file loaded!')
             return
         self.timestamps = self.data['time']['variable']
         self.calculated = [{'calculated': False} for t in self.timestamps]
