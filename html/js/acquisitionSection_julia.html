@@ -469,17 +469,14 @@
             let state = $('#laser_state');
             state.css('background-color','grey');
             state.html('Requesting...');
-            this.RequestLas(
+            this.Request(
                 {
-                    reqtype: 'idle'
+                    reqtype: 'laser_state',
+                    state: 1
                 }
                 , function (resp) {
                     if(resp.ok ){
-                        if(resp.code === 0 || resp.code === 1) {
-                            this.m_laser_warming = null;
-                            this.m_laser_warm = null;
-                            return
-                        }
+                       return
                     }
                     console.log(resp);
                     state.css('background-color','red');
@@ -635,11 +632,26 @@
                     //process crate operations
                     for (const operation_id in resp['crate']['operations']) {
                         let operation = resp['crate']['operations'][operation_id];
-                        console.log("pending", operation);
                         if(operation['status'] !== 0){
                             this.Request(
                                 {
                                     reqtype: 'crate_acknowledge',
+                                    id: operation_id
+                                }
+                                , function (resp) {
+                                })
+                            if(operation['status'] !== 1){
+                                console.log(operation);
+                                alert(operation['error'])
+                            }
+                        }
+                    }
+                    for (const operation_id in resp['laser']['operations']) {
+                        let operation = resp['laser']['operations'][operation_id];
+                        if(operation['status'] !== 0){
+                            this.Request(
+                                {
+                                    reqtype: 'laser_acknowledge',
                                     id: operation_id
                                 }
                                 , function (resp) {

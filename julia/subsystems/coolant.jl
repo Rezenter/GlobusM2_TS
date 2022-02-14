@@ -97,7 +97,7 @@ module Coolant
                 disconnect_coolant();
                 return -3.0;
             end
-            write(socket::TCPSocket, string_req);
+            write(socket::TCPSocket, string_req); # IOError: write: connection reset by peer (ECONNRESET)
             raw_resp::Vector{UInt8} = read(socket::TCPSocket, 13);
             if length(raw_resp) == 13
                 return reinterpret(Float32, [raw_resp[11], raw_resp[10], raw_resp[13], raw_resp[12]])[1];
