@@ -8,7 +8,7 @@
 """
 module Coolant
     using Sockets;
-    using StructTypes
+    using StructTypes;
 
     export connect_coolant;
     export disconnect_coolant;
@@ -17,7 +17,7 @@ module Coolant
     const addr = ip"192.168.10.47";
     const port = 502;
     const request_dt = 1; #seconds
-    const history = ceil(Int16, 15 * 60 * request_dt); # measurements to store
+    const history = ceil(UInt16, 15 * 60 * request_dt); # measurements to store
 
     socket = TCPSocket();
 

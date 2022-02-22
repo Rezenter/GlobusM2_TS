@@ -207,10 +207,9 @@
             //this.UpdateSelects();
 
             //connect everything
-            //check state timer
+
 
             let delay = 3000;
-
             this.m_status_timer = setTimeout(function request() {
                 this.DiagStatus();
               //if (ошибка запроса из-за перегрузки сервера) {
@@ -452,15 +451,9 @@
                     reqtype: 'fire'
                 }
                 , function (resp) {
-                    if(resp.ok){
-                        if(resp.code === 0 || resp.code === 1) {
-                            this.m_laser_warming = Date.now();
-                            return;
-                        }
+                    if(!resp.ok){
+                        console.log(resp);
                     }
-                    console.log(resp);
-                    state.css('background-color','red');
-                    state.html(resp.description);
                 }.bind(this)
             );
         }.bind(this);
@@ -662,6 +655,7 @@
                             }
                         }
                     }
+
                     /*
                     this.m_coolant_chart.options.data[0].dataPoints = [];
 
@@ -669,9 +663,14 @@
                         y: entry.temperature,
                         x: entry.time_f - resp.coolant[resp.coolant.length - 1].time_f
                     }));
+
+                    //draw states
+
                     this.m_coolant_chart.render();
 
-                     */
+                    //draw states
+
+                    */
                 }.bind(this)
             );
         }.bind(this);

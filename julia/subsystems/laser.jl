@@ -8,7 +8,9 @@
 """
 module Laser
     using Sockets;
-    using Printf
+    using Printf;
+    using StructTypes;
+    using ..Coolant
 
     export connect_laser;
     export disconnect_laser;
@@ -18,26 +20,40 @@ module Laser
 
     const addr = ip"192.168.10.44";
     const port = 4001;
-    const request_dt = 0.5; #seconds
+    const request_dt = 0.5; # (seconds)
+    const history = 100; # state changes to store
+    const temperature_timeout = 10; # (seconds) "best before" time for coolant temperature
+    const temperature_max = 29; # (degC) maximum laser temperature
+    const temperature_min = 23; # (degC) minimum laser temperature
+    const time_warmUp = 10; # (seconds) time required for warm-up
+    const time_total = 60 + time_warmUp; # (seconds) total allowed time for pump to work
+    pump_start = time();
+
     mutex = Channel(1);
 
     socket = TCPSocket();
+
+    struct StateChange
+        prev_state::Int8;
+        new_state::Int8;
+        unix::Float64;
+    end
+    StructTypes.StructType(::Type{StateChange}) = StructTypes.Struct()
 
     status = Dict{String, Any}([
         ("state", -1),
         ("conn", 0),
         ("unix", 0),
-        ("operations", Dict{Int, Dict}([]))
+        ("delay_gen", 0),
+        ("delay_pump", 0),
+        ("operations", Dict{Int, Dict}([])),
+        ("hist", Array{StateChange, 1}(undef, history)),
+        ("latest", 0)
     ]);
 
-    #power_off = 'S0004'
-    #idle = 'S0012'
-    #desync = 'S100A'
-    #generation = 'S200A'
-    #pump_delay = 'J0500'
-    #gen_delay = 'J0600'
-    #state = 'J0700'
-    #error = 'J0800'
+    for i = 1:history
+        status["hist"][i] = StateChange(0, 0, 0.0);
+    end
 
     function timeout(timer::Timer)
         @debug "Socket timeout";
@@ -173,9 +189,11 @@ module Laser
                 status["is_remote_allowed"] = status["bits"][15] == 1;
                 status["is_laser_switch_on"] = status["bits"][16] == 1;
 
+                old_state = status["state"];
                 if status["is_error"] == 1
                     status["state"] = -1;
                     @error("Laser emegency!");
+                    control_state(0);
                 elseif status["is_on"] == 0
                     status["state"] = 0;
                 elseif status["is_pumping"] == 0
@@ -187,7 +205,27 @@ module Laser
                 end
                 if status["is_temp_ok"] == 0
                     @error("Laser temperature error!");
+                    control_state(0);
                 end
+
+                if old_state != status["state"]
+                    if old_state == 1 && status["state"] > 1
+                        pump_start = time();
+
+                        status["warmUp_timeout"] = time_warmUp;
+                        status["timeout"] = time_total;
+                    else if status["state"] <= 1
+                        status["warmUp_timeout"] = time_warmUp;
+                        status["timeout"] = time_total;
+                    end
+                    if status["latest"] == length(status["hist"])
+                        status["latest"] = 0;
+                    else
+                        status["latest"] += 1;
+                    end
+                    status["hist"][status["latest"]] = StateChange(old_state, status["state"], time());
+                end
+
                 return true;
             else
                 @error("Wrong responce on status request: payload size is fucked-up");
@@ -237,6 +275,37 @@ module Laser
         return false;
     end
 
+    function check_temperature()::Bool
+        coolant = Coolant.getStatus();
+        if coolant["hist"][coolant[latest]]["unix"] == 0 ||
+             (status["unix"] - coolant["hist"][coolant[latest]]["unix"]) > temperature_timeout
+             @error("coolant temperature is unknown, shut down laser")
+             if status["state"] > 1
+                 control_state(1);
+             end
+        end
+        if temperature_min < coolant["hist"][coolant[latest]]["temp"] <= temperature_max
+            return true
+        end
+        @error("coolant temperature is out of bounds, shut down laser")
+        if status["state"] > 1
+            control_state(1);
+        end
+        return true
+    end
+
+    function check_timeout()
+        if status["state"] > 1
+            curr = time();
+            status["warmUp_timeout"] = curr - status["state"] - time_warmUp;
+            status["timeout"] = curr - status["state"] - time_total;
+
+            if status["timeout"] < 1:
+                @error("laser timeout, shut down laser")
+                control_state(1);
+        end
+    end
+
     function update_laser(timer::Timer)
         success::Bool = true;
         if !get_status()
@@ -248,8 +317,10 @@ module Laser
         if !get_delay_gen();
             return
         end
-
         status["unix"] = time();
+
+        check_temperature();
+        check_timeout();
         return
     end
 
@@ -272,8 +343,16 @@ module Laser
         elseif switch == 1
             resp = request(b"S0012 36\n");
         elseif switch == 2
+            if !check_temperature()
+                @error("Forbidden to turn on laser due to coolant temperature reasons");
+                return -3;
+            end
             resp = request(b"S100A 45\n");
         elseif switch == 3
+            if !check_temperature()
+                @error("Forbidden to turn on laser due to coolant temperature reasons");
+                return -3;
+            end
             resp = request(b"S200A 46\n");
         end
 
@@ -293,32 +372,43 @@ module Laser
 
     function async_state(operation::Dict{String, Any}, switch::Int64)
         resp::Int32 = -1;
-        timeout_timer = Timer(timeout, 5);
-
         old_state = status["state"];
-
-        resp = cmd_request(switch);
-        close(timeout_timer::Timer);
-
-        if resp < 0
-            operation["status"] = resp;
-            operation["error"] = "bad responce";
-        elseif resp < 2
+        if old_state == switch
             operation["status"] = 1;
-        elseif resp == 4
-            operation["status"] = -255;
-            operation["error"] = "Remote control is disabled!";
-        else
-            operation["status"] = -resp - 128;
-            operation["error"] = "Laser rejected command";
+            operation["unix"] = 0;
+            return
         end
 
-        if operation["status"] == 1
-            unused = 1;
-            # new state successfully set
-        else
-            unused = 2;
-            # set state failed
+        for attempt=0:3
+            timeout_timer = Timer(timeout, 2);
+            resp = cmd_request(switch);
+            close(timeout_timer::Timer);
+
+            if resp == -3
+                operation["status"] = resp;
+                operation["error"] = "Coolant temperature error";
+            elseif resp < 0
+                operation["status"] = resp;
+                operation["error"] = "bad responce";
+            elseif resp < 2
+                operation["status"] = 1;
+            elseif resp == 4
+                operation["status"] = -255;
+                operation["error"] = "Remote control is disabled!";
+            else
+                operation["status"] = -resp - 128;
+                operation["error"] = "Laser rejected command";
+            end
+
+            if operation["status"] != 1 || operation["status"] != -3
+                # set state failed, retry
+                if switch <= 1
+                    @info("failed to turn off laser!");
+                    control_state(1); # will lead to infinite loop
+                    continue;
+                end
+            end
+            break;
         end
 
         operation["unix"] = time();
