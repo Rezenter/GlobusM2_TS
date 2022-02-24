@@ -19,6 +19,7 @@ linear_count = 3
 def angle(x1, y1, cx, cy):
     return math.atan2((y1-cy), (x1 - cx))
 
+
 def interpol(x_prev, x, x_next, y_prev, y_next):
     return y_prev + (y_next - y_prev) * (x - x_prev) / (x_next - x_prev)
 
