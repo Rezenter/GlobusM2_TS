@@ -214,7 +214,7 @@ module Laser
 
                         status["warmUp_timeout"] = time_warmUp;
                         status["timeout"] = time_total;
-                    else if status["state"] <= 1
+                    elseif status["state"] <= 1
                         status["warmUp_timeout"] = time_warmUp;
                         status["timeout"] = time_total;
                     end
@@ -277,14 +277,14 @@ module Laser
 
     function check_temperature()::Bool
         coolant = Coolant.getStatus();
-        if coolant["hist"][coolant[latest]]["unix"] == 0 ||
-             (status["unix"] - coolant["hist"][coolant[latest]]["unix"]) > temperature_timeout
+        if coolant["hist"][coolant["latest"]].unix == 0 ||
+             (status["unix"] - coolant["hist"][coolant["latest"]].unix) > temperature_timeout
              @error("coolant temperature is unknown, shut down laser")
              if status["state"] > 1
                  control_state(1);
              end
         end
-        if temperature_min < coolant["hist"][coolant[latest]]["temp"] <= temperature_max
+        if temperature_min < coolant["hist"][coolant["latest"]].temp <= temperature_max
             return true
         end
         @error("coolant temperature is out of bounds, shut down laser")
@@ -300,9 +300,10 @@ module Laser
             status["warmUp_timeout"] = curr - status["state"] - time_warmUp;
             status["timeout"] = curr - status["state"] - time_total;
 
-            if status["timeout"] < 1:
+            if status["timeout"] < 1
                 @error("laser timeout, shut down laser")
                 control_state(1);
+            end
         end
     end
 
