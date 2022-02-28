@@ -2,6 +2,7 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import gc
+import json
 
 PACKAGE_PARENT = '../..'  # "python" directory
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
@@ -17,10 +18,11 @@ HEADER_FILE = 'header'
 FILE_EXT = 'json'
 
 is_plasma = True
-shotn = 40205
-config = '2021.05.26_g10_sync2.json'
+shotn = 41505
+config = '2021.11.02_g2-10'
 
 integrator = rawToSignals.Integrator(DB_PATH, shotn, is_plasma, config)
+print(integrator.error)
 if not integrator.loaded:
     integrator.load_raw()
 
@@ -40,8 +42,12 @@ def plot(poly_ind, event_ind, xlim, ylim):
         #    continue
         if 'skip' in sp_ch and sp_ch['skip']:
             continue
-        adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
-        signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+
+        #adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
+        #signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+
+        signal = integrator.data[board_ind][event_ind]['ch'][sp_ch['ch']]
+
         start = integrator.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
         x = [(cell_ind - start) * integrator.time_step for cell_ind in range(len(signal))]
         y = [y - integrator.processed[event_ind]['poly']['%d' % poly_ind]['ch'][ch_ind]['zero_lvl'] for y in signal]
@@ -78,6 +84,44 @@ def plot(poly_ind, event_ind, xlim, ylim):
     plt.clf()
     plt.close(fig)
     del tmp
+    gc.collect()
+
+
+def csv(poly_ind, event_ind):
+    print('Plotting poly %d' % poly_ind)
+    fig = plt.figure()
+
+    dumping = []
+
+    sp_ch = integrator.config['poly'][poly_ind]['channels'][0]
+    board_ind = sp_ch['adc']
+    laser = integrator.data[board_ind][event_ind]['ch'][integrator.config['adc']['sync'][board_ind]['ch']]
+    dumping.append(laser)
+
+    for ch_ind in range(len(integrator.config['poly'][poly_ind]['channels'])):
+        sp_ch = integrator.config['poly'][poly_ind]['channels'][ch_ind]
+        board_ind = sp_ch['adc']
+        if 'captured_bad' in integrator.data[board_ind][event_ind] and \
+                integrator.data[board_ind][event_ind]['captured_bad']:
+            continue
+        # if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
+        #    continue
+        if 'skip' in sp_ch and sp_ch['skip']:
+            continue
+
+        # adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
+        # signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+        signal = integrator.data[board_ind][event_ind]['ch'][sp_ch['ch']]
+        dumping.append(signal)
+        del signal
+
+    with open('%d.csv' % event_ind, 'w') as dump:
+        for ch in dumping:
+            line = ''
+            for cell in range(1024):
+                line += '%.2f, ' % ch[cell]
+            dump.write(line[:-2] + '\n')
+    print('dumped')
     gc.collect()
 
 print('Viewer ok')
