@@ -620,8 +620,10 @@
                     reqtype: 'status'
                 }
                 , function (resp) {
-                    console.log('diagStatus new', resp);
-
+                    if (!resp["ok"]) {
+                        console.log(resp);
+                        alert("Bad status response!");
+                    }
                     //process crate operations
                     for (const operation_id in resp['crate']['operations']) {
                         let operation = resp['crate']['operations'][operation_id];

@@ -10,7 +10,7 @@ module Laser
     using Sockets;
     using Printf;
     using StructTypes;
-    using ..Coolant
+    using ..Coolant;
 
     export connect_laser;
     export disconnect_laser;

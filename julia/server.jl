@@ -5,7 +5,6 @@ using JSON3
 include("requestHandler.jl")
 
 ENV["JULIA_DEBUG"] = "all"
-
 @debug "Debug is enabled!"
 
 if Threads.nthreads() == 1

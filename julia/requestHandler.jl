@@ -1,10 +1,11 @@
 module RequestHandler
     using Sockets;
     using Dates;
-    include("subsystems/crate.jl")
-    include("subsystems/coolant.jl")
-    include("subsystems/laser.jl")
-    include("subsystems/fastADC.jl")
+    include("subsystems/crate.jl");
+    include("subsystems/coolant.jl");
+    include("subsystems/laser.jl");
+    include("subsystems/fastADC.jl");
+    include("subsystems/tokamak.jl");
 
     export handle;
 
@@ -78,6 +79,18 @@ module RequestHandler
         tmp["laser"] = Laser.getStatus();
         tmp["ok"] = 1;
         return tmp;
+    end
+
+    function tokamakArm(shotn::Int64)
+        @debug(shotn)
+        @debug("tokamak from reqHandler")
+        #return Laser.operation_acknowledge(parse(Int, req["id"]));
+    end
+
+    function tokamakSht(shotn::Int64)
+        @debug(shotn)
+        @debug("sht ready from reqHandler")
+        #return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
     table = Dict{String, Dict}();
