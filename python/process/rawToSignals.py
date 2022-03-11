@@ -44,6 +44,7 @@ class Integrator:
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.config_name = config_name
+        self.error = ''
         if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
             return
@@ -53,7 +54,7 @@ class Integrator:
             return
         config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.JSON_EXT)
         if not os.path.isfile(config_full_name):
-            self.error = 'Configuration file not found.'
+            self.error = 'Configuration file not found. %s' % config_full_name
             return
         self.config = {}
         with open(config_full_name, 'r') as config_file:
@@ -400,6 +401,7 @@ class Integrator:
                     integral += self.time_step * (signal[cell] + signal[cell + 1] - 2 * zero) * 0.5  # ns*mV
             else:
                 print(error)
+
             if 'matchingFastGain' not in self.config['preamp']:
                 matching_gain = 1
                 print('WARNING! forgotten preamp gain')
