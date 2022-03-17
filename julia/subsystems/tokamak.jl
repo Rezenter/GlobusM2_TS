@@ -6,10 +6,9 @@ tokamak:
 =#
 
 module Tokamak
-    using Sockets;
     using FileWatching;
-    using JSON3;
-    using ..RequestHandler
+    using Sockets;
+    using ..RequestHandler;
 
     const shotn_path = "Z:\\SHOTN.txt";
     const sht_path = "Z:\\";
@@ -37,6 +36,25 @@ module Tokamak
         return nothing;
     end
 
+    function wait_shot()
+        sock=UDPSocket();
+        bind(sock, ip"192.168.10.41", 8888);
+        @info("UDP monitor is up"); # !!! do not remove or comment this line !!!
+        while true
+            payload = recv(sock);
+            if payload[1] == 255
+                RequestHandler.tokamakStart();
+            else
+                @error("UDP received wrong packet");
+                @debug(payload)
+            end
+        end
+        close(sock)
+    end
+
+    @async begin
+        wait_shot();
+    end
     @async begin
         while true
             watch_shotn();

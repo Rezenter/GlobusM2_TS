@@ -83,13 +83,18 @@ module RequestHandler
 
     function tokamakArm(shotn::Int64)
         @debug(shotn)
-        @debug("tokamak from reqHandler")
+        @debug("arm")
         #return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
     function tokamakSht(shotn::Int64)
         @debug(shotn)
-        @debug("sht ready from reqHandler")
+        @debug("sht ready")
+        #return Laser.operation_acknowledge(parse(Int, req["id"]));
+    end
+
+    function tokamakStart()
+        @debug("___Tokamak start____")
         #return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
