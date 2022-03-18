@@ -24,7 +24,9 @@ module Crate
         ("state", -1),
         ("conn", 0),
         ("unix", 0),
-        ("operations", Dict{Int, Dict}([]))
+        ("operations", Dict{Int, Dict}([])),
+        ("psu_temp", 0),
+        ("fan_temp", 0)
     ]);
 
     function timeout(timer::Timer)

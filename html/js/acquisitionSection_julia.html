@@ -112,9 +112,6 @@
             <label class="form-check-label" for="diag_auto_switch">
                 Automatic
             </label>
-            <input class="form-check-input" type="checkbox" id="diag_fire_lock_switch" checked disabled>
-            <label class="form-check-label" for="diag_fire_lock_switch">Automatic fire lock</label>
-        </div>
         </div>
     </div>
 </body>
@@ -208,7 +205,7 @@
 
             let delay = 1000;
             this.m_status_timer = setTimeout(function request() {
-                this.DiagStatus();
+                this.StatusUpdate();
               //if (ошибка запроса из-за перегрузки сервера) {
                 // увеличить интервал для следующего запроса
               //  delay *= 2;
@@ -225,6 +222,9 @@
             this.coolantDisconnect();
             //turn off everything
             //stop adc.exe
+
+            //clear displays!
+            $('#crate_state').html('Disconnected');
 
             clearTimeout(this.m_status_timer);
         }.bind(this);
@@ -415,6 +415,30 @@
             );
         }.bind(this);
 
+        // diagnostics
+        this.SetMode = function(ev){
+            let mode = -1;
+            if($('#diag_fullManual_switch').is(':checked')){
+                mode = 0;
+            }else if($('#diag_manual_switch').is(':checked')){
+                mode = 1;
+            }else if($('#diag_auto_switch').is(':checked')){
+                mode = 2;
+            }
+            this.Request(
+                {
+                    reqtype: 'set_mode',
+                    mode: mode
+                }
+                , function (resp) {
+                    if(resp.ok ){
+                       return
+                    }
+                    console.log(resp);
+                    alert('Failed to set mode!');
+                }.bind(this)
+            );
+        }.bind(this);
 
         this.UpdateSelects = function() {
             this.RequestDiag(
@@ -474,7 +498,7 @@
             }
             this.m_coolant_chart.render();
 
-            $('#coolant_state').html('Updated ' + ((state.hist[state.latest - 1].unix - now)).toFixed(0) + ' (ms)');
+            $('#coolant_state').html('Updated ' + ((state.hist[state.latest].unix - now)).toFixed(0) + ' (ms)');
 
         };
 
@@ -507,12 +531,19 @@
                 display.html('Local control');
             }
 
-            $('#laser_energy_output').html('ИП = ' + state.delay_pump.toFixed(0) + ' (мкс), Ген = ' + state.delay_gen.toFixed(0) + ' (мкс)');
+            $('#laser_energy_output').html('PSU = ' + state.delay_pump.toFixed(0) + ' (μs), Gen = ' + state.delay_gen.toFixed(0) + ' (μs)');
 
             let state_display = $('#laser_state');
             switch (state.state){
+                case -3:
+                    break;
+                case -2:
+                    state_display.css('background-color','red');
+                    state_display.html('Wrong responce on status request');
+                    alert('Wrong responce on request');
+                    break;
                 case -1:
-                    console.log(resp)
+                    console.log(state)
                     state_display.css('background-color','red');
                     state_display.html('Аварийная остановка!');
                     alert('Аварийная остановка лазера!');
@@ -551,7 +582,20 @@
             //draw laser states on coolant chart
         };
 
-        this.DiagStatus = function(ev){
+        this.DiagStatus = function(state){
+            if(state.auto_mode === 2){
+                $('#diag_auto_switch').prop("checked", true);
+                $('#diag_arm_button').prop( "disabled", true);
+            }else if(state.auto_mode === 1){
+                $('#diag_manual_switch').prop("checked", true);
+                $('#diag_arm_button').prop( "disabled", false);
+            }else{
+                $('#diag_fullManual_switch').prop("checked", true);
+                $('#diag_arm_button').prop( "disabled", true);
+            }
+        };
+
+        this.StatusUpdate = function(ev){
             this.Request(
                 {
                     reqtype: 'status'
@@ -600,6 +644,8 @@
                     this.LaserStatus(resp.laser);
 
                     this.CrateStatus(resp.crate);
+
+                    this.DiagStatus(resp.diag);
                 }.bind(this)
             );
         }.bind(this);
@@ -616,6 +662,9 @@
             $('#diag_on_button').on('click', this, this.DiagOn);
             $('#diag_off_button').on('click', this, this.DiagOff);
 
+            $('#diag_fullManual_switch').on('click', this, this.SetMode);
+            $('#diag_manual_switch').on('click', this, this.SetMode);
+            $('#diag_auto_switch').on('click', this, this.SetMode);
             /*
             <input class="form-check-input" type="radio" id="diag_fullManual_switch" name="diagArmMode">
             <input class="form-check-input" type="radio" id="diag_manual_switch" name="diagArmMode" checked>
@@ -626,6 +675,7 @@
         };
 
         this.ConnectControls();
+        this.StatusUpdate();
     }
 
     $(document).ready(function () {

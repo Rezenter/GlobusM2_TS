@@ -41,7 +41,7 @@ module Laser
     StructTypes.StructType(::Type{StateChange}) = StructTypes.Struct()
 
     status = Dict{String, Any}([
-        ("state", -1),
+        ("state", -3),
         ("conn", 0),
         ("unix", 0),
         ("delay_gen", 0),

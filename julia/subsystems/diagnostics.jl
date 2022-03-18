@@ -11,8 +11,8 @@ module Diagnostics
     const path = "D:/data/db/plasma/raw/";
 
     status = Dict{String, Any}([
-        ("auto_arm", false),
-        ("auto_lock", true),
+        ("is_on", false),
+        ("auto_mode", 0),
         ("adc_armed", false),
         ("next_shotn", 0),
         ("is_plasma", true),
@@ -23,15 +23,15 @@ module Diagnostics
 
     function fireMode(mode::Int)::Dict{String, Any}
         if mode < 0 || mode > 3
+            @debug(mode);
             return Dict{String, Any}("ok" => 0, "error" => "Bad mode. Should be [0, 2]");
         end
-        if status["operations"][id]["status"] == 0
-            return Dict{String, Any}("ok" => 0, "error" => "Operations with this ID is not finished yet");
-        end
-            resp::Dict{String, Any} = Dict{String, Any}("ok" => 1, "operation" => status["operations"][id])
-            delete!(status["operations"], id);
-            return resp;
-        end
+        status["auto_mode"] = mode;
+        resp::Dict{String, Any} = Dict{String, Any}("ok" => 1)
+        return resp;
+    end
+
+    isAuto() = (status["auto_mode"] == 2)::Bool;
 
     getStatus() = status::Dict{String, Any};
 end

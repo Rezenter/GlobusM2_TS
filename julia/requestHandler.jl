@@ -91,7 +91,9 @@ module RequestHandler
     end
 
     function tokamakArm(shotn::Int64)
-        @debug(shotn)
+        if Diagnostics.isAuto()
+            Laser.control_state(2);
+        end
         @debug("arm")
     end
 
@@ -112,7 +114,7 @@ module RequestHandler
         if !haskey(req, "mode")
             return Dict{String, Any}("ok" => 0, "error" => "mode field is missing!");
         end
-        return Diagnostics.fireMode(parse(Int, req["mode"]));
+        return Diagnostics.fireMode(req["mode"]);
     end
 
     table = Dict{String, Dict}();
@@ -133,7 +135,7 @@ module RequestHandler
         ("laser_state", laserState),
         ("laser_acknowledge", laserAcq),
 
-        ("set_fire_mode", fireMode),
+        ("set_mode", fireMode),
 
         ("status", diagStatus)
     ]);
