@@ -22,7 +22,7 @@ module Laser
     const port = 4001;
     const request_dt = 0.5; # (seconds)
     const history = 100; # state changes to store
-    const temperature_timeout = 10; # (seconds) "best before" time for coolant temperature
+    const temperature_timeout = 10*1e3; # (milliseconds) "best before" time for coolant temperature
     const temperature_max = 29; # (degC) maximum laser temperature
     const temperature_min = 23; # (degC) minimum laser temperature
     const time_warmUp = 10; # (seconds) time required for warm-up
@@ -36,7 +36,7 @@ module Laser
     struct StateChange
         prev_state::Int8;
         new_state::Int8;
-        unix::Float64;
+        unix::UInt64;
     end
     StructTypes.StructType(::Type{StateChange}) = StructTypes.Struct()
 
@@ -113,15 +113,14 @@ module Laser
             @error("Too short responce")
             return Vector{UInt8}();
         end
+        #@debug(raw_resp);
+
+        if length(raw_resp) == 6 && raw_resp[1] == 0x41
+            return raw_resp[2:5];  # for "set" commands
+        end
+
         crc_calc::Vector{UInt8} = crc(raw_resp[1:(end - 2)]);
 
-        if raw_resp[1] == 0x41
-            if raw_resp[end] != 0x20
-                @error("Bad separator")
-                return Vector{UInt8}();
-            end
-            return raw_resp[1:(end - 1)];
-        end
         if crc_calc[1] != raw_resp[end - 1] || crc_calc[2] != raw_resp[end]
             @debug(crc_calc)
             @debug(raw_resp)
@@ -139,9 +138,10 @@ module Laser
     function request(string_req::Base.CodeUnits{UInt8, String})::Vector{UInt8}
         put!(mutex, true);
         for attempt = 0:3
-            if socket.status != 3
+            if status["conn"] != 1
                 disconnect_laser();
                 take!(mutex);
+                @debug("socket is closed!");
                 return Vector{UInt8}();
             end
             write(socket::TCPSocket, string_req);
@@ -153,6 +153,7 @@ module Laser
             end
         end
         take!(mutex);
+        @debug("Take this!");
         return Vector{UInt8}();
     end
 
@@ -199,9 +200,9 @@ module Laser
                 elseif status["is_pumping"] == 0
                     status["state"] = 1;
                 elseif status["is_desync"] == 0
-                    status["state"] = 2;
-                else
                     status["state"] = 3;
+                else
+                    status["state"] = 2;
                 end
                 if status["is_temp_ok"] == 0
                     @error("Laser temperature error!");
@@ -223,7 +224,7 @@ module Laser
                     else
                         status["latest"] += 1;
                     end
-                    status["hist"][status["latest"]] = StateChange(old_state, status["state"], time());
+                    status["hist"][status["latest"]] = StateChange(old_state, status["state"], trunc(UInt64, time() * 1000));
                 end
 
                 return true;
@@ -297,8 +298,8 @@ module Laser
     function check_timeout()
         if status["state"] > 1
             curr = time();
-            status["warmUp_timeout"] = curr - status["state"] - time_warmUp;
-            status["timeout"] = curr - status["state"] - time_total;
+            status["warmUp_timeout"] = trunc(Int64, time_warmUp - (curr - status["hist"][status["latest"]].unix * 0.001));
+            status["timeout"] = trunc(Int64, time_total - (curr - status["hist"][status["latest"]].unix * 0.001));
 
             if status["timeout"] < 1
                 @error("laser timeout, shut down laser")
@@ -318,7 +319,7 @@ module Laser
         if !get_delay_gen();
             return
         end
-        status["unix"] = time();
+        status["unix"] = trunc(UInt64, time() * 1000);
 
         check_temperature();
         check_timeout();
@@ -331,7 +332,7 @@ module Laser
         end
         if status["operations"][id]["status"] == 0
             return Dict{String, Any}("ok" => 0, "error" => "Operations with this ID is not finished yet");
-        end
+    end
         resp::Dict{String, Any} = Dict{String, Any}("ok" => 1, "operation" => status["operations"][id])
         delete!(status["operations"], id);
         return resp;
@@ -357,13 +358,12 @@ module Laser
             resp = request(b"S200A 46\n");
         end
 
-        if length(resp) != 5 || resp[1] != 0x41
+        if length(resp) != 4
             @error("Wrong responce on set_state request");
-            @debug(String(resp));
+            @debug(resp);
             return -2;
         else
-            payload::Vector{UInt8} = resp[begin + 1:end];
-            resp_bits::UInt16 = parse(UInt16, String(payload), base = 16);
+            resp_bits::UInt16 = parse(UInt16, String(resp), base = 16);
             result::Int32 = convert(Int32, resp_bits);
             return result;
         end
@@ -401,18 +401,21 @@ module Laser
                 operation["error"] = "Laser rejected command";
             end
 
-            if operation["status"] != 1 || operation["status"] != -3
-                # set state failed, retry
-                if switch <= 1
-                    @info("failed to turn off laser!");
-                    control_state(1); # will lead to infinite loop
-                    continue;
-                end
+            if operation["status"] == 1 || operation["status"] == -3
+                break;
             end
-            break;
+
+            # set state failed, retry
+            if switch <= 1
+                @info("failed to turn off laser!");
+                @debug(resp);
+                @debug(operation["status"]);
+                control_state(1); # will lead to infinite loop
+                continue;
+            end
         end
 
-        operation["unix"] = time();
+        operation["unix"] = trunc(UInt64, time() * 1000);
         return
     end
 

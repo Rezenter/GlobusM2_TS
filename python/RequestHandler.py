@@ -10,7 +10,7 @@ import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
-import python.subsyst.crate as crate
+#import python.subsyst.crate as crate
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
@@ -99,8 +99,8 @@ class Handler:
         self.tokamak = tokamak.Sync(self.diag_disarm)
         print('connecting coolant...')
         self.las_cool = laser1064.Coolant()
-        print('connecting crate...')
-        self.crate = crate.Crate()
+        #print('connecting crate...')
+        #self.crate = crate.Crate()
         print('DONE')
         self.db = db.DB(self.plasma_path)
         return
@@ -671,7 +671,7 @@ class Handler:
                     'resp': resp,
                     'shotn': shotn
                 }
-                self.crate.connect()
+                #self.crate.connect()
             else:
                 self.state['fast'] = resp
         return self.state['fast']
@@ -779,7 +779,7 @@ class Handler:
         self.fast_status({})
         self.state['coolant'] = self.las_cool.log
         self.state['tokamak'] = self.tokamak.log
-        self.state['crate'] = self.crate.log
+        #self.state['crate'] = self.crate.log
         return self.state
 
     def diag_disarm(self):

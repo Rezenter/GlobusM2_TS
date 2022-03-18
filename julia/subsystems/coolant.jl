@@ -23,7 +23,7 @@ module Coolant
 
     struct Measurement
         temp::Float32;
-        unix::Float64;
+        unix::UInt64;
     end
 
     StructTypes.StructType(::Type{Measurement}) = StructTypes.Struct()
@@ -35,7 +35,7 @@ module Coolant
     ]);
 
     for i = 1:history
-        status["hist"][i] = Measurement(0.0, 0.0);
+        status["hist"][i] = Measurement(0.0, 0);
     end
 
     function timeout(timer::Timer)
@@ -115,7 +115,7 @@ module Coolant
         else
             status["latest"] += 1;
         end
-        status["hist"][status["latest"]] = Measurement(resp, time());
+        status["hist"][status["latest"]] = Measurement(resp, trunc(UInt64, time() * 1000));
         return
     end
 

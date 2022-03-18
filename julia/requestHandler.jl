@@ -6,21 +6,29 @@ module RequestHandler
     include("subsystems/laser.jl");
     include("subsystems/fastADC.jl");
     include("subsystems/tokamak.jl");
+    include("subsystems/diagnostics.jl");
 
     export handle;
+    export tokamakArm;
+    export tokamakSht;
+    export tokamakStart;
 
     function handle(req)::Dict{String, Any}
         #@debug req
         if !haskey(req, "subsystem")
+            @error("Subsystem field is missing!");
             return Dict{String, Any}("ok" => 0, "error" => "Subsystem field is missing!")
         end
         if !haskey(table, req.subsystem);
+            @error("Handling table has no subsystem " * req.subsystem);
             return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no subsystem " * req.subsystem))
         end
         if !haskey(req, "reqtype")
+            @error("reqtype field is missing!");
             return Dict{String, Any}("ok" => 0, "error" => "reqtype field is missing!")
         end
         if !haskey(table[req.subsystem], req.reqtype)
+            @error("Handling table has no reqtype " * req.reqtype);
             return Dict{String, Any}("ok" => 0, "error" => ("Handling table has no reqtype " * req.reqtype))
         end
         return table[req.subsystem][req.reqtype](req);
@@ -77,6 +85,7 @@ module RequestHandler
         tmp["crate"] = Crate.getStatus();
         tmp["coolant"] = Coolant.getStatus();
         tmp["laser"] = Laser.getStatus();
+        tmp["diag"] = Diagnostics.getStatus();
         tmp["ok"] = 1;
         return tmp;
     end
@@ -84,18 +93,26 @@ module RequestHandler
     function tokamakArm(shotn::Int64)
         @debug(shotn)
         @debug("arm")
-        #return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
     function tokamakSht(shotn::Int64)
         @debug(shotn)
         @debug("sht ready")
-        #return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
     function tokamakStart()
+        current_state = Laser.getStatus()["state"];
+        if current_state > 1
+            Laser.control_state(1);
+        end
         @debug("___Tokamak start____")
-        #return Laser.operation_acknowledge(parse(Int, req["id"]));
+    end
+
+    function fireMode(req)::Dict{String, Any}
+        if !haskey(req, "mode")
+            return Dict{String, Any}("ok" => 0, "error" => "mode field is missing!");
+        end
+        return Diagnostics.fireMode(parse(Int, req["mode"]));
     end
 
     table = Dict{String, Dict}();
@@ -115,6 +132,8 @@ module RequestHandler
         ("laser_disconnect", laserDisconnect),
         ("laser_state", laserState),
         ("laser_acknowledge", laserAcq),
+
+        ("set_fire_mode", fireMode),
 
         ("status", diagStatus)
     ]);
