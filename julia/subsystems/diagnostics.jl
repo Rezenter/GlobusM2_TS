@@ -31,6 +31,14 @@ module Diagnostics
         return resp;
     end
 
+    function on()
+        status["is_on"] = true;
+    end
+
+    function off()
+        status["is_on"] = false;
+    end
+
     isAuto() = (status["auto_mode"] == 2)::Bool;
 
     getStatus() = status::Dict{String, Any};

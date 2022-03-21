@@ -115,7 +115,7 @@ module Coolant
         else
             status["latest"] += 1;
         end
-        status["hist"][status["latest"]] = Measurement(resp, trunc(UInt64, time() * 1000));
+        status["hist"][status["latest"] + 1] = Measurement(resp, trunc(UInt64, time() * 1000));
         return
     end
 

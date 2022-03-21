@@ -117,6 +117,62 @@ module RequestHandler
         return Diagnostics.fireMode(req["mode"]);
     end
 
+    function diagOn(req)::Dict{String, Any}
+        if Diagnostics.getStatus()["is_on"]
+            return Dict{String, Any}("ok" => 1);
+        end
+
+        if crateConnect(Dict{String, Any}())["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate connection error");
+        end
+        if coolantConnect(Dict{String, Any}())["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Coolant connection error");
+        end
+
+        sleep(2);
+        if cratePower(Dict{String, Any}("state" => true))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate power error");
+        end
+        if laserConnect(Dict{String, Any}(""))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
+        end
+
+        Diagnostics.on();
+        return Dict{String, Any}("ok" => 1);
+    end
+
+    function diagOff(req)::Dict{String, Any}
+        if !Diagnostics.getStatus()["is_on"]
+            return Dict{String, Any}("ok" => 1);
+        end
+
+        if Laser.control_state(0)["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Laser power off error");
+        end
+
+        if cratePower(Dict{String, Any}("state" => false))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate power error");
+        end
+
+
+        sleep(2);
+
+        if laserDisconnect(Dict{String, Any}(""))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
+        end
+
+        if crateDisconnect(Dict{String, Any}())["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate connection error");
+        end
+        if coolantDisconnect(Dict{String, Any}())["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Coolant connection error");
+        end
+
+        Diagnostics.off();
+        return Dict{String, Any}("ok" => 1);
+    end
+
+
     table = Dict{String, Dict}();
     table["process"] = Dict{String, Function}([
         ("calc", calc)
@@ -136,6 +192,8 @@ module RequestHandler
         ("laser_acknowledge", laserAcq),
 
         ("set_mode", fireMode),
+        ("diag_on", diagOn),
+        ("diag_off", diagOff),
 
         ("status", diagStatus)
     ]);

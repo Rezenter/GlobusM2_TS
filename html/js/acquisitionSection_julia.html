@@ -14,7 +14,7 @@
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <p id="crate_fan_temp"></p>
             <p id="crate_psu_temp"></p>
-            <p id="crate_error"></p>
+            <p id="crate_is_on"></p>
         </div>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <button class="btn btn-success" id="crate_on_button">Power On</button>
@@ -101,7 +101,7 @@
             </label>
         </div>
         <div class="form-check">
-            <input class="form-check-input" type="radio" id="diag_manual_switch" name="diagArmMode" checked>
+            <input class="form-check-input" type="radio" id="diag_manual_switch" name="diagArmMode">
             <label class="form-check-label" for="diag_manual_switch">
                 Manual arm
             </label>
@@ -118,7 +118,6 @@
 
 <script>
     function Main () {
-        this.m_status = {};
         this.m_status_timer = null;
 
         this.m_coolant_chart = new CanvasJS.Chart("coolant_chart", {
@@ -191,18 +190,7 @@
             $.post('/api', JSON.stringify(req), callback, 'json');
         };
 
-        this.DiagOn = function(){
-            this.crateConnect();
-            //run adc.exe
-            //this.ADCConnect();
-            //this.genConnect();
-            this.laserConnect();
-            this.coolantConnect();
-            //this.UpdateSelects();
-
-            //connect everything
-
-
+        this.setTimer = function(){
             let delay = 1000;
             this.m_status_timer = setTimeout(function request() {
                 this.StatusUpdate();
@@ -210,23 +198,54 @@
                 // увеличить интервал для следующего запроса
               //  delay *= 2;
               //}
-
                 this.m_status_timer = setTimeout(request.bind(this), delay);
 
             }.bind(this), delay);
+        }
+
+        this.DiagOn = function(){
+            this.Request(
+                {
+                    reqtype: 'diag_on',
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                    }
+                    this.setTimer();
+                }.bind(this)
+            );
+
+
+            //this.ADCConnect();
+            //this.genConnect();
+            //this.UpdateSelects();
+
+            //connect everything
+                //run adc.exe
+
         }.bind(this);
 
         this.DiagOff = function(){
-            this.crateDisconnect();
-            this.laserDisconnect();
-            this.coolantDisconnect();
+            this.Request(
+                {
+                    reqtype: 'diag_off',
+                }
+                , function (resp) {
+                    this.StatusUpdate();
+                    if(!resp.ok){
+                        console.log(resp);
+                    }else{
+                        clearTimeout(this.m_status_timer);
+                        this.m_status_timer = null;
+                    }
+                }.bind(this)
+            );
+
             //turn off everything
             //stop adc.exe
 
             //clear displays!
-            $('#crate_state').html('Disconnected');
-
-            clearTimeout(this.m_status_timer);
         }.bind(this);
 
         //crate
@@ -252,6 +271,7 @@
                     if(!resp.ok){
                         console.log(resp);
                     }
+                    $('#crate_state').html('Disconnected');
                 }
             );
         }.bind(this);
@@ -309,6 +329,7 @@
                     if(!resp.ok){
                         console.log(resp);
                     }
+                    $('#coolant_state').html('Disconnected');
                 }
             );
         }.bind(this);
@@ -340,6 +361,7 @@
                                 reqtype: 'laser_disconnect',
                             }
                             , function (resp) {
+                                $('#laser_state').html('Disconnected');
                                 if(!resp.ok){
                                     console.log(resp);
                                 }
@@ -466,12 +488,25 @@
         };
 
         this.CrateStatus = function(state){
-            $('#crate_state').html('Updated ' + ((state.unix - Date.now())).toFixed(0) + ' (ms)');
+            if(state.conn){
+                $('#crate_state').html('Updated ' + ((state.unix - Date.now())).toFixed(0) + ' (ms)');
+            }else{
+                $('#crate_state').html('Disconnected');
+            }
             $('#crate_fan_temp').html('Fan temp = ' + state.fan_temp.toFixed(0) + ' (°C)');
             $('#crate_psu_temp').html('PSU temp = ' + state.psu_temp.toFixed(0) + ' (°C)');
-            /*
-            <label for="crate_error">Error:</label><output id="crate_error"></output>
-             */
+            let display = $('#crate_is_on');
+            if(state.is_on) {
+                display.css('background-color','green');
+                display.html('ON');
+                $('#crate_on_button').prop( "disabled", true);
+                $('#crate_off_button').prop( "disabled", false);
+            }else{
+                display.css('background-color','yellow');
+                display.html('OFF');
+                $('#crate_on_button').prop( "disabled", false);
+                $('#crate_off_button').prop( "disabled", true);
+            }
         };
 
         this.CoolantStatus = function(state){
@@ -498,7 +533,11 @@
             }
             this.m_coolant_chart.render();
 
-            $('#coolant_state').html('Updated ' + ((state.hist[state.latest].unix - now)).toFixed(0) + ' (ms)');
+            if(state.conn){
+                $('#coolant_state').html('Updated ' + ((state.hist[state.latest].unix - now)).toFixed(0) + ' (ms)');
+            }else{
+                $('#coolant_state').html('Disconnected');
+            }
 
         };
 
@@ -577,7 +616,12 @@
                     state_display.html('Firing... Time left ' + state.timeout + ' (s)');
                     break;
             }
-            $('#laser_connection').html('Updated ' + ((state.unix - now)).toFixed(0) + ' (ms)');
+            if(state.conn){
+                $('#laser_connection').html('Updated ' + ((state.unix - now)).toFixed(0) + ' (ms)');
+            }else{
+                $('#laser_connection').html('Disconnected');
+                $('#laser_state').css('background-color','white');
+            }
 
             //draw laser states on coolant chart
         };
@@ -592,6 +636,27 @@
             }else{
                 $('#diag_fullManual_switch').prop("checked", true);
                 $('#diag_arm_button').prop( "disabled", true);
+            }
+
+            if(state.is_on){
+                $('#diag_on_button').prop( "disabled", true);
+                $('#diag_off_button').prop( "disabled", false);
+                $('#diag_auto_switch').prop("disabled", false);
+                if(this.m_status_timer === null){
+                    this.setTimer();
+                }
+            }else{
+                $('#diag_on_button').prop( "disabled", false);
+                $('#diag_off_button').prop( "disabled", true);
+                $('#diag_auto_switch').prop("disabled", true);
+                if($('#diag_auto_switch').is(':checked')){
+                    $('#diag_fullManual_switch').prop("checked", true);
+                    alert('Warning! automatic fire disabled!');
+                }
+                if(this.m_status_timer !== null){
+                    clearTimeout(this.m_status_timer);
+                    this.m_status_timer = null;
+                }
             }
         };
 
