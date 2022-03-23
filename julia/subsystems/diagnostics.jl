@@ -13,12 +13,12 @@ module Diagnostics
     status = Dict{String, Any}([
         ("is_on", false),
         ("auto_mode", 0),
-        ("adc_armed", false),
         ("next_shotn", 0),
         ("is_plasma", true),
         ("config", "Undefined"),
         ("cal_sp", "Undefined"),
-        ("cal_abs", "Undefined")
+        ("cal_abs", "Undefined"),
+        ("sht_ready", false)
     ]);
 
     function fireMode(mode::Int)::Dict{String, Any}
@@ -31,12 +31,24 @@ module Diagnostics
         return resp;
     end
 
-    function on()
+    function on(shotn::Int)
+        status["next_shotn"] = shotn;
+        status["sht_ready"] = false;
         status["is_on"] = true;
     end
 
     function off()
         status["is_on"] = false;
+    end
+
+    function tokamakArm(shotn::Int)
+       status["next_shotn"] = shotn;
+       status["sht_ready"] = false;
+    end
+
+    function tokamakSht(shotn::Int)
+       status["next_shotn"] = shotn;
+       status["sht_ready"] = true;
     end
 
     isAuto() = (status["auto_mode"] == 2)::Bool;

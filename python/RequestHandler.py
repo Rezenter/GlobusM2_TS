@@ -96,7 +96,7 @@ class Handler:
         self.state = {}
 
         print('connecting udp...')
-        #self.tokamak = tokamak.Sync(self.diag_disarm)
+        self.tokamak = tokamak.Sync(self.diag_disarm)
         print('connecting coolant...')
         self.las_cool = laser1064.Coolant()
         #print('connecting crate...')

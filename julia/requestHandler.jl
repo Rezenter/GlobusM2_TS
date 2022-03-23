@@ -58,9 +58,19 @@ module RequestHandler
         return Crate.operation_acknowledge(parse(Int, req["id"]));
     end
 
-    coolantConnect(req) = Coolant.connect_coolant();
+    adcConnect(req) = FastADC.connect_ADC();
 
-    coolantDisconnect(req) = Coolant.disconnect_coolant();
+    adcDisconnect(req) = FastADC.disconnect_ADC();
+
+    function adcArm(req)::Dict{String, Int}
+        if !haskey(req, "is_plasma")
+            return Dict{String, Any}("ok" => 0, "error" => "is_plasma field is missing!");
+        end
+        shotn::Int = 00012;
+        return FastADC.adcArm(shotn, req["is_plasma"]);
+    end
+
+    adcDisarm(req) = FastADC.disarm();
 
     laserConnect(req) = Laser.connect_laser();
 
@@ -80,11 +90,16 @@ module RequestHandler
         return Laser.operation_acknowledge(parse(Int, req["id"]));
     end
 
+    coolantConnect(req) = Coolant.connect_coolant();
+
+    coolantDisconnect(req) = Coolant.disconnect_coolant();
+
     function diagStatus(req)::Dict{String, Any}
         tmp::Dict{String, Any} = deepcopy(state);
         tmp["crate"] = Crate.getStatus();
-        tmp["coolant"] = Coolant.getStatus();
+        tmp["ADC"] = FastADC.getStatus();
         tmp["laser"] = Laser.getStatus();
+        tmp["coolant"] = Coolant.getStatus();
         tmp["diag"] = Diagnostics.getStatus();
         tmp["ok"] = 1;
         return tmp;
@@ -94,12 +109,13 @@ module RequestHandler
         if Diagnostics.isAuto()
             Laser.control_state(2);
         end
-        @debug("arm")
+        Diagnostics.tokamakArm(shotn, true);
+        @info("arm")
     end
 
     function tokamakSht(shotn::Int64)
-        @debug(shotn)
         @debug("sht ready")
+        Diagnostics.tokamakSht(shotn);
     end
 
     function tokamakStart()
@@ -107,7 +123,8 @@ module RequestHandler
         if current_state > 1
             Laser.control_state(1);
         end
-        @debug("___Tokamak start____")
+        adcDisarm(Dict{String, Any}(""));
+        @info("___Tokamak start____")
     end
 
     function fireMode(req)::Dict{String, Any}
@@ -136,8 +153,11 @@ module RequestHandler
         if laserConnect(Dict{String, Any}(""))["ok"] != 1
             return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
         end
+        if adcConnect(Dict{String, Any}(""))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
+        end
 
-        Diagnostics.on();
+        Diagnostics.on(Tokamak.get_shotn());
         return Dict{String, Any}("ok" => 1);
     end
 
@@ -150,10 +170,9 @@ module RequestHandler
             return Dict{String, Any}("ok" => 0, "error" => "Laser power off error");
         end
 
-        if cratePower(Dict{String, Any}("state" => false))["ok"] != 1
-            return Dict{String, Any}("ok" => 0, "error" => "Crate power error");
+        if adcDisconnect(Dict{String, Any}(""))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate connection error");
         end
-
 
         sleep(2);
 
@@ -161,9 +180,16 @@ module RequestHandler
             return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
         end
 
+        if cratePower(Dict{String, Any}("state" => false))["ok"] != 1
+            return Dict{String, Any}("ok" => 0, "error" => "Crate power error");
+        end
+
+        sleep(2);
+
         if crateDisconnect(Dict{String, Any}())["ok"] != 1
             return Dict{String, Any}("ok" => 0, "error" => "Crate connection error");
         end
+
         if coolantDisconnect(Dict{String, Any}())["ok"] != 1
             return Dict{String, Any}("ok" => 0, "error" => "Coolant connection error");
         end
@@ -183,13 +209,16 @@ module RequestHandler
         ("crate_acknowledge", crateAcq),
         ("crate_disconnect", crateDisconnect),
 
-        ("coolant_connect", coolantConnect),
-        ("coolant_disconnect", coolantDisconnect),
+        ("ADC_connect", adcConnect),
+        ("ADC_disconnect", adcDisconnect),
 
         ("laser_connect", laserConnect),
         ("laser_disconnect", laserDisconnect),
         ("laser_state", laserState),
         ("laser_acknowledge", laserAcq),
+
+        ("coolant_connect", coolantConnect),
+        ("coolant_disconnect", coolantDisconnect),
 
         ("set_mode", fireMode),
         ("diag_on", diagOn),
