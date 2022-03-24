@@ -13,7 +13,7 @@ module RequestHandler
     export tokamakSht;
     export tokamakStart;
 
-    function handle(req)::Dict{String, Any}
+    function handle(req)
         #@debug req
         if !haskey(req, "subsystem")
             @error("Subsystem field is missing!");
@@ -93,15 +93,19 @@ module RequestHandler
 
     coolantDisconnect(req) = Coolant.disconnect_coolant();
 
-    function diagStatus(req)::Dict{String, Any}
-        tmp::Dict{String, Any} = deepcopy(state);
-        tmp["crate"] = Crate.getStatus();
-        tmp["ADC"] = FastADC.getStatus();
-        tmp["laser"] = Laser.getStatus();
-        tmp["coolant"] = Coolant.getStatus();
-        tmp["diag"] = Diagnostics.getStatus();
-        tmp["ok"] = 1;
-        return tmp;
+    #function diagStatus(req)::Dict{String, Any}
+    #    tmp::Dict{String, Any} = deepcopy(state);
+    #    tmp["crate"] = Crate.getStatus();
+    #    tmp["ADC"] = FastADC.getStatus();
+    #    tmp["laser"] = Laser.getStatus();
+    #    tmp["coolant"] = Coolant.getStatus();
+    #    tmp["diag"] = Diagnostics.getStatus();
+    #    tmp["ok"] = 1;
+    #    return tmp;
+    #end
+
+    function diagStatus(req)::Laser.Status
+        return Laser.getStatus();
     end
 
     function tokamakArm(shotn::Int64)

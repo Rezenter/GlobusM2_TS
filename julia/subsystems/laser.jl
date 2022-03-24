@@ -34,25 +34,46 @@ module Laser
     socket = TCPSocket();
 
     struct StateChange
-        prev_state::Int8;
-        new_state::Int8;
-        unix::UInt64;
+        prev_state::Int;
+        new_state::Int;
+        unix::Int;
     end
-    StructTypes.StructType(::Type{StateChange}) = StructTypes.Struct()
+    StructTypes.StructType(::Type{StateChange}) = StructTypes.Struct();
 
-    status = Dict{String, Any}([
-        ("state", -3),
-        ("conn", 0),
-        ("unix", 0),
-        ("delay_gen", 0),
-        ("delay_pump", 0),
-        ("operations", Dict{Int, Dict}([])),
-        ("hist", Array{StateChange, 1}(undef, history)),
-        ("latest", 0)
-    ]);
+    mutable struct Status
+        state::Int;
+        conn::Int;
+        unix::Int;
+        delay_gen::Int;
+        delay_pump::Int;
+        operations::Dict{Int, Dict};
+        hist::Array{StateChange, 1};
+        latest::Int;
+        bits::Array{UInt8};
+        is_on::Int;
+        is_pumping::Int;
+        is_gen_internal::Int;
+        is_psu_ready::Int;
+        is_temp_ok::Int;
+        is_unused_6::Int;
+        is_desync::Int;
+        is_error::Int;
+        is_psu_1::Int;
+        is_psu_2::Int;
+        is_psu_3::Int;
+        is_psu_4::Int;
+        is_5V::Int;
+        is_ignore_5V::Int;
+        is_remote_allowed::Int;
+        is_laser_switch_on::Int;
+        warmUp_timeout::Int;
+        timeout::Int;
+    end
+    StructTypes.StructType(::Type{Status}) = StructTypes.Mutable();
+    status = Status(-3, 0, 0, 0, 0, Dict{Int, Dict}([]), Array{StateChange, 1}(undef, history), -1, Array{UInt8}(undef, 16), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9999999, 9999999);
 
     for i = 1:history
-        status["hist"][i] = StateChange(0, 0, 0.0);
+        status.hist[i] = StateChange(0, 0, 0.0);
     end
 
     function timeout(timer::Timer)
@@ -74,7 +95,7 @@ module Laser
             connect(socket::TCPSocket, addr::IPAddr, port::Int);
             close(timeout_timer::Timer);
             @debug "connected"
-            status["conn"] = 1;
+            status.conn = 1;
             t = Timer(update_laser, 1, interval=request_dt);
         end
         return Dict{String, Int}("ok" => 1);
@@ -86,7 +107,7 @@ module Laser
         global t;
         global status;
         close(t::Timer);
-        status["conn"] = 0;
+        status.conn = 0;
         if socket.status == 6
             return Dict{String, Int}("ok" => 1);
         end
@@ -138,7 +159,7 @@ module Laser
     function request(string_req::Base.CodeUnits{UInt8, String})::Vector{UInt8}
         put!(mutex, true);
         for attempt = 0:3
-            if status["conn"] != 1
+            if status.conn != 1
                 disconnect_laser();
                 take!(mutex);
                 @debug("socket is closed!");
@@ -162,69 +183,68 @@ module Laser
         if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0700"
             @error("Wrong responce on status request");
             @debug(String(resp));
-            status["state"] = -2;
+            status.state = -2;
             return false;
         else
             payload::Vector{UInt8} = resp[begin + 5:end];
 
             if length(payload) == 4
                 value::UInt16 = parse(UInt16, String(payload), base = 16);
-                status["bits"] = Array{UInt8}(undef, 16);
                 for bit_pos=0:15
-                    status["bits"][bit_pos + 1] = (value & (1 << bit_pos)) >> bit_pos;
+                    status.bits[bit_pos + 1] = (value & (1 << bit_pos)) >> bit_pos;
                 end
-                status["is_on"] = status["bits"][1] == 1;
-                status["is_pumping"] = status["bits"][2] == 1;
-                status["is_gen_internal"] = status["bits"][3] == 1;
-                status["is_psu_ready"] = status["bits"][4] == 1;
-                status["is_temp_ok"] = status["bits"][5] == 1;
-                status["is_unused_6"] = status["bits"][6] == 1;
-                status["is_desync"] = status["bits"][7] == 1;
-                status["is_error"] = status["bits"][8] == 1;
-                status["is_psu_1"] = status["bits"][9] == 1;
-                status["is_psu_2"] = status["bits"][10] == 1;
-                status["is_psu_3"] = status["bits"][11] == 1;
-                status["is_psu_4"] = status["bits"][12] == 1;
-                status["is_5V"] = status["bits"][13] == 1;
-                status["is_ignore_5V"] = status["bits"][14] == 1;
-                status["is_remote_allowed"] = status["bits"][15] == 1;
-                status["is_laser_switch_on"] = status["bits"][16] == 1;
+                status.is_on = status.bits[1] == 1;
+                status.is_pumping = status.bits[2] == 1;
+                status.is_gen_internal = status.bits[3] == 1;
+                status.is_psu_ready = status.bits[4] == 1;
+                status.is_temp_ok = status.bits[5] == 1;
+                status.is_unused_6 = status.bits[6] == 1;
+                status.is_desync = status.bits[7] == 1;
+                status.is_error = status.bits[8] == 1;
+                status.is_psu_1 = status.bits[9] == 1;
+                status.is_psu_2 = status.bits[10] == 1;
+                status.is_psu_3 = status.bits[11] == 1;
+                status.is_psu_4 = status.bits[12] == 1;
+                status.is_5V = status.bits[13] == 1;
+                status.is_ignore_5V = status.bits[14] == 1;
+                status.is_remote_allowed = status.bits[15] == 1;
+                status.is_laser_switch_on = status.bits[16] == 1;
 
-                old_state = status["state"];
-                if status["is_error"] == 1
-                    status["state"] = -1;
+                old_state = status.state;
+                if status.is_error == 1
+                    status.state = -1;
                     @error("Laser emegency!");
                     control_state(0);
-                elseif status["is_on"] == 0
-                    status["state"] = 0;
-                elseif status["is_pumping"] == 0
-                    status["state"] = 1;
-                elseif status["is_desync"] == 0
-                    status["state"] = 3;
+                elseif status.is_on == 0
+                    status.state = 0;
+                elseif status.is_pumping == 0
+                    status.state = 1;
+                elseif status.is_desync == 0
+                    status.state = 3;
                 else
-                    status["state"] = 2;
+                    status.state = 2;
                 end
-                if status["is_temp_ok"] == 0
+                if status.is_temp_ok == 0
                     @error("Laser temperature error!");
                     control_state(0);
                 end
 
-                if old_state != status["state"]
-                    if old_state == 1 && status["state"] > 1
+                if old_state != status.state
+                    if old_state == 1 && status.state > 1
                         pump_start = time();
 
-                        status["warmUp_timeout"] = time_warmUp;
-                        status["timeout"] = time_total;
-                    elseif status["state"] <= 1
-                        status["warmUp_timeout"] = time_warmUp;
-                        status["timeout"] = time_total;
+                        status.warmUp_timeout = time_warmUp;
+                        status.timeout = time_total;
+                    elseif status.state <= 1
+                        status.warmUp_timeout = time_warmUp;
+                        status.timeout = time_total;
                     end
-                    if status["latest"] == length(status["hist"])
-                        status["latest"] = 0;
+                    if status.latest == length(status.hist)
+                        status.latest = 0;
                     else
-                        status["latest"] += 1;
+                        status.latest += 1;
                     end
-                    status["hist"][status["latest"]] = StateChange(old_state, status["state"], trunc(UInt64, time() * 1000));
+                    status.hist[status.latest] = StateChange(old_state, status.state, trunc(UInt64, time() * 1000));
                 end
 
                 return true;
@@ -241,12 +261,12 @@ module Laser
         if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0500"
             @error("Wrong responce on pump_delay request");
             @debug(String(resp));
-            status["state"] = -2;
+            status.state = -2;
             return false;
         else
             payload::Vector{UInt8} = resp[begin + 5:end];
             if length(payload) == 4
-                status["delay_pump"] = parse(UInt16, String(payload), base = 16);
+                status.delay_pump = parse(UInt16, String(payload), base = 16);
                 return true;
             else
                 @error("Wrong responce on pump delay request: payload size is fucked-up");
@@ -261,12 +281,12 @@ module Laser
         if length(resp) < 6 || String(resp[begin: begin + 4]) != "K0600"
             @error("Wrong responce on gen_delay request");
             @debug(String(resp));
-            status["state"] = -2;
+            status.state = -2;
             return false;
         else
             payload::Vector{UInt8} = resp[begin + 5:end];
             if length(payload) == 4
-                status["delay_gen"] = parse(UInt16, String(payload), base = 16);
+                status.delay_gen = parse(UInt16, String(payload), base = 16);
                 return true;
             else
                 @error("Wrong responce on gen delay request: payload size is fucked-up");
@@ -278,33 +298,33 @@ module Laser
 
     function check_temperature()::Bool
         coolant = Coolant.getStatus();
-        if coolant["hist"][coolant["latest"] + 1].unix == 0 ||
-             (trunc(UInt64, time() * 1000) - coolant["hist"][coolant["latest"] + 1].unix) > temperature_timeout
-             @debug(trunc(UInt64, time() * 1000));
-             @debug(coolant["hist"][coolant["latest"] + 1].unix);
+        if coolant.hist[coolant.latest + 1].unix == 0 ||
+             (trunc(UInt64, time() * 1000) - coolant.hist[coolant.latest + 1].unix) > temperature_timeout
+             #@debug(trunc(UInt64, time() * 1000));
+             #@debug(coolant.hist[coolant.latest + 1].unix);
              @error("coolant temperature is unknown, shut down laser");
-             if status["state"] > 1
+             if status.state > 1
                  control_state(1);
              end
              return false;
         end
-        if temperature_min < coolant["hist"][coolant["latest"] + 1].temp <= temperature_max
+        if temperature_min < coolant.hist[coolant.latest + 1].temp <= temperature_max
             return true;
         end
         @error("coolant temperature is out of bounds, shut down laser")
-        if status["state"] > 1
+        if status.state > 1
             control_state(1);
         end
         return false;
     end
 
     function check_timeout()
-        if status["state"] > 1
+        if status.state > 1
             curr = time();
-            status["warmUp_timeout"] = trunc(Int64, time_warmUp - (curr - status["hist"][status["latest"]].unix * 0.001));
-            status["timeout"] = trunc(Int64, time_total - (curr - status["hist"][status["latest"]].unix * 0.001));
+            status.warmUp_timeout = trunc(Int64, time_warmUp - (curr - status.hist[status.latest].unix * 0.001));
+            status.timeout = trunc(Int64, time_total - (curr - status.hist[status.latest].unix * 0.001));
 
-            if status["timeout"] < 1
+            if status.timeout < 1
                 @error("laser timeout, shut down laser")
                 control_state(1);
             end
@@ -322,7 +342,7 @@ module Laser
         if !get_delay_gen();
             return
         end
-        status["unix"] = trunc(UInt64, time() * 1000);
+        status.unix = trunc(UInt64, time() * 1000);
 
         check_temperature();
         check_timeout();
@@ -330,14 +350,14 @@ module Laser
     end
 
     function operation_acknowledge(id::Int)::Dict{String, Any}
-        if !haskey(status["operations"], id::Int)
+        if !haskey(status.operations, id::Int)
             return Dict{String, Any}("ok" => 0, "error" => "No pending operations with this ID");
         end
-        if status["operations"][id]["status"] == 0
+        if status.operations[id]["status"] == 0
             return Dict{String, Any}("ok" => 0, "error" => "Operations with this ID is not finished yet");
     end
-        resp::Dict{String, Any} = Dict{String, Any}("ok" => 1, "operation" => status["operations"][id])
-        delete!(status["operations"], id);
+        resp::Dict{String, Any} = Dict{String, Any}("ok" => 1, "operation" => status.operations[id])
+        delete!(status.operations, id);
         return resp;
     end
 
@@ -377,7 +397,7 @@ module Laser
 
     function async_state(operation::Dict{String, Any}, switch::Int64)
         resp::Int32 = -1;
-        old_state = status["state"];
+        old_state = status.state;
         if old_state == switch
             operation["status"] = 1;
             operation["unix"] = 0;
@@ -424,24 +444,24 @@ module Laser
     end
 
     function control_state(switch::Int64)::Dict{String, Any}
-        if status["conn"] == 0
+        if status.conn == 0
             return Dict{String, Any}("ok" => 0, "error" => "laser is not connected");
         end
 
         id::Int = 0;
-        while haskey(status["operations"], id::Int)
+        while haskey(status.operations, id::Int)
             id::Int += 1;
         end
 
-        status["operations"][id] = Dict{String, Any}("status" => 0);
+        status.operations[id] = Dict{String, Any}("status" => 0);
         @async begin
-            async_state(status["operations"][id], switch);
+            async_state(status.operations[id], switch);
         end
 
         return Dict{String, Any}("ok" => 1, "id" => id);
     end
 
-    getStatus() = status::Dict{String, Any};
+    getStatus() = status::Status;
 
     t = Timer(update_laser, 1);
     close(t::Timer);
