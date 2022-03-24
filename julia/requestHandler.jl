@@ -66,8 +66,7 @@ module RequestHandler
         if !haskey(req, "is_plasma")
             return Dict{String, Any}("ok" => 0, "error" => "is_plasma field is missing!");
         end
-        shotn::Int = 00012;
-        return FastADC.adcArm(shotn, req["is_plasma"]);
+        return FastADC.arm(Diagnostics.getStatus()["next_shotn"], req["is_plasma"]);
     end
 
     adcDisarm(req) = FastADC.disarm();
@@ -107,9 +106,10 @@ module RequestHandler
 
     function tokamakArm(shotn::Int64)
         if Diagnostics.isAuto()
+            adcArm(Dict{String, Any}("is_plasma" => true));
             Laser.control_state(2);
         end
-        Diagnostics.tokamakArm(shotn, true);
+        Diagnostics.tokamakArm(shotn);
         @info("arm")
     end
 
@@ -153,9 +153,9 @@ module RequestHandler
         if laserConnect(Dict{String, Any}(""))["ok"] != 1
             return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
         end
-        if adcConnect(Dict{String, Any}(""))["ok"] != 1
-            return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
-        end
+        #if adcConnect(Dict{String, Any}(""))["ok"] != 1
+        #    return Dict{String, Any}("ok" => 0, "error" => "Laser connection error");
+        #end
 
         Diagnostics.on(Tokamak.get_shotn());
         return Dict{String, Any}("ok" => 1);
@@ -198,7 +198,6 @@ module RequestHandler
         return Dict{String, Any}("ok" => 1);
     end
 
-
     table = Dict{String, Dict}();
     table["process"] = Dict{String, Function}([
         ("calc", calc)
@@ -211,6 +210,8 @@ module RequestHandler
 
         ("ADC_connect", adcConnect),
         ("ADC_disconnect", adcDisconnect),
+        ("ADC_arm", adcArm),
+        ("ADC_disarm", adcDisarm),
 
         ("laser_connect", laserConnect),
         ("laser_disconnect", laserDisconnect),

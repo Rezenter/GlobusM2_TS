@@ -34,7 +34,11 @@ function handler(req::HTTP.Request)
         #@debug req
         return HTTP.Response(404, "No payload found in request.")
     else
-        return HTTP.Response(200, JSON3.write(RequestHandler.handle(JSON3.read(HTTP.payload(req)))))
+        payload = HTTP.payload(req);
+        arguments = JSON3.read(payload);
+        resp = RequestHandler.handle(arguments);
+        json = JSON3.write(resp);
+        return HTTP.Response(200, json);
     end
     
 end

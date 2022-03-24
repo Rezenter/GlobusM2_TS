@@ -306,6 +306,36 @@
             );
         }.bind(this);
 
+        //ADC
+        this.ADCArm = function(){
+            this.Request(
+                {
+                    reqtype: 'ADC_arm',
+                    is_plasma: $('#is_plasma')[0].checked
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                        alert(resp);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.ADCDisarm = function(){
+            this.Request(
+                {
+                    reqtype: 'ADC_disarm'
+                }
+                , function (resp) {
+                    if(!resp.ok){
+                        console.log(resp);
+                        alert(resp);
+                    }
+                }
+            );
+        }.bind(this);
+
         //coolant
         this.coolantConnect = function(){
             this.Request(
@@ -509,6 +539,25 @@
             }
         };
 
+        this.ADCStatus = function(state){
+            if(state.conn){
+                if(state.state === 1){
+                    $('#ADC_state').css('background-color','white');
+                    $('#ADC_state').html('Ready ' + ((state.unix - Date.now())).toFixed(0) + ' (ms)');
+                    $('#ADC_arm_button').prop("disabled", false);
+                    $('#ADC_disarm_button').prop( "disabled", true);
+                }else if(state.state === 2){
+                    $('#ADC_state').css('background-color','green');
+                    $('#ADC_state').html('Armed ' + ((state.unix - Date.now())).toFixed(0) + ' (ms)');
+                    $('#ADC_arm_button').prop("disabled", true);
+                    $('#ADC_disarm_button').prop( "disabled", false);
+                }
+            }else{
+                $('#ADC_state').css('background-color','red');
+                $('#ADC_state').html('Disconnected');
+            }
+        };
+
         this.CoolantStatus = function(state){
             this.m_coolant_chart.options.data[0].dataPoints = [];
 
@@ -658,6 +707,7 @@
                     this.m_status_timer = null;
                 }
             }
+            $('#next_shot_number').val(state.next_shotn);
         };
 
         this.StatusUpdate = function(ev){
@@ -706,6 +756,8 @@
 
                     this.CoolantStatus(resp.coolant);
 
+                    this.ADCStatus(resp.ADC);
+
                     this.LaserStatus(resp.laser);
 
                     this.CrateStatus(resp.crate);
@@ -720,6 +772,9 @@
             $('#crate_on_button').on('click', this, this.crateOn);
             $('#crate_off_button').on('click', this, this.crateOff);
 
+            $('#ADC_arm_button').on('click', this, this.ADCArm);
+            $('#ADC_disarm_button').on('click', this, this.ADCDisarm);
+
             $('#laser_reconnect_button').on('click', this, this.laserConnect);
             $('#laser_fire_button').on('click', this, this.LasFire);
             $('#laser_idle_button').on('click', this, this.LasIdle);
@@ -730,13 +785,6 @@
             $('#diag_fullManual_switch').on('click', this, this.SetMode);
             $('#diag_manual_switch').on('click', this, this.SetMode);
             $('#diag_auto_switch').on('click', this, this.SetMode);
-            /*
-            <input class="form-check-input" type="radio" id="diag_fullManual_switch" name="diagArmMode">
-            <input class="form-check-input" type="radio" id="diag_manual_switch" name="diagArmMode" checked>
-                <button class="btn btn-danger" id="diag_arm_button">Arm ADC and fire laser.</button>
-            "diag_auto_switch"
-                "diag_fire_lock_switch"
-             */
         };
 
         this.ConnectControls();

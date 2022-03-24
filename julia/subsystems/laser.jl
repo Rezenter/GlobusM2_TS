@@ -279,8 +279,10 @@ module Laser
     function check_temperature()::Bool
         coolant = Coolant.getStatus();
         if coolant["hist"][coolant["latest"] + 1].unix == 0 ||
-             (status["unix"] - coolant["hist"][coolant["latest"] + 1].unix) > temperature_timeout
-             @error("coolant temperature is unknown, shut down laser")
+             (trunc(UInt64, time() * 1000) - coolant["hist"][coolant["latest"] + 1].unix) > temperature_timeout
+             @debug(trunc(UInt64, time() * 1000));
+             @debug(coolant["hist"][coolant["latest"] + 1].unix);
+             @error("coolant temperature is unknown, shut down laser");
              if status["state"] > 1
                  control_state(1);
              end
@@ -357,7 +359,6 @@ module Laser
                 @error("Forbidden to turn on laser due to coolant temperature reasons");
                 return -3;
             end
-            @debug("Laser should fire, no joke");
             resp = request(b"S200A 46\n");
         end
 

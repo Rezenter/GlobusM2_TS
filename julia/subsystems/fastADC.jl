@@ -55,9 +55,10 @@ module FastADC
         @debug("Connecting caens...")
         sleep(20);
         @debug("mb done.")
+        status["state"] = 1;
 
         status["conn"] = 1;
-        #t = Timer(update_ADC, 1, interval=request_dt);
+        t = Timer(update_ADC, 1, interval=request_dt);
         return Dict{String, Int}("ok" => 1);
     end
 
@@ -78,7 +79,7 @@ module FastADC
         resp::String = String(readline(socket::TCPSocket));
         if length(resp) == 0
             @error("No responce from ADC!");
-            Dict{String, Int}("status" => 0);
+            return Dict{String, Int}("status" => 0);
         end
         return JSON3.read(resp);
     end
@@ -127,28 +128,32 @@ module FastADC
 
         resp::Int = request(Dict{String, Any}("cmd" => "alive"));
         if resp > 0
-            status["state"] = 1;
+            if status["state"] == 0
+                status["state"] = 1;
+            end
         else
             disconnect_ADC();
             status["state"] = -1;
             @error("Disconnect: bad update responce")
         end
 
-        status["unix"] = time();
+        status["unix"] = trunc(UInt64, time() * 1000);
         return
     end
 
-    function arm(shotn::Int, is_plasma::Bool)
+    function arm(shotn::Int, is_plasma::Bool)::Dict{String, Int}
         resp::Int = request(Dict{String, Any}("cmd" => "arm", "shotn" => shotn, "isPlasma" => is_plasma));
         if resp > 0
-            status["state"] = 1;
+            status["state"] = 2;
         else
             disconnect_ADC();
             status["state"] = -1;
             @error("Disconnect: bad update responce")
+            return Dict{String, Int}("ok" => 0, "error" => "Disconnect: bad update responce");
         end
-
-        status["unix"] = time();
+        @info("ADC armed")
+        status["unix"] = trunc(UInt64, time() * 1000);
+        return Dict{String, Int}("ok" => 1);
     end
 
     function disarm()
@@ -158,10 +163,13 @@ module FastADC
         else
             disconnect_ADC();
             status["state"] = -1;
+            @debug(resp);
             @error("Disconnect: bad update responce")
+            return Dict{String, Int}("ok" => 0, "error" => "Disconnect: bad update responce");
         end
-
-        status["unix"] = time();
+        @info("ADC disarmed")
+        status["unix"] = trunc(UInt64, time() * 1000);
+        return Dict{String, Int}("ok" => 1);
     end
 
     getStatus() = status::Dict{String, Any};

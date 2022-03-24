@@ -17,7 +17,7 @@ module Coolant
     const addr = ip"192.168.10.47";
     const port = 502;
     const request_dt = 1; #seconds
-    const history = ceil(UInt16, 15 * 60 * request_dt); # measurements to store
+    const history = ceil(UInt, 1 * 60 * request_dt); # measurements to store
 
     socket = TCPSocket();
 
@@ -25,17 +25,26 @@ module Coolant
         temp::Float32;
         unix::UInt64;
     end
-
     StructTypes.StructType(::Type{Measurement}) = StructTypes.Struct()
+
+    struct Status
+        conn::Int;
+        hist::Array{Measurement, 1};
+        latest::Int;
+    end
+    StructTypes.StructType(::Type{Status}) = StructTypes.Struct()
+
+    status_new = Status(0, Array{Measurement, 1}(undef, history), -1);
 
     status = Dict{String, Any}([
         ("conn", 0),
         ("hist", Array{Measurement, 1}(undef, history)),
-        ("latest", 0)
+        ("latest", -1)
     ]);
 
     for i = 1:history
         status["hist"][i] = Measurement(0.0, 0);
+        status_new.hist[i] = Measurement(0.0, 0);
     end
 
     function timeout(timer::Timer)
@@ -48,6 +57,7 @@ module Coolant
         global socket;
         global t;
         global status;
+
         if socket.status == 3
             disconnect_coolant();
             socket = TCPSocket();
@@ -110,12 +120,13 @@ module Coolant
 
     function update_coolant(timer::Timer)
         resp::Float32 = request(b"\xaf\x11\x00\x00\x00\x06\x02\x04\x00\x1e\x00\x02");
-        if status["latest"] == length(status["hist"])
+        if status["latest"] == length(status["hist"]) - 1
+            status["hist"][1] = Measurement(resp, trunc(UInt64, time() * 1000));
             status["latest"] = 0;
-        else
-            status["latest"] += 1;
+            return
         end
-        status["hist"][status["latest"] + 1] = Measurement(resp, trunc(UInt64, time() * 1000));
+        status["hist"][status["latest"] + 2] = Measurement(resp, trunc(UInt64, time() * 1000));
+        status["latest"] += 1;
         return
     end
 
