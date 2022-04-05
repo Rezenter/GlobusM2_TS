@@ -24,7 +24,9 @@ module Crate
         ("state", -1),
         ("conn", 0),
         ("unix", 0),
-        ("operations", Dict{Int, Dict}([]))
+        ("operations", Dict{Int, Dict}([])),
+        ("psu_temp", 0),
+        ("fan_temp", 0)
     ]);
 
     function timeout(timer::Timer)
@@ -126,7 +128,7 @@ module Crate
         else
             status["fan_temp"] = -1;
         end
-        status["unix"] = time();
+        status["unix"] = trunc(UInt64, time() * 1000);
         return
     end
 
@@ -166,7 +168,7 @@ module Crate
             operation["status"] = -1;
             operation["error"] = "bad responce";
         end
-        operation["unix"] = time();
+        operation["unix"] = trunc(UInt64, time() * 1000);
         return
     end
 

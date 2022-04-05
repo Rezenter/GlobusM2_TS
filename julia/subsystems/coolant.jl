@@ -17,25 +17,27 @@ module Coolant
     const addr = ip"192.168.10.47";
     const port = 502;
     const request_dt = 1; #seconds
-    const history = ceil(UInt16, 15 * 60 * request_dt); # measurements to store
+    const history = ceil(UInt, 15 * 60 * request_dt); # measurements to store
 
     socket = TCPSocket();
 
     struct Measurement
         temp::Float32;
-        unix::Float64;
+        unix::UInt64;
     end
+    StructTypes.StructType(::Type{Measurement}) = StructTypes.Struct();
 
-    StructTypes.StructType(::Type{Measurement}) = StructTypes.Struct()
+    mutable struct Status
+        conn::Int;
+        hist::Array{Measurement, 1};
+        latest::Int;
+    end
+    StructTypes.StructType(::Type{Status}) = StructTypes.Struct();
 
-    status = Dict{String, Any}([
-        ("conn", 0),
-        ("hist", Array{Measurement, 1}(undef, history)),
-        ("latest", 0)
-    ]);
+    status = Status(0, Array{Measurement, 1}(undef, history), -1);
 
     for i = 1:history
-        status["hist"][i] = Measurement(0.0, 0.0);
+        status.hist[i] = Measurement(0.0, 0);
     end
 
     function timeout(timer::Timer)
@@ -47,7 +49,7 @@ module Coolant
     function connect_coolant()::Dict{String, Int}
         global socket;
         global t;
-        global status;
+
         if socket.status == 3
             disconnect_coolant();
             socket = TCPSocket();
@@ -57,7 +59,7 @@ module Coolant
             connect(socket::TCPSocket, addr::IPAddr, port::Int);
             close(timeout_timer::Timer);
             @debug "connected"
-            status["conn"] = 1;
+            status.conn = 1;
             t = Timer(update_coolant, 1, interval=request_dt);
         end
         return Dict{String, Int}("ok" => 1);
@@ -67,9 +69,8 @@ module Coolant
         @debug "disconnect"
         global socket;
         global t;
-        global status;
         close(t::Timer);
-        status["conn"] = 0;
+        status.conn = 0;
         if socket.status == 6
             return Dict{String, Int}("ok" => 1);
         end
@@ -110,16 +111,18 @@ module Coolant
 
     function update_coolant(timer::Timer)
         resp::Float32 = request(b"\xaf\x11\x00\x00\x00\x06\x02\x04\x00\x1e\x00\x02");
-        if status["latest"] == length(status["hist"])
-            status["latest"] = 0;
-        else
-            status["latest"] += 1;
+        if status.latest == length(status.hist) - 1
+            status.hist[1] = Measurement(resp, trunc(UInt64, time() * 1000));
+            status.latest = 0;
+            return
         end
-        status["hist"][status["latest"]] = Measurement(resp, time());
+        status.hist[status.latest + 2] = Measurement(resp, trunc(UInt64, time() * 1000));
+        status.latest += 1;
+
         return
     end
 
-    getStatus() = status::Dict{String, Any};
+    getStatus() = status::Status;
 
     t = Timer(update_coolant, 1);
     close(t::Timer);
