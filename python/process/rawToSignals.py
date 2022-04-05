@@ -341,7 +341,8 @@ class Integrator:
             return laser, error
 
         if board_count < len(self.data):
-            error = 'not all boards got laser signal'
+            #error = 'not all boards got laser signal'
+            print('not all boards got laser signal, but commented for t15')
         else:
             laser['ave']['pre_std'] /= board_count
             laser['ave']['int'] /= board_count
