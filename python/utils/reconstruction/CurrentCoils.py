@@ -233,7 +233,9 @@ class CCM:
             'a': 0,
             'r_min': center_r,
             'r_max': center_r,
-            'z': params['Z']
+            'z': params['Z'],
+            'z_min': params['Z'],
+            'z_max': params['Z']
         })
         r_arr = []
         T_arr = []

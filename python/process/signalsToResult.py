@@ -398,9 +398,14 @@ class Processor:
             n_p = []
             r_sep_arr = []
             cfm_timestamps = []
+            nl_eq = []
+            nl_eq_err = []
+            eq_length = []
+            nl_eq_ave = []
+            nl_eq_ave_err = []
 
-            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep\n'
-            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm\n'
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3\n'
             for event_ind_aux in range(len(data)):
                 event = data[event_ind_aux]
 
@@ -410,7 +415,8 @@ class Processor:
                 if x_from <= self.result['events'][event_ind]['timestamp'] <= x_to:
                     if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
                         length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
-
+                        length_eq = math.sqrt(math.pow((event['data']['surfaces'][0]['r_max']), 2) - (17 * 17)) * 2 * 1e-2
+                        eq_length.append(length_eq)
                         we_derivative = 0
                         if len(data) > 1:
                             if 'error' in data[event_ind_aux]:
@@ -464,6 +470,12 @@ class Processor:
                         t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
                         n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
+                        nl_eq.append(event['data']['nl_eq'] * correction)
+                        nl_eq_err.append(event['data']['nl_eq_err'] * correction)
+
+                        nl_eq_ave.append(event['data']['nl_eq'] * correction / length_eq)
+                        nl_eq_ave_err.append(event['data']['nl_eq_err'] * correction / length_eq)
+
                         surf = event['data']['surfaces'][0]
                         for surf_ind in range(len(surf['z']) - 1):
                             if surf['z'][surf_ind] >= 0 > surf['z'][surf_ind + 1] and surf['r'][surf_ind] > 40:
@@ -475,7 +487,7 @@ class Processor:
                                 r_sep_val = -1
 
 
-                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f\n' % \
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e\n' % \
                                (event_ind, self.result['events'][event_ind]['timestamp'],
                                 event['data']['nl'] * correction, event['data']['nl_err'] * correction,
                                 length,
@@ -489,9 +501,13 @@ class Processor:
                                 event['data']['surfaces'][-1]['ne_err'] * correction,
                                 event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
                                 event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'],
-                                r_sep_val)
+                                r_sep_val,
+                                event['data']['nl_eq'] * correction, event['data']['nl_eq_err'] * correction,
+                                length_eq,
+                                event['data']['nl_eq'] * correction / length_eq, event['data']['nl_eq_err'] * correction / length_eq
+                        )
                     else:
-                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, self.result['events'][event_ind]['timestamp'])
             to_pack = {
                 'nl42 (m^-2)': {
@@ -501,12 +517,26 @@ class Processor:
                     'y': nl42,
                     'err': nl42_err
                 },
+                'nl_eq (m^-2)': {
+                    'comment': 'линейная концентрация по экваториальной хорде',
+                    'unit': 'nl_eq(m^-2)',
+                    'x': timestamps,
+                    'y': nl_eq,
+                    'err': nl_eq_err
+                },
                 '<nl42> (m^-3)': {
                     'comment': 'средняя концентрация по хорде R=42',
                     'unit': '<nl42>(m^-3)',
                     'x': timestamps,
                     'y': nl_ave,
                     'err': nl_ave_err
+                },
+                '<nl_eq> (m^-3)': {
+                    'comment': 'средняя концентрация по экваториальной хорде',
+                    'unit': '<nl_eq>(m^-3)',
+                    'x': timestamps,
+                    'y': nl_eq_ave,
+                    'err': nl_eq_ave_err
                 },
                 '<ne> (m^-3)': {
                     'comment': 'средняя по объёму концентрация',
@@ -572,7 +602,13 @@ class Processor:
                     'unit': 'R_sep (cm)',
                     'x': cfm_timestamps,
                     'y': r_sep_arr
-                }
+                },
+                'len_eq (m)': {
+                    'comment': 'длина экваториальной хорды',
+                    'unit': 'l_eq(m)',
+                    'x': timestamps,
+                    'y': eq_length
+                },
             }
 
         serialised = [{

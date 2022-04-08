@@ -24,13 +24,21 @@ class StoredCalculator:
                 'R': poly['R'] * 0.1
             })
 
-    def get_profile(self, surfaces, r):
+    def get_profile(self, surfaces, coordinate, is_vertical=True):
         profile = []
         not_used_surfaces = []
         for surf_ind in range(len(surfaces)):
             surf = surfaces[surf_ind]
-            if surf['r_min'] == r == surf['r_max']:
+            if is_vertical:
+                key = 'r'
+                sort_key = 'z'
+            else:
+                key = 'z'
+                sort_key = 'r'
+
+            if surf['%s_min' % key] == coordinate == surf['%s_max' % key]:
                 profile.append({
+                    'r': surf['r'],
                     'z': surf['z'],
                     'surf_ind': surf_ind,
                     'Te': surf['Te'],
@@ -38,19 +46,13 @@ class StoredCalculator:
                     'Te_err': surf['Te_err'],
                     'ne_err': surf['ne_err']
                 })
-            elif surf['r_min'] <= r <= surf['r_max']:
-                #print('\n\n----------------')
-                #print(surf)
-
-                correct = r < surfaces[-1]['r_max'] # add asymmetry correction for HFS points
-                for index in range(len(surf['r']) - 1):
-                    if (surf['r'][index] - r) * (surf['r'][index + 1] - r) <= 0:
+            elif surf['%s_min' % key] <= coordinate <= surf['%s_max' % key]:
+                for index in range(len(surf[key]) - 1):
+                    if (surf[key][index] - coordinate) * (surf[key][index + 1] - coordinate) <= 0:
                         ne = surf['ne']
                         ne_err = surf['ne_err']
-                        #if correct and surf_ind != 0: # asymmetry
-                        #    ne = surfaces[surf_ind - 1]['ne']
-                        #    ne_err = surfaces[surf_ind - 1]['ne_err']
                         profile.append({
+                            'r': surf['r'][index],
                             'z': surf['z'][index],
                             'surf_ind': surf_ind,
                             'Te': surf['Te'],
@@ -60,22 +62,21 @@ class StoredCalculator:
                         })
             else:
                 not_used_surfaces.append(surf_ind)
-
-        return sorted(profile, key=lambda point: point['z'], reverse=True)  # debug
+        return sorted(profile, key=lambda point: point[sort_key], reverse=True)  # debug
         # unreacheble: Not implemented yet
         fuck
 
         closest_ind = not_used_surfaces[0]
         for surf_ind in not_used_surfaces:
-            if surfaces[surf_ind]['r_min'] - r < surfaces[closest_ind]['r_min'] - r or \
-               r - surfaces[surf_ind]['r_max'] < r - surfaces[closest_ind]['r_max']:
+            if surfaces[surf_ind]['r_min'] - coordinate < surfaces[closest_ind]['r_min'] - coordinate or \
+               coordinate - surfaces[surf_ind]['r_max'] < coordinate - surfaces[closest_ind]['r_max']:
                 closest_ind = surf_ind
 
         surf = surfaces[closest_ind]
         if surf['a'] != 0:
             for index in range(len(surf['r']) - 1):
-                if (r < surf['r_min'] and surf['r'][index] == surf['r_min']) or \
-                        (r > surf['r_max'] and surf['r'][index] == surf['r_max']):
+                if (coordinate < surf['r_min'] and surf['r'][index] == surf['r_min']) or \
+                        (coordinate > surf['r_max'] and surf['r'][index] == surf['r_max']):
                     profile.append({
                         'z': surf['z'][index],
                         'surf_ind': closest_ind,
@@ -98,17 +99,21 @@ class StoredCalculator:
         w = 0
         w_err = 0
         nl_prof = []
+        equator_prof = []
         nl_val = 0
         nl_err = 0
+        nl_eq = 0
+        nl_eq_err = 0
         t_ave = 0
         t_ave_err = 0
         n_ave = 0
         n_ave_err = 0
         pressure = []
+        equator = []
         if len(surfaces) != 0:
             radius = surfaces[0]['r_min']
             while radius < surfaces[0]['r_max']:
-                l_prof = self.get_profile(surfaces, radius)
+                l_prof = self.get_profile(surfaces, radius, is_vertical=True)
                 pressure.append({
                     'R': radius,
                     'vertical': l_prof
@@ -143,27 +148,49 @@ class StoredCalculator:
                     n_ave += dz * n_curr * radius
                     n_ave_err += dz * n_curr_err * radius
                 radius += r_step
-                #fuck
+
+
+            coordinate: float = 0.0
+            equator_prof = self.get_profile(surfaces, coordinate, is_vertical=False)
+            equator.append(equator_prof)
+            stop_ind = 0
+            for point_ind in range(len(equator_prof)):
+                if equator_prof[point_ind]['r'] > 17:
+                    equator_prof[point_ind]['l'] = math.sqrt(math.pow(equator_prof[point_ind]['r'], 2) - (17 * 17))
+                    stop_ind = point_ind
+            if len(equator_prof) > stop_ind:
+                dl = equator_prof[stop_ind]['l']
+                nl_eq += dl * equator_prof[stop_ind]['ne']
+                nl_eq_err += dl * equator_prof[stop_ind]['ne_err']
+            for point_ind in range(stop_ind - 1):
+                if equator_prof[point_ind]['r'] > 17:
+                    dl = equator_prof[point_ind]['l'] - equator_prof[point_ind + 1]['l']
+                    nl_eq += dl * (equator_prof[point_ind]['ne'] + equator_prof[point_ind + 1]['ne']) * 0.5
+                    nl_eq_err += dl * (equator_prof[point_ind]['ne_err'] + equator_prof[point_ind + 1]['ne_err']) * 0.5
+
         final_vol = volume * 1e-6 * r_step * math.tau
         if final_vol != 0:
             t_ave /= final_vol
             n_ave /= final_vol
             t_ave_err /= final_vol
             n_ave_err /= final_vol
-
         return {
             'area': r_step * area * 1e-4,
             'volume': final_vol,
             'vol_w': w * 1e-6 * const.q_e * r_step * math.tau * 1.5,
             'w_err': w_err * 1e-6 * const.q_e * r_step * math.tau * 1.5,
             'nl_prof': nl_prof,
+            'eq_prof': equator_prof,
             'nl_val': nl_val * 1e-2,
             'nl_err': nl_err * 1e-2,
+            'nl_eq': nl_eq * 1e-2 * 2,
+            'nl_eq_err': nl_eq_err * 1e-2 * 2,
             't_vol': t_ave * r_step * 1e-6 * math.tau,
             't_vol_err': t_ave_err * r_step * 1e-6 * math.tau,
             'n_vol': n_ave * r_step * 1e-6 * math.tau,
             'n_vol_err': n_ave_err * r_step * 1e-6 * math.tau,
-            'pressure': pressure
+            'pressure': pressure,
+            'equator': equator
         }
 
     def calc_laser_shot(self, requested_time, nl_r):
@@ -189,6 +216,11 @@ class StoredCalculator:
             for point in poly['r']:
                 poly['r_min'] = min(poly['r_min'], point)
                 poly['r_max'] = max(poly['r_max'], point)
+            poly['z_min'] = 50
+            poly['z_max'] = -50
+            for point in poly['z']:
+                poly['z_min'] = min(poly['z_min'], point)
+                poly['z_max'] = max(poly['z_max'], point)
         integration = self.integrate(poly_a, nl_r)
         return {
             'area': integration['area'],
@@ -203,7 +235,11 @@ class StoredCalculator:
             't_vol_err': integration['t_vol_err'],
             'n_vol': integration['n_vol'],
             'n_vol_err': integration['n_vol_err'],
-            'pressure': integration['pressure']
+            'pressure': integration['pressure'],
+            'eq_prof': integration['eq_prof'],
+            'equator': integration['equator'],
+            'nl_eq': integration['nl_eq'],
+            'nl_eq_err': integration['nl_eq_err'],
         }
 
     def calc_dynamics(self, t_from, t_to, nl_r):
