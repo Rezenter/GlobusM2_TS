@@ -19,7 +19,7 @@ def integrate(x, y):
 
 
 class SpCal:
-    def __init__(self, filename, config_filename, wl_start, wl_stop, wl_step, additional_filter=None):
+    def __init__(self, calibr_filename, config_filename, wl_start, wl_stop, wl_step, additional_filter=None):
         self.aux_filter = []
         if additional_filter is not None:
             print('WARNING!!!!\n\n USING ADDITIONAL FILTER!!!\n\n___________________________\n\n')
@@ -31,8 +31,11 @@ class SpCal:
                         't': float(split[1]) * 0.01
                     })
 
-        with open('%s%s%s.json' % (db_path, CALIBR_FOLDER, filename), 'r') as calibr_file:
+        with open('%s%s%s.json' % (db_path, CALIBR_FOLDER, calibr_filename), 'r') as calibr_file:
             cal_data = json.load(calibr_file)
+            self.version: int = 1
+            if "version" in cal_data:
+                self.version = cal_data['version']
         self.lamp_wl = []
         self.lamp_val = []
         with open('%s%s%s' % (db_path, LAMP_FOLDER, lamp_filename), 'r') as lamp_file:
@@ -56,7 +59,12 @@ class SpCal:
                     integrand.append(self.get_spectrum(wl[-1]) * self.apd.qe(wl[-1]) *
                                      self.fil.transmission(ch + 1, wl[-1]))
                     wl.append(wl[-1] + wl_step)
-                kappas.append((cal_data['poly'][poly]['u'][ch] - cal_data['poly'][poly]['dark'][ch]) /
+                cal_signal = 0
+                if self.version == 1:
+                    cal_signal = (cal_data['poly'][poly]['u'][ch] - cal_data['poly'][poly]['dark'][ch])
+                elif self.version == 2:
+                    cal_signal = cal_data['poly'][poly]['amp'][ch]
+                kappas.append(cal_signal /
                               (integrate(wl, integrand) * config['poly'][poly]['channels'][ch]['slow_gain']))
             self.kappas.append(kappas)
         #self.dump_rel_sens()  # debug
