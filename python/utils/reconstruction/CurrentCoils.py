@@ -231,6 +231,7 @@ class CCM:
                 result.append(poly)
         result.append({
             'a': 0,
+            'r': center_r,
             'r_min': center_r,
             'r_max': center_r,
             'z': params['Z'],

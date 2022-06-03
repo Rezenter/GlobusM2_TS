@@ -507,6 +507,8 @@ class Handler:
             }
 
         shot_path = '%s%s%05d' % (self.plasma_path, RAW_FOLDER, self.fine_processor.shotn)
+        if not req['is_plasma']:
+            shot_path = '%s%s%05d' % (self.debug_path, RAW_FOLDER, self.fine_processor.shotn)
         if not os.path.isdir(shot_path):
             resp['ok'] = False
             resp['description'] = 'Requested shotn is missing: %s.' % shot_path
