@@ -179,10 +179,10 @@ class Processor:
         print('Processing shot...')
 
         stray = [
-            [0.0 for ch in range(5)] for poly in range(10)
+            [0.0 for ch in range(6)] for poly in range(len(self.result['config']['poly']))
         ]
         count = [
-            [0 for ch in range(5)] for poly in range(10)
+            [0 for ch in range(6)] for poly in range(len(self.result['config']['poly']))
         ]
         if len(self.signal['data']) == 0:
             print('No events!')
@@ -250,6 +250,7 @@ class Processor:
 
         #E *= self.absolute['E_mult']
 
+        print('WARNING!!! 5ch only')
         for ch_ind in range(5):
             if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
