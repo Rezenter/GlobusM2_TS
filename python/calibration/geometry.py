@@ -1,6 +1,6 @@
 import json
 import math
-import phys_const
+import phys_const  # at least v1.1
 
 DB_PATH: str = 'd:/data/db/'
 SOCKET_FOLDER: str = 'sockets/'
@@ -35,9 +35,10 @@ with open('%s%s%s%s' % (DB_PATH, SOCKET_FOLDER, sockets_name, JSON), 'r') as fil
     result['sockets'] = json.load(file)
 
 with open('%s%s%s%s' % (DB_PATH, FIBER_FOLDER, fibers_name, JSON), 'r') as file:
-    result['fibers'] = json.load(file)
+    tmp = json.load(file)
 
-for fiber in result['fibers']:
+result['fibers'] = {}
+for fiber in tmp:
     socket_ind: int = 0
     for socket_ind in range(len(result['sockets'])):
         if result['sockets'][socket_ind]['lens_socket'] == fiber['lens_socket']:
@@ -52,6 +53,10 @@ for fiber in result['fibers']:
     fiber['poloidal_angle_deg']: float = phys_const.rad_to_deg(math.asin(center_to_laser / fiber['R']))
     fiber['poloidal_length']: float = result['sockets'][socket_ind]['scattering_l'] * \
                                       math.cos(phys_const.deg_to_rad(fiber['poloidal_angle_deg']))
+    name: str = fiber['name']
+    del fiber['name']
+    del fiber['ind']
+    result['fibers'][name] = fiber
 
 with open('%s%s%s%s%s' % (DB_PATH, FIBER_FOLDER, PROCESSED_FOLDER, fibers_name, JSON), 'w') as file:
     json.dump(result, file, indent=4)
