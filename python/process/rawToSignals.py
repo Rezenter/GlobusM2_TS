@@ -4,6 +4,7 @@ import json
 import statistics
 import math
 import msgpack
+import phys_const
 
 
 def find_front_findex(signal, threshold, rising=True):
@@ -410,7 +411,7 @@ class Integrator:
             else:
                 matching_gain = self.config['preamp']['matchingFastGain']
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
-                                                       self.config['preamp']['charge'] *
+                                                       phys_const.q_e *
                                                        self.config['preamp']['feedbackResistance'] *
                                                        sp_ch['fast_gain'] *
                                                        matching_gain)

@@ -18,7 +18,7 @@ EXPECTED_FOLDER: str = 'expected/'
 
 
 # change only these lines!
-config_name: str = '2022.06.14'
+config_name: str = '2022.06.21_!correctedGains'
 spectral_raw_name: str = '2022.05.12'
 WL_STEP: float = 0.05  # [nm]. integration step, 0.1
 T_LOW: float = 1.0  # [eV]

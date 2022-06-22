@@ -250,8 +250,7 @@ class Processor:
 
         #E *= self.absolute['E_mult']
 
-        print('WARNING!!! 5ch only')
-        for ch_ind in range(5):
+        for ch_ind in range(len(self.expected['poly'][poly]['expected'])):
             if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
             else:
