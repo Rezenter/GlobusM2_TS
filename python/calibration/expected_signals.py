@@ -1,120 +1,30 @@
-import json
-import math
-from pathlib import Path
-import phys_const  # at least v1.3
 import scipy.special as sci
-from datetime import date
-
-DB_PATH: str = 'd:/data/db/'
-FIBER_FOLDER: str = 'fibers/calculated/'
-FILTER_FOLDER = 'filters/'
-APD_FOLDER = 'apd/'
-JSON: str = '.json'
-CONFIG_FOLDER: str = 'config/'
-CALIBRATION_FOLDER: str = 'calibration/'
-SPECTRAL_FOLDER: str = 'spectral/'
-LAMP: str = 'lamp/Lab_spectrum.txt'
-EXPECTED_FOLDER: str = 'expected/'
-
+import auxiliary as aux
 
 # change only these lines!
 config_name: str = '2022.06.21_!correctedGains'
 spectral_raw_name: str = '2022.05.12'
-WL_STEP: float = 0.05  # [nm]. integration step, 0.1
+WL_STEP: float = 0.1  # [nm]. integration step, 0.1
 T_LOW: float = 1.0  # [eV]
 T_HIGH: float = 5e3  # [eV]
-T_MULT: float = 1.05
+T_MULT: float = 1.02
 # change only these lines!
-
-
-class Filters:
-    def __init__(self, filter_set: str):
-        self.trans = []
-        self.name: str = filter_set
-        for ch_filename in Path('%s%s%s/' % (DB_PATH, FILTER_FOLDER, filter_set)).iterdir():
-            filter = {
-                't': [],
-                'wl': []
-            }
-            print(ch_filename)
-            with open(ch_filename, 'r') as filter_file:
-                for line in filter_file:
-                    splitted = line.split(',')
-                    filter['wl'].append(float(splitted[0]))
-                    filter['t'].append(0.01 * float(splitted[1]))
-                if filter['wl'][0] > filter['wl'][-1]:
-                    filter['wl'].reverse()
-                    filter['t'].reverse()
-            self.trans.append(filter)
-
-    def dump(self):
-        with open('%s.csv' % self.name, 'w') as file:
-            wl = 700
-            file.write('wl, ch1, ch2, ch3, ch4, ch5\n')
-            while wl < 1070:
-                line = '%.1f, ' % wl
-                for ch in range(5):
-                    line += '%.3e, ' % self.transmission(ch + 1, wl)
-                file.write(line[:-2] + '\n')
-                wl += 0.1
-        print('filters written to file')
-
-    def transmission(self, ch: int, wl: float) -> float:  # whole polychromator
-        if wl >= self.trans[ch - 1]['wl'][-1] or wl <= self.trans[ch - 1]['wl'][0]:
-            return 0.0
-        res: float = 1
-        curr: int = 1
-        while curr != ch:
-            if wl >= self.trans[curr - 1]['wl'][-1] or wl <= self.trans[curr - 1]['wl'][0]:
-                prev: float = 0.0
-            else:
-                prev: float = max(0.0, phys_const.interpolate_arr(self.trans[curr - 1]['wl'], self.trans[curr - 1]['t'], wl))
-            res *= 1 - prev
-            curr += 1
-        return max(0.0, res * phys_const.interpolate_arr(self.trans[ch - 1]['wl'], self.trans[ch - 1]['t'], wl))
-
-
-class APD:
-    mult: float = 0.01 * phys_const.h * phys_const.c * 1e9 / phys_const.q_e
-
-    def __init__(self, apd_name: str):
-        self.apd = {
-                'wl': [],
-                'qe': [],
-                'aw': []
-            }
-        with open('%s%s%s/aw.csv' % (DB_PATH, APD_FOLDER, apd_name), 'r') as filter_file:
-            for header in range(2):
-                filter_file.readline()
-
-            for line in filter_file:
-                splitted = line.split(',')
-                self.apd['wl'].append(float(splitted[0]))
-                self.apd['aw'].append(float(splitted[1]))
-                self.apd['qe'].append(float(splitted[1]) * self.mult / self.apd['wl'][-1])
-
-    def qe(self, wl: float) -> float:
-        return phys_const.interpolate_arr(self.apd['wl'], self.apd['qe'], wl)
-
-    def aw(self, wl: float) -> float:
-        return phys_const.interpolate_arr(self.apd['wl'], self.apd['aw'], wl)
-
 
 class TS_spectrum:
     def __init__(self, theta_deg: float, model: str = 'Naito', lambda0: float = 1064.5):
-        self.theta: float = phys_const.deg_to_rad(theta_deg)
-        self.sin_theta: float = math.sin(self.theta)
-        self.cos_theta: float = math.cos(self.theta)
+        self.theta: float = aux.phys_const.deg_to_rad(theta_deg)
+        self.sin_theta: float = aux.math.sin(self.theta)
+        self.cos_theta: float = aux.math.cos(self.theta)
         self.lambda_0: float = lambda0  # [nm], laser wavelength
         if model == 'Selden':
             self.model: int = 0
-            self.alphaT: float = phys_const.m_e * phys_const.c**2 / (2 * phys_const.q_e)
+            self.alphaT: float = aux.phys_const.m_e * aux.phys_const.c**2 / (2 * aux.phys_const.q_e)
 
         elif model == 'Naito':
             self.model: int = 1
             self.t_low = 750  # switch to selden for low temp
-            self.u2: float = (math.sin(self.theta) / (1 - math.cos(self.theta)))**2
-            self.alphaT: float = phys_const.m_e * phys_const.c ** 2 / (2 * phys_const.q_e)  # for low-temp
+            self.u2: float = (aux.math.sin(self.theta) / (1 - aux.math.cos(self.theta)))**2
+            self.alphaT: float = aux.phys_const.m_e * aux.phys_const.c ** 2 / (2 * aux.phys_const.q_e)  # for low-temp
 
         else:
             print('Unsupported TS spectrum model "%s". Only "Selden" or "Naito" is implemented' % model)
@@ -129,24 +39,24 @@ class TS_spectrum:
         if model == 0:  # Selden
             alpha: float = self.alphaT / temp
             x: float = (wl / self.lambda_0) - 1
-            a_loc: float = math.pow(1 + x, 3) * math.sqrt(2 * (1 - self.cos_theta) * (1 + x) + math.pow(x, 2))
-            b_loc: float = math.sqrt(1 + x * x / (2 * (1 - self.cos_theta) * (1 + x))) - 1
-            c_loc: float = math.sqrt(alpha / math.pi) * (1 - (15 / 16) / alpha + 345 / (512 * alpha * alpha))
-            return (c_loc / a_loc) * math.exp(-2 * alpha * b_loc) / self.lambda_0
+            a_loc: float = aux.math.pow(1 + x, 3) * aux.math.sqrt(2 * (1 - self.cos_theta) * (1 + x) + aux.math.pow(x, 2))
+            b_loc: float = aux.math.sqrt(1 + x * x / (2 * (1 - self.cos_theta) * (1 + x))) - 1
+            c_loc: float = aux.math.sqrt(alpha / aux.math.pi) * (1 - (15 / 16) / alpha + 345 / (512 * alpha * alpha))
+            return (c_loc / a_loc) * aux.math.exp(-2 * alpha * b_loc) / self.lambda_0
         elif model == 1:  # Naito
             if temp < self.t_low:
                 return self.scat_power_dens(temp=temp, wl=wl, model_override=0)
 
-            alpha2: float = phys_const.m_e * phys_const.c**2 * phys_const.Joule_to_eV / temp
+            alpha2: float = aux.phys_const.m_e * aux.phys_const.c**2 * aux.phys_const.Joule_to_eV / temp
             epsilon: float = (wl - self.lambda_0) / self.lambda_0
-            x: float = math.sqrt(1 + epsilon**2 / (2 * (1 - self.cos_theta) * (1 + epsilon)))
+            x: float = aux.math.sqrt(1 + epsilon**2 / (2 * (1 - self.cos_theta) * (1 + epsilon)))
             u: float = self.sin_theta / (1 - self.cos_theta)
-            y: float = math.pow(x**2 + u**2, -0.5)
+            y: float = aux.math.pow(x**2 + u**2, -0.5)
             zeta: float = x * y
             eta: float = y / alpha2
 
-            sz: float = math.exp(-alpha2 * x) / (2 * sci.kn(2, alpha2) * (1 + epsilon)**3) * \
-                        math.pow(2 * (1 - self.cos_theta) * (1 + epsilon) + epsilon**2, - 0.5)
+            sz: float = aux.math.exp(-alpha2 * x) / (2 * sci.kn(2, alpha2) * (1 + epsilon)**3) * \
+                        aux.math.pow(2 * (1 - self.cos_theta) * (1 + epsilon) + epsilon**2, - 0.5)
             q: float = 1 - 4 * eta * zeta * (2 * zeta - (2 - 3 * zeta**2) * eta) / (2 * zeta - (2 - 15 * zeta**2) * eta)
             return sz * q / self.lambda_0
         else:
@@ -190,8 +100,8 @@ class LampCalibration:
 
         if config['type version'] < 1:
             fuck
-        with open('%s%s%s%s%s' % (DB_PATH, CALIBRATION_FOLDER, SPECTRAL_FOLDER, spectral_name, JSON), 'r') as file:
-            self.calibration = json.load(file)
+        with open('%s%s%s%s%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.SPECTRAL_FOLDER, spectral_name, aux.JSON), 'r') as file:
+            self.calibration = aux.json.load(file)
             if self.calibration['type version'] < 2:
                 fuck
 
@@ -199,7 +109,7 @@ class LampCalibration:
             'x': [],  # [nm] wavelength
             'y': []
         }
-        with open('%s%s%s' % (DB_PATH, CALIBRATION_FOLDER, LAMP), 'r') as file:
+        with open('%s%s%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.LAMP), 'r') as file:
             for line in file:
                 splt = line.split()
                 self.lamp['x'].append(float(splt[0]) * 1e3)
@@ -223,8 +133,8 @@ class LampCalibration:
 
     def __calc_ae(self):
         for poly_ind_conf, poly_conf in enumerate(self.config['poly']):
-            poly_conf['filters'] = Filters(poly_conf['filter_set'])
-            poly_conf['detector'] = APD(poly_conf['detectors'])
+            poly_conf['filters'] = aux.Filters(poly_conf['filter_set'])
+            poly_conf['detector'] = aux.APD(poly_conf['detectors'])
             for ch_ind in range(len(poly_conf['channels'])):
                 integral: float = 0
                 wl: float = self.config['laser'][0]['wavelength']
@@ -240,7 +150,7 @@ class LampCalibration:
                     else:
                         if transmission > 0.1:
                             flag = True
-                    integral += phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
+                    integral += aux.phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
                                 transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP / wl
                     wl -= WL_STEP
 
@@ -260,6 +170,7 @@ class ExpectedSignals:
 
         for poly_ind_conf, poly_conf in enumerate(lamp_calibration.config['poly']):
             print('processing poly %d...' % (poly_ind_conf + 1))
+
             angle_deg: float = lamp_calibration.config['fibers'][poly_conf['fiber']]['scattering_angle_deg']
             cross = TS_spectrum(theta_deg=angle_deg, model='Naito', lambda0=lamp_calibration.config['laser'][0]['wavelength'])
 
@@ -287,7 +198,7 @@ class ExpectedSignals:
                         wl -= WL_STEP
                     poly_conf['channels'][ch_ind]['expected'].append(integral * poly_conf['channels'][ch_ind]['ae'])
 
-        with open('%s%s%s%s%s' % (DB_PATH, CALIBRATION_FOLDER, EXPECTED_FOLDER, date.today().strftime("%Y.%m.%d"), JSON), 'w') as file:
+        with open('%s%s%s%s_debug%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.EXPECTED_FOLDER, aux.date.today().strftime("%Y.%m.%d"), aux.JSON), 'w') as file:
             result = {
                 'type': 'expected signals',
                 'type version': 1,
@@ -307,11 +218,11 @@ class ExpectedSignals:
                 })
                 for ch_ind in range(len(poly_conf['channels'])):
                     result['poly'][-1]['expected'].append(poly_conf['channels'][ch_ind]['expected'])
-            json.dump(result, file, indent=2)
+            aux.json.dump(result, file, indent=2)
 
 
-with open('%s%s%s%s' % (DB_PATH, CONFIG_FOLDER, config_name, JSON), 'r') as file:
-    config = json.load(file)
+with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, config_name, aux.JSON), 'r') as file:
+    config = aux.json.load(file)
 
 expected = ExpectedSignals(lamp_calibration=LampCalibration(config=config, spectral_name=spectral_raw_name))
 
