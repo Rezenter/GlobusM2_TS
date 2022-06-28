@@ -27,7 +27,7 @@ RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
-CFM_ADDR = 'http://192.168.101.222:8050/_dash-update-component'
+CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data

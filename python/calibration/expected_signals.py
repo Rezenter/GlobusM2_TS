@@ -214,10 +214,12 @@ class ExpectedSignals:
             for poly_ind_conf, poly_conf in enumerate(lamp_calibration.config['poly']):
                 result['poly'].append({
                     'ind': poly_conf['ind'],
-                    'expected': []
+                    'expected': [],
+                    'ae': []
                 })
                 for ch_ind in range(len(poly_conf['channels'])):
                     result['poly'][-1]['expected'].append(poly_conf['channels'][ch_ind]['expected'])
+                    result['poly'][-1]['ae'].append(poly_conf['channels'][ch_ind]['ae'])
             aux.json.dump(result, file, indent=2)
 
 

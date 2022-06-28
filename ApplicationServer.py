@@ -92,6 +92,7 @@ if __name__ == '__main__':
 
     httpd = server(('', 443), ApplicationServer)
     httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='privatekey.key', certfile='certificate.pem', server_side=True)
+    #httpd.socket = ssl.SSLContext.wrap_socket(httpd.socket, keyfile='privatekey.key', certfile='certificate.pem', server_side=True)
     try:
         print('Serving from now.')
         httpd.serve_forever()
