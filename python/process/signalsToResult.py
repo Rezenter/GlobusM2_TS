@@ -6,6 +6,7 @@ import math
 import phys_const as const
 import shtRipper
 
+
 def calc_chi2(N_i, sigm2_i, f_i):
     res = 0
     top_sum = 0
@@ -99,10 +100,23 @@ class Processor:
         self.result = {}
         self.load()
 
+    def version_control(self):
+        if 'type version' not in self.result['config']:
+            return self.result
+        res = self.result.copy()
+        if res['config']['type version'] == 1:
+            for poly in res['config']['poly']:
+                poly['R'] = res['config']['fibers'][poly['fiber']]['R']
+                poly['l05'] = res['config']['fibers'][poly['fiber']]['poloidal_length'] * 0.5
+                if res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket']]['image_h'] == 'ceramooptec_half':
+                    poly['l05'] *= 0.5
+                poly['h'] = res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket']]['image_h']
+        return res
+
     def get_data(self):
         err = self.get_error()
         if err is None:
-            return self.result
+            return self.version_control()
         else:
             return {
                 'error': err
@@ -176,6 +190,7 @@ class Processor:
             'config': self.signal['common']['config'],
             'events': []
         }
+
         print('Processing shot...')
 
         stray = [
