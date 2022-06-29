@@ -2396,6 +2396,11 @@
                 res.m_current_event_raw.poly_ind = this.selectors.polyInputs.val();
                 res.m_current_event_raw.poly_R = this.selectors.poly_radius.html();
             }
+            if(targetAttr.getNamedItem('ccm') !== null) {
+                res.m_current_ccm = this.m_current_ccm;
+            }
+
+
             console.log(res);
         };
 
@@ -2650,6 +2655,8 @@
         this.DrawCCM = function(){
             let nl_points = [];
             let nl_errors = [];
+            let nl_eq_points = [];
+            let nl_eq_errors = [];
             let w_points = [];
             let w_errors = [];
             if(this.m_current_ccm.ok){
@@ -2663,6 +2670,17 @@
                             ccm_ind: arr_ind
                         });
                         nl_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [null, null]
+                        });
+
+                        nl_eq_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: null,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_eq_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
                             y: [null, null]
                         });
@@ -2694,6 +2712,22 @@
                             ]
                         });
 
+                        nl_eq_points.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: this.m_current_ccm.data[arr_ind].data.nl_eq * mult,
+                            global_ind: this.m_current_ccm.data[arr_ind].event_index,
+                            ccm_ind: arr_ind
+                        });
+                        nl_eq_errors.push({
+                            x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            y: [
+                                (this.m_current_ccm.data[arr_ind].data.nl_eq - this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
+                                mult,
+                                (this.m_current_ccm.data[arr_ind].data.nl_eq + this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
+                                mult
+                            ]
+                        });
+
                         w_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
                             y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
@@ -2717,11 +2751,25 @@
                     color: this.palette[0],
                     type: "line",
                     markerType: "none",
-                    dataPoints: nl_points
+                    dataPoints: nl_points,
+                    showInLegend: true,
+                    legendText: "nl 42 TS"
                 }, {
                     color: this.palette[0],
                     type: "error",
                     dataPoints: nl_errors
+                },
+                {
+                    color: this.palette[5],
+                    type: "line",
+                    markerType: "none",
+                    dataPoints: nl_eq_points,
+                    showInLegend: true,
+                    legendText: "nl_eq TS"
+                }, {
+                    color: this.palette[5],
+                    type: "error",
+                    dataPoints: nl_eq_errors
                 }
             ];
             this.m_nl_evo_chart.render();
