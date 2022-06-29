@@ -147,8 +147,8 @@ def process_point(point, stray=None):
                 if aux.math.isnan(total_sig) or total_sig < 1e-49:
                     poly[poly_ind][ch_ind]['A'] = -1
                 else:
-                    #poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * aux.phys_const.q_e * nl_correction / (stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * config['laser'][0]['wavelength'] * total_sig)
-                    poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * nl_correction / (stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * total_sig * n_N2)
+                    #poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * aux.phys_const.q_e / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * config['laser'][0]['wavelength'] * total_sig)
+                    poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * total_sig * n_N2)
 
     result['J_from_int'] = abs_calibration['laser_energy'] / measured_energy
     result['poly'] = poly
