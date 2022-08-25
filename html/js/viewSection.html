@@ -124,6 +124,8 @@
             ">
             <button class="btn btn-success" id="shotModal_button">Load Shot</button>
             <button class="btn btn-success glyphicon glyphicon-cloud-upload" id="save_shot">Save to DB</button>
+            <label for="set_default">set as default</label>
+                <input type="checkbox" id="set_default">
             <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
             <label for="export_old">Include old format?</label>
                 <input type="checkbox" id="export_old">
@@ -227,23 +229,37 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <ul>
-                        <li>
-                            <label for="shot_select">Shot №:</label><select id="shot_select"></select>
-                        </li>
-                        <li>
-                            <label for="viewerConfig_select">Configuration:</label>
-                                <select id="viewerConfig_select" class="configs"></select>
-                        </li>
-                        <li>
-                            <label for="viewerSpectral_select">Spectral calibration:</label>
-                                <select id="viewerSpectral_select" class="sp_calibrations"></select>
-                        </li>
-                        <li>
-                            <label for="viewerAbs_select">Absolute calibration:</label>
-                                <select id="viewerAbs_select" class="abs_calibrations"></select>
-                        </li>
-                    </ul>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <input class="form-control" id="shot_select" type="number" placeholder="Shot №">
+                            </div>
+                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                <ul class="list-group" id="shotn_list" style="max-height: 300px; margin-bottom: 10px; overflow-x:clip; overflow-y:scroll; -webkit-overflow-scrolling: touch;">
+                                </ul>
+                            </div>
+                            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                <ul class="list-group" id="version_list" style="max-height: 300px; margin-bottom: 10px; overflow-x:clip; overflow-y:scroll; -webkit-overflow-scrolling: touch;">
+                                </ul>
+                            </div>
+                            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                <ul>
+                                    <li>
+                                        <label for="viewerConfig_select">Configuration:</label>
+                                            <select id="viewerConfig_select" class="configs"></select>
+                                    </li>
+                                    <li>
+                                        <label for="viewerSpectral_select">Spectral calibration:</label>
+                                            <select id="viewerSpectral_select" class="sp_calibrations"></select>
+                                    </li>
+                                    <li>
+                                        <label for="viewerAbs_select">Absolute calibration:</label>
+                                            <select id="viewerAbs_select" class="abs_calibrations"></select>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -500,7 +516,8 @@
             chi_count: $('#chi_pointCount'),
             chi_offscale: $('#chi_offscale'),
             poly_radius: $('.poly_radius'),
-            shotn: $('#shot_select'),
+            shotn: $('#shotn_list'),
+            version_list: $('#version_list'),
             chord_time: $('#chord_time'),
             chord_length: $('#chord_len'),
             chord_nl: $('#chord_nl'),
@@ -1586,7 +1603,7 @@
                 }
                 , function (resp) {
                     this.m_plasma_shots = resp['plasma'];
-                    this.m_debug_shots = resp['debug'];
+                    //this.m_debug_shots = resp['debug'];
                     this.m_config_list = resp['config'];
                     this.m_spectralConf_list = resp['spectral_cal'];
                     this.m_absConf_list = resp['abs_cal'];
@@ -1597,10 +1614,64 @@
 
         this.UpdateShotSelect = function() {
             let options = [];
-            this.m_plasma_shots.forEach(shot => options.push("<option>" + shot + "</option>"));
+            $("#shotn_list button").remove();
+            this.m_plasma_shots.forEach(shot => options.push("<button type=\"button\" class=\"list-group-item list-group-item-action\">" + shot['#'] + "</button>"));
+            //console.log(this.m_plasma_shots);
             this.selectors.shotn.html(options);
+            $("#shotn_list button").on('click', function(ev){
+                //console.log($(ev.target).index());
+                if(!$(ev.target).hasClass('active')){
+                    $("#shotn_list .active").toggleClass("active");
+                    $(ev.target).toggleClass("active");
 
-            //options = ['<option>2020.12.10</option>'];
+                    let versions = [];
+                    if('versions' in this.m_plasma_shots[$(ev.target).index()]){
+                        for(let ver_ind = 0; ver_ind < this.m_plasma_shots[$(ev.target).index()].versions.length; ver_ind++){
+                            let element = "<button type=\"button\" class=\"list-group-item list-group-item-action";
+                            if(this.m_plasma_shots[$(ev.target).index()].versions[ver_ind].ver === this.m_plasma_shots[$(ev.target).index()].default_version){
+                                element += " active";
+                            }
+                            element += "\">" + this.m_plasma_shots[$(ev.target).index()].versions[ver_ind].ver + "</button>";
+                            versions.push(element);
+                        }
+                    }
+
+                    let element = "<button type=\"button\" class=\"list-group-item list-group-item-action";
+                        if(versions.length === 0){
+                            element += " active";
+                            console.log('!!! fill next column !!!');
+                        }
+                        element += "\"> + </button>";
+                    versions.push(element);
+                    this.selectors.version_list.html(versions);
+                    $("#version_list button").on('click', function(ev) {
+                        if(!$(ev.target).hasClass('active')){
+                            $("#version_list .active").toggleClass("active");
+                            $(ev.target).toggleClass("active");
+
+                            let shot_ind = $("#shotn_list .active").index();
+                            let ver_ind = $(ev.target).index();
+                            if(!'versions' in this.m_plasma_shots[shot_ind] || this.m_plasma_shots[shot_ind].versions.length <= ver_ind){
+                                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].default_configs.config);
+                                $('#viewerConfig_select').prop('disabled', false);
+                                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].default_configs.spectral_cal);
+                                $('#viewerSpectral_select').prop('disabled', false);
+                                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].default_configs.abs_cal);
+                                $('#viewerAbs_select').prop('disabled', false);
+                            }else{
+                                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].config);
+                                $('#viewerConfig_select').prop('disabled', true);
+                                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].sp_cal);
+                                $('#viewerSpectral_select').prop('disabled', true);
+                                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].abs_cal);
+                                $('#viewerAbs_select').prop('disabled', true);
+                            }
+                        }
+                    }.bind(this));
+                }
+
+            }.bind(this));
+
             options = [];
             this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('.configs').html(options);
@@ -2217,9 +2288,15 @@
             this.Request(
                 {
                     reqtype: 'save_shot',
-                    shot: this.m_currentShot
+                    shot: this.m_currentShot,
+                    cfm: this.m_current_ccm,
+                    default: $('#set_default')[0].checked
                 }, function (resp) {
-                    alert('saved');
+                    if(resp.ok) {
+                        alert('saved version = ' + resp.ver);
+                    }else{
+                        alert(resp.description);
+                    }
                 }.bind(this)
             );
         };
@@ -2246,6 +2323,15 @@
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
 
+                    /*
+                    this.SavePNG('T_evo_chart');
+                    this.SavePNG('n_evo_chart');
+                    this.SavePNG('T_profile_chart');
+                    this.SavePNG('n_profile_chart');
+                    this.SavePNG('nl_evo_chart');
+                    this.SavePNG('w_evo_chart');
+                     */
+
                     this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
                     this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
                     this.DownloadFile(resp.nR, (this.m_currentShot.shotn + '_n(R).csv'));
@@ -2258,6 +2344,8 @@
                         this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
+
+
 
                     //this.DownloadSHT();
 
@@ -2822,7 +2910,7 @@
                         y: this.m_current_ccm.data[index].data.surfaces[poly_ind].z[param]
                     })
                 }
-                let color = '#000000';
+                let color = '#FF00FF';
                 if(poly_ind !== 0){
                     color = this.palette[this.m_current_ccm.data[index].data.surfaces[poly_ind].ind];
                 }
@@ -3080,10 +3168,9 @@
                 });
             }
             this.m_poloidal_chart.options.data.push({
+                markerType: "none",
                 color: '#000000',
                 type: "line",
-                markerType: "none",
-                showInLegend: true,
                 name: 'last',
                 dataPoints: points
             });
@@ -3335,6 +3422,13 @@
             }.bind(this))
 
             $('#show_signal').on('click', this, this.AddSHTSignals.bind(this));
+
+            $("#shot_select").on("keyup", function() {
+                let value = $(this).val();
+                $("#shotn_list button").filter(function() {
+                  $(this).toggle($(this).text().indexOf(value) > -1)
+                });
+              });
         };
 
         this.HideMainRightTooltips = function(){

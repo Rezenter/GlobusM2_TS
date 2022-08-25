@@ -220,9 +220,10 @@ class Integrator:
 
         self.save_processed()
 
-    def save_processed(self):
+    def save_processed(self, filepath=''):
         print('Saving processed data...')
-        filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
+        if filepath == '':
+            filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
         with open(filepath, 'w') as file:
             file.write('{\n "common": ')
             common = {
@@ -231,15 +232,15 @@ class Integrator:
                 'config': self.config,
                 'isPlasma': self.is_plasma
             }
-            json.dump(common, file)
+            json.dump(common, file, indent=1)
 
             file.write(', \n "data": [')
             for event in self.processed[:-1]:
-                json.dump(event, file)
+                json.dump(event, file, indent=1)
                 file.write(',')
 
             if len(self.processed) > 0:
-                json.dump(self.processed[-1], file)
+                json.dump(self.processed[-1], file, indent=1)
             file.write(']\n}')
         print('completed.')
 
@@ -326,8 +327,11 @@ class Integrator:
                 'int': integral,
                 'int_len': stop_ind
             })
-            laser['ave']['pre_std'] += laser['boards'][-1]['pre_std']
-            laser['ave']['int'] += integral
+            if board_ind != 8:
+                laser['ave']['pre_std'] += laser['boards'][-1]['pre_std']
+                laser['ave']['int'] += integral
+            else:
+                print('Warning! T15 patch!')
             #laser['ave']['int_len'] += stop_ind
             board_count += 1
         sync = True
@@ -345,6 +349,9 @@ class Integrator:
             #error = 'not all boards got laser signal'
             print('not all boards got laser signal, but commented for t15')
         else:
+            if board_count >= 8:
+                board_count = 8
+                print('Warning! T15 patch!')
             laser['ave']['pre_std'] /= board_count
             laser['ave']['int'] /= board_count
             #laser['ave']['int_len'] /= board_count
@@ -356,7 +363,10 @@ class Integrator:
                     error = 'too large prehistory error'
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
-                    error = 'integrals differ'
+                    if board_ind != 8:
+                        error = 'integrals differ'
+                    else:
+                        print('Warning! T15 patch!')
         if error is not None:
             print(error, event_ind)
         return laser, error

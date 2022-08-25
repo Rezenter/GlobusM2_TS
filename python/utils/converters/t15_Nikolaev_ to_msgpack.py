@@ -2,8 +2,9 @@ import msgpack
 from pathlib import Path
 import json
 
-ch_count = 6
-for shotn in range(41604, 41618):
+ch_count = 5
+shots = [42130]
+for shotn in shots:
     print(shotn)
 
     #path = Path('\\\\172.16.12.130\\d\\data\\db\\plasma\\t15\\%d' % shotn)
@@ -34,13 +35,16 @@ for shotn in range(41604, 41618):
                 continue
             sp = line.split()
 
-            for ch in range(ch_count + 1):
-                event['ch'][ch].append(float(sp[1 + ch]) * 1000)
+            adc_channels = [6, 1, 2, 3, 4, 5]
+            for ch_ind in range(ch_count + 1):
+                event['ch'][ch_ind].append(float(sp[1 + adc_channels[ch_ind]]) * 1000)
             if count == 0:
                 event['t'] = int(sp[-2])
             count += 1
 
-    while len(data) < 116:
+
+    print('THE next line is BAD!!!!!!!!! \n\n\n')
+    while len(data) < 101:
         data.append({
             't': 0,
             'ch': [[0 for cell in range(1024)] for ch in range(ch_count + 1)]
@@ -53,7 +57,9 @@ for shotn in range(41604, 41618):
     with open('d:\\data\\db\\plasma\\raw\\%d\\header.json' % shotn, 'r') as file:
         header = json.load(file)
         if len(header['boards']) == 8:
-            header['boards'].append(15)
+            header['boards'].append(34)
+        elif len(header['boards']) == 9:
+            header['boards'][8] = 34
     with open('d:\\data\\db\\plasma\\raw\\%d\\header.json' % shotn, 'w') as file:
         json.dump(header, file)
 print('Code OK')

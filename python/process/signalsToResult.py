@@ -347,6 +347,8 @@ class Processor:
                 fdf_sum = 0
                 nf_sum = 0
                 for ch in range(len(channels)):
+                    #if poly == 5 and event_ind == 60:
+                    #    print('N_i %.1e, f %.1e, sigma2 %.1e' % (N_i[ch], f[ch], sigm2_i[ch]))
                     f2_sum += math.pow(f[ch], 2) / sigm2_i[ch]
                     df_sum += math.pow(df[ch], 2) / sigm2_i[ch]
                     fdf_sum += f[ch] * df[ch] / sigm2_i[ch]
@@ -356,7 +358,8 @@ class Processor:
                 A = self.absolute['A'][poly] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
-                #print('%.2e, %.2e, %.2f' % (A, n_e, E))
+                #if poly == 5 and event_ind == 60:
+                #    print('n_e %.1e, nf_sum %.1e, A %.1e, sigma_TS %.1e, E %.1e, f2_sum %.1e' % (n_e, nf_sum, self.absolute['A'][poly], self.cross_section, E, f2_sum))
 
                 mult = nf_sum / f2_sum
                 Terr2 = math.pow(A * E * n_e, -2) * f2_sum / (f2_sum * df_sum - fdf_sum)
@@ -449,7 +452,7 @@ class Processor:
                                                                       data[event_ind_aux - 1]['event_index']]['timestamp'] -
                                                                   self.result['events'][event_ind]['timestamp'])
 
-                            elif len(data) > 2 and 'error' not in data[event_ind_aux - 1] and 'error' not in data[event_ind_aux + 1]:
+                            elif len(data) > 2 and 'error' not in data[event_ind_aux - 1] and 'error' not in data[event_ind_aux + 1] and 'error' not in data[event_ind_aux - 1]['data'] and 'error' not in data[event_ind_aux + 1]['data']:
                                 we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
                                                  data[event_ind_aux - 1]['data']['vol_w']) * correction / \
                                                 (self.result['events'][data[event_ind_aux + 1]['event_index']][

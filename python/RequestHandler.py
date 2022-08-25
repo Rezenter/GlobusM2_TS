@@ -90,6 +90,7 @@ class Handler:
         self.config_path = '%s%s' % (DB_PATH, CONFIG)
         self.spectral_path = '%s%s' % (DB_PATH, SPECTRAL_CAL)
         self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
+        self.plasma_verified_path = '%s%s/' % (self.plasma_path, 'verified')
         self.raw_processor = None
         self.fine_processor = None
         self.sht = None
@@ -127,18 +128,40 @@ class Handler:
             resp['description'] = 'Directory for debug shots "%s" does not exist.' % (self.debug_path + RAW_FOLDER)
             return resp
 
-        resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
-        resp['processed'] = sorted(os.listdir(self.plasma_path + RES_FOLDER), reverse=True)
-        resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
+        #resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
+        #resp['processed'] = sorted(os.listdir(self.plasma_path + RES_FOLDER), reverse=True)
+        #resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
 
-        resp['good'] = []
+        resp['plasma'] = []
         for shotn in sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True):
             entry = {
                 '#': shotn,
             }
-            if shotn in resp['processed']:
-                entry['proc'] = True
-            resp['good'].append(entry)
+            result_folder = '%s%s/' % (self.plasma_verified_path, shotn)
+            if os.path.isdir(result_folder):
+                versions = sorted([name for name in os.listdir(result_folder) if os.path.isdir(os.path.join(result_folder, name))], reverse=True)
+                entry['versions'] = []
+                for ver in versions:
+                    with open('%s%s/result.json' % (result_folder, ver), 'r') as file:
+                        res = json.load(file)
+                        entry['versions'].append({
+                            'ver': ver,
+                            'rating': 0,
+                            'comment': '',
+                            'config': res['config_name'],
+                            'abs_cal': res['absolute_name'],
+                            'sp_cal': res['spectral_name']
+                        })
+                #load header of each entry
+
+                with open('%sdefault.txt' % result_folder, 'r') as file:
+                    entry['default_version'] = 'v%02d' % int(file.readline())
+            with open(self.plasma_path + RAW_FOLDER + shotn + '/header.json', 'r') as file:
+                header = json.load(file)
+                if 'aux' in header:
+                    entry['default_configs'] = header['aux']
+
+            resp['plasma'].append(entry)
 
         tmp = sorted(os.listdir(self.config_path), reverse=True)
         resp['config'] = []
@@ -234,53 +257,41 @@ class Handler:
         return resp
 
     def save_shot(self, req):
-        if 'is_plasma' not in req:
+        data = req['shot']
+
+        if self.raw_processor is None or self.raw_processor.is_plasma != True or \
+                self.raw_processor.shotn != int(data['shotn']):
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(data['shotn']), True, data['config_name'])
+        if len(data['events']) != len(self.raw_processor.processed):
             return {
                 'ok': False,
-                'description': '"is-plasma" field is missing from request.'
+                'description': 'Event count differs'
             }
-        if 'shotn' not in req:
-            return {
-                'ok': False,
-                'description': '"shotn" field is missing from request.'
-            }
-        if 'events' not in req:
-            return {
-                'ok': False,
-                'description': '"events" field is missing from request.'
-            }
-        if 'abs_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"abs_cal" field is missing from request.'
-            }
-        if 'sp_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"sp_cal" field is missing from request.'
-            }
-        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
-                                                      shotn=int(req['shotn']),
-                                                      is_plasma=req['is_plasma'],
-                                                      expected_id=req['sp_cal'],
-                                                      absolute_id=req['abs_cal'])
-            err = self.fine_processor.get_error()
-            if err is not None:
-                return {
-                    'ok': False,
-                    'description': err
-                }
-        ok = self.fine_processor.update_events(req['events'])
-        if ok:
-            return {
-                'ok': True
-            }
-        else:
-            return {
-                'ok': False,
-                'descrioption': self.fine_processor.get_error()
-            }
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(data['shotn']))
+        if not os.path.isdir(result_folder):
+            os.mkdir(result_folder)
+            req['default'] = True
+        version = 1
+        while os.path.isdir('%sv%02d' % (result_folder, version)):
+            version += 1
+        result_folder += 'v%02d/' % version
+        os.mkdir(result_folder)
+        with open('%sresult.%s' % (result_folder, FILE_EXT), 'w') as out_file:
+            json.dump(data, out_file, indent=1)
+        with open('%scfm_res.%s' % (result_folder, FILE_EXT), 'w') as out_file:
+            json.dump(req['cfm'], out_file, indent=1)
+        if req['default']:
+            with open('%sdefault.txt' % result_folder, 'w') as out_file:
+                out_file.write('%d' % version)
+
+        self.raw_processor.save_processed('%ssignal.%s' % (result_folder, FILE_EXT))
+
+        return {
+            'ok': True,
+            'ver': version
+        }
+
 
     def export_shot(self, req):
         if 'shot' not in req:
