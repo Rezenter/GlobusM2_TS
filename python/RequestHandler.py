@@ -28,6 +28,8 @@ HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
 CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
+CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
+CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
@@ -69,6 +71,7 @@ class Handler:
             },
             'view': {
                 'refresh': self.refresh_shots,
+                'load_version': self.get_version,
                 'get_shot': self.get_shot,
                 'get_event_sig': self.get_event_sig,
                 'get_event_raw': self.get_event_raw,
@@ -256,6 +259,37 @@ class Handler:
         resp['ok'] = True
         return resp
 
+    def get_version(self, req):
+        self.raw_processor = None
+        self.fine_processor = None
+        self.sht = None
+        resp = {}
+        if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        if 'ver' not in req:
+            resp['ok'] = False
+            resp['description'] = '"ver" field is missing from request.'
+            return resp
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(req['shotn']))
+        if not os.path.isdir(result_folder):
+            resp['ok'] = False
+            resp['description'] = 'Verified shotn "%s" does not exist' % req['shotn']
+        result_folder = '%s%s/' % (result_folder, req['ver'])
+        if not os.path.isdir(result_folder):
+            resp['ok'] = False
+            resp['description'] = 'Verified shotn "%s" with version "%s" does not exist' % (req['shotn'], req['ver'])
+
+        with open('%sresult.%s' % (result_folder, FILE_EXT), 'r') as file:
+            resp['res'] = json.load(file)
+        with open('%scfm_res.%s' % (result_folder, FILE_EXT), 'r') as file:
+            resp['cfm'] = json.load(file)
+
+        resp['ok'] = True
+        return resp
+
     def save_shot(self, req):
         data = req['shot']
 
@@ -277,21 +311,22 @@ class Handler:
             version += 1
         result_folder += 'v%02d/' % version
         os.mkdir(result_folder)
+        data['version'] = version
         with open('%sresult.%s' % (result_folder, FILE_EXT), 'w') as out_file:
             json.dump(data, out_file, indent=1)
+        req['cfm']['version'] = version
         with open('%scfm_res.%s' % (result_folder, FILE_EXT), 'w') as out_file:
             json.dump(req['cfm'], out_file, indent=1)
         if req['default']:
-            with open('%sdefault.txt' % result_folder, 'w') as out_file:
+            with open('%s%05d/default.txt' % (self.plasma_verified_path, int(data['shotn'])), 'w') as out_file:
                 out_file.write('%d' % version)
 
-        self.raw_processor.save_processed('%ssignal.%s' % (result_folder, FILE_EXT))
+        self.raw_processor.save_processed('%ssignal.%s' % (result_folder, FILE_EXT), version)
 
         return {
             'ok': True,
             'ver': version
         }
-
 
     def export_shot(self, req):
         if 'shot' not in req:
@@ -888,24 +923,43 @@ class Handler:
                 'ok': False,
                 'description': '"shotn" field is missing from request.'
             }
-        return requests.post(CFM_ADDR, json={
-            'changedPropIds': ["btn-2.n_clicks"],
-            'inputs': [
-                {
-                    'id': "btn-2",
-                    'property': "n_clicks",
-                    'value': 1
+
+        filename = '%smcc_%s.json' % (CFM_DB, req['shotn'])
+        if not os.path.isfile(filename):
+            filename = '%smcc_%s.json' % (CFM_DB_NEW, req['shotn'])
+            if not os.path.isfile(filename):
+                serv_resp = requests.post(CFM_ADDR, json={
+                    'changedPropIds': ["btn-2.n_clicks"],
+                    'inputs': [
+                        {
+                            'id': "btn-2",
+                            'property': "n_clicks",
+                            'value': 1
+                        }
+                    ],
+                    'output': "my-output1.children",
+                    'outputs': {
+                        'id': "my-output1",
+                        'property': "children"
+                    },
+                    'state': [
+                        {
+                            'id': "shot_number_input",
+                            'property': "value",
+                            'value': req['shotn']}
+                    ]
+                })
+
+                if serv_resp.json()['response']['my-output1']['children'].startswith(' Good! '):
+                    return {
+                        'ok': True
+                    }
+                return {
+                    'ok': False,
+                    'description': serv_resp.json()['response']['children']
                 }
-            ],
-            'output': "my-output1.children",
-            'outputs': {
-                'id': "my-output1",
-                'property': "children"
-            },
-            'state': [
-                {
-                    'id': "shot_number_input",
-                    'property': "value",
-                    'value': req['shotn']}
-            ]
-        }).text
+        return {
+            'ok': True
+        }
+
+

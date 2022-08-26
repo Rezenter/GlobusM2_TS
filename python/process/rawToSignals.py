@@ -220,7 +220,7 @@ class Integrator:
 
         self.save_processed()
 
-    def save_processed(self, filepath=''):
+    def save_processed(self, filepath='', version=-1):
         print('Saving processed data...')
         if filepath == '':
             filepath = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
@@ -232,6 +232,8 @@ class Integrator:
                 'config': self.config,
                 'isPlasma': self.is_plasma
             }
+            if version != -1:
+                common['version'] = version
             json.dump(common, file, indent=1)
 
             file.write(', \n "data": [')
