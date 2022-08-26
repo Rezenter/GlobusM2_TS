@@ -1906,7 +1906,6 @@
                         if(resp.ok){
                             Object.assign(this.m_currentShot, resp.res);
                             this.m_currentShot.shotn = shotn;
-                            Object.assign(this.m_current_ccm, resp.cfm);
                             this.ShotLoaded();
                         }
                     }.bind(this)
@@ -1955,6 +1954,9 @@
 
             this.LoadSHT();
 
+            if(this.m_current_ccm !== {}){
+
+            }
             this.m_ccm_surf_chart.options.data = [];
             this.DrawCCM();
             this.UpdateCCMPopup();

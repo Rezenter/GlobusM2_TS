@@ -3,6 +3,7 @@ import os
 import logging
 import time
 import requests
+import ijson
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -21,7 +22,7 @@ DEBUG_SHOTS = 'debug/'
 CONFIG = 'config/'
 SPECTRAL_CAL = 'calibration/expected/'
 ABS_CAL = 'calibration/abs/processed/'
-#EXPECTED_FOLDER = 'calibration/expected/'
+EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
@@ -192,27 +193,15 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
-        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
-            return {
-                'ok': False,
-                'description': 'server has another shotn loaded'
-            }
-        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another config'
-            }
-        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another spectral calibration'
-            }
-        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another absolute calibration'
-            }
-        expected = self.fine_processor.expected
+
+        expected_full_name = '%s%s%s.%s' % (DB_PATH, EXPECTED_FOLDER, req['shot']['spectral_name'], FILE_EXT)
+        expected = {}
+        with open(expected_full_name, 'r') as expected_file:
+            obj = ijson.kvitems(expected_file, '', use_float=True)
+            for k, v in obj:
+                expected[k] = v
+        expected['modification'] = os.path.getmtime(expected_full_name)
+
         expected['ok'] = True
         resp = expected
         return resp
@@ -284,8 +273,6 @@ class Handler:
 
         with open('%sresult.%s' % (result_folder, FILE_EXT), 'r') as file:
             resp['res'] = json.load(file)
-        with open('%scfm_res.%s' % (result_folder, FILE_EXT), 'r') as file:
-            resp['cfm'] = json.load(file)
 
         resp['ok'] = True
         return resp
@@ -601,6 +588,23 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
+        if 'start' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'stop' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'r' not in req:
+            resp['ok'] = False
+            resp['description'] = '"r" field is missing from request.'
+            return resp
+
+        if 'version' in req['shot']:
+            with open('%s%s/v%02d/cfm_res.%s' % (self.plasma_verified_path, req['shot']['shotn'], req['shot']['version'], FILE_EXT), 'r') as file:
+                return json.load(file)
+
         if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
             return {
                 'ok': False,
@@ -621,18 +625,7 @@ class Handler:
                 'ok': False,
                 'description': 'server has shot loaded with another absolute calibration'
             }
-        if 'start' not in req:
-            resp['ok'] = False
-            resp['description'] = '"start" field is missing from request.'
-            return resp
-        if 'stop' not in req:
-            resp['ok'] = False
-            resp['description'] = '"start" field is missing from request.'
-            return resp
-        if 'r' not in req:
-            resp['ok'] = False
-            resp['description'] = '"r" field is missing from request.'
-            return resp
+
         stored_calc = ccm_energy.StoredCalculator(self.fine_processor.shotn, self.fine_processor.get_data())
         if stored_calc.error is not None:
             return {
