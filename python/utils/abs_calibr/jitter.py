@@ -2,8 +2,8 @@ import json
 import ijson
 import statistics
 
-shotn = 280
-poly_ind = 5
+shotn = 521
+poly_ind = 0
 
 with open('d:/data/db/debug/signal/%05d.json' % shotn, 'r') as data_fp:
     data = json.load(data_fp)

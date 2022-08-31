@@ -1902,7 +1902,7 @@
                     ver: this.m_plasma_shots[shot_ind].versions[ver_ind].ver
                 },
                     function (resp) {
-                        console.log(resp);
+                        //console.log(resp);
                         if(resp.ok){
                             Object.assign(this.m_currentShot, resp.res);
                             this.m_currentShot.shotn = shotn;
@@ -2214,7 +2214,6 @@
                         Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2,
                             this.m_expected.T_arr[this.m_expected.T_arr.length - 1]);
                     this.m_fitting_chart.render();
-
                 }.bind(this)
             );
         };
@@ -2232,6 +2231,7 @@
                 }
                 , function (resp) {
                     Object.assign(this.m_current_event_raw, resp);
+                    //console.log(this.m_current_event_raw);
                     let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
                     this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
                     this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
