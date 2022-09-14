@@ -1,7 +1,7 @@
 import json
 import statistics
 
-shotn = 524
+shotn = 530
 poly_count = 11
 
 with open('d:/data/db/debug/signal/%05d.json' % shotn, 'r') as data_fp:
@@ -28,5 +28,13 @@ count = 1
 for poly in res:
     poly['mean'] = statistics.mean(poly['vals'])
     poly['std'] = statistics.stdev(poly['vals'])
-    print('poly %d: stray = %d ph.el., std = %d, min-max: %d-%d' % (count, poly['mean'], poly['std'], poly['min'], poly['max']))
+    print('poly %d: stray = %d±%d, min-max: %d-%d' % (count, poly['mean'], poly['std'], poly['min'], poly['max']))
     count += 1
+'''
+print('\n\n\n')
+
+
+poly_ind = '3'
+for event in data['data']:
+    print('%.2f %.2f' % (event['poly'][poly_ind]['ch'][0]['ph_el'], event['laser']['ave']['int']))
+'''

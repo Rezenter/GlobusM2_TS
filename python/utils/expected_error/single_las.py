@@ -5,14 +5,16 @@ import json
 expected_name = '2021.05.27_1047.6_zs10'
 expected_name = '2021.05.27_1064.4_zs10'
 expected_name = '2021.05.27_1047.6'
+expected_name = '2022.09.01'
 #expected_name = '2021.05.27_1064.4'
 
 
-laser_energy = 1  # J
+laser_wl = 1064.5
+laser_energy = 1.9  # J
 electron_density = 5e19  # local density m-3
 abs_calibration = 460600000000000 * 0.125  # value for poly_ind 4
-poly_ind = 4
-channels = [0, 2, 3, 4]
+poly_ind = 1
+channels = [0, 1, 2, 3, 4]
 
 const_error = 6  # %. Error from APD temperature and spectral calibration
 excess_noise = 4
@@ -25,17 +27,17 @@ cross_section = (8 * math.pi / 3) * \
 with open('%scalibration/expected/%s.json' % (db_path, expected_name), 'r') as file:
     expected = json.load(file)
 
-print('laser = %.1f' % expected['lambda_0'])
-print('T start = %.1f' % expected['T_start'])
-print('T stop = %.1f' % expected['T_stop'])
-print('T mult = %.1f' % expected['T_mult'])
+print('laser = %.1f' % laser_wl)
+print('T start = %.1f' % expected['Te_low'])
+print('T stop = %.1f' % expected['Te_high'])
+print('T mult = %.1f' % expected['Te_mult'])
 
 with open('out/info_%s.json' % expected_name, 'w') as file:
     json.dump({
-        'laser wl': expected['lambda_0'],
-        'T start': expected['T_start'],
-        'T stop': expected['T_stop'],
-        'T mult': expected['T_mult'],
+        'laser wl': laser_wl,
+        'T start': expected['Te_low'],
+        'T stop': expected['Te_high'],
+        'T mult': expected['Te_mult'],
         'expected name': expected_name,
         'laser energy': laser_energy,
         'n_e': '%.1e' % electron_density,

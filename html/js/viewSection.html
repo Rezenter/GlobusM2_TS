@@ -1023,8 +1023,10 @@
                 shared: true,
                 contentFormatter: function(e){
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
+                    //text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
+                    //    (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.selectors.abs_mult.val()).toFixed(0) + ' [J]</p>';
                     text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
-                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.selectors.abs_mult.val()).toFixed(0) + ' [J]</p>';
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err).toFixed(0) + ' [J]</p>';
                     text += '<p style="color: #000000;">Plasma volume = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.vol.toFixed(3) + ' [m<sup>3</sup>]</p>';
                     text += '<p style="color: #000000;">Separatrix area = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.area.toFixed(3) + ' [m<sup>2</sup>]</p>';
                     return text;
@@ -1923,6 +1925,9 @@
                     function (resp) {
                         Object.assign(this.m_currentShot, resp);
                         this.m_currentShot.shotn = shotn;
+                        this.m_currentShot.override = {
+                            'abs_mult': 1.0
+                        };
                         this.ShotLoaded();
                     }.bind(this)
                 );
@@ -1978,7 +1983,7 @@
 
         this.MainChartsSetPoint = function(event_ind, poly_ind){
             let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
-            let mult = this.selectors.abs_mult.val();
+            //let mult = this.selectors.abs_mult.val();
             if(this.m_currentShot.events[event_ind].error !== null ||
                     this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
                     this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
@@ -2054,14 +2059,17 @@
                 this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
                     }
                 );
                 this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
                     }
                 );
 
@@ -2081,14 +2089,17 @@
                 this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
                     }
                 );
                 this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
                     }
                 );
             }
@@ -2358,7 +2369,7 @@
                     shot: this.m_currentShot,
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
-                    correction: this.selectors.abs_mult.val(),
+                    //correction: this.selectors.abs_mult.val(),
                     aux: this.m_current_ccm.data,
                     old: $('#export_old')[0].checked
                 }, function (resp) {
@@ -2367,7 +2378,7 @@
                         spectral_name: this.m_currentShot.spectral_name,
                         absolute_name: this.m_currentShot.absolute_name,
                         process_timestamp: this.m_currentShot.timestamp,
-                        absolute_correction: this.selectors.abs_mult.val()
+                        absolute_correction: this.m_currentShot.override.abs_mult
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
 
@@ -2798,7 +2809,7 @@
             let w_points = [];
             let w_errors = [];
             if(this.m_current_ccm.ok){
-                let mult = this.selectors.abs_mult.val();
+                //let mult = this.selectors.abs_mult.val();
                 for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
                     if('error' in this.m_current_ccm.data[arr_ind]){
                         nl_points.push({
@@ -2836,49 +2847,69 @@
                     } else {
                         nl_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.nl * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.nl * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.nl,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         nl_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            /*
                             y: [
                                 (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
                                 mult
                             ]
+                            */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err,
+                                this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err
+                            ]
                         });
 
                         nl_eq_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.nl_eq * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.nl_eq * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.nl_eq,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         nl_eq_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: [
+                            /*y: [
                                 (this.m_current_ccm.data[arr_ind].data.nl_eq - this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.nl_eq + this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
                                 mult
                             ]
+
+                             */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.nl_eq - this.m_current_ccm.data[arr_ind].data.nl_eq_err,
+                                this.m_current_ccm.data[arr_ind].data.nl_eq + this.m_current_ccm.data[arr_ind].data.nl_eq_err
+                            ]
                         });
 
                         w_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.vol_w,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         w_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: [
+                            /*y: [
                                 (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
                                 mult
+                            ]
+                            */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err,
+                                this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err
                             ]
                         });
                     }
@@ -3004,7 +3035,8 @@
             let points = [];
             for(let arr_ind = 0; arr_ind < this.m_current_ccm.data[index].data.nl_profile.length; arr_ind++){
                 points.push({
-                    x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne * this.selectors.abs_mult.val(),
+                    //x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne * this.selectors.abs_mult.val(),
+                    x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne,
                     y: this.m_current_ccm.data[index].data.nl_profile[arr_ind].z,
                     surf: this.m_current_ccm.data[index].data.nl_profile[arr_ind].surf_ind
                 });
@@ -3363,8 +3395,35 @@
         };
 
         this.UpdateDens = function(){
+            let mult = this.selectors.abs_mult.val() / this.m_currentShot.override.abs_mult;
+            this.m_currentShot.override.abs_mult = this.selectors.abs_mult.val();
+
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if (this.m_currentShot.events[event_ind].error === null) {
+                    for(let poly_ind = 0; poly_ind < this.m_currentShot.events[event_ind]['T_e'].length; poly_ind++){
+                        if(this.m_currentShot.events[event_ind].T_e[poly_ind].error === null){
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n *= mult;
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n_err *= mult;
+                        }
+                    }
+                }
+            }
+
             this.selectors.ccmPopup.setAttribute('hidden', true);
             this.DrawMain();
+
+            if(this.m_current_ccm.ok){
+                for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
+                    if(! 'error' in this.m_current_ccm.data[arr_ind]){
+                        this.m_current_ccm.data[arr_ind].data.nl *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.vol_w *= mult;
+                        this.m_current_ccm.data[arr_ind].data.w_err *= mult;
+                    }
+                }
+            }
             this.DrawCCM();
         };
 
