@@ -1926,11 +1926,25 @@
                         Object.assign(this.m_currentShot, resp);
                         this.m_currentShot.shotn = shotn;
                         this.m_currentShot.override = {
-                            'abs_mult': 1.0
+                            'abs_mult': this.selectors.abs_mult.val()
                         };
+                        this.updateMainDens(this.m_currentShot.override.abs_mult);
                         this.ShotLoaded();
                     }.bind(this)
                 );
+            }
+        };
+
+        this.updateMainDens = function(mult){
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if (this.m_currentShot.events[event_ind].error === null) {
+                    for(let poly_ind = 0; poly_ind < this.m_currentShot.events[event_ind]['T_e'].length; poly_ind++){
+                        if(this.m_currentShot.events[event_ind].T_e[poly_ind].error === null){
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n *= mult;
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n_err *= mult;
+                        }
+                    }
+                }
             }
         };
 
@@ -2793,13 +2807,29 @@
                     this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
                         this.m_currentShot.shotn + this.m_defaults.w_evo_title;
                     if(this.m_current_ccm.ok){
-                        this.DrawCCM();
+                        this.UpdateCCMDens(this.m_currentShot.override.abs_mult);
                     }else{
                         alert('CFM data error! See console for details.');
                     }
                 }.bind(this)
             );
         };
+
+        this.UpdateCCMDens = function(mult){
+            if(this.m_current_ccm.ok){
+                for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
+                    if(!('error' in this.m_current_ccm.data[arr_ind])){
+                        this.m_current_ccm.data[arr_ind].data.nl *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.vol_w *= mult;
+                        this.m_current_ccm.data[arr_ind].data.w_err *= mult;
+                    }
+                }
+            }
+            this.DrawCCM();
+        }
 
         this.DrawCCM = function(){
             let nl_points = [];
@@ -3397,34 +3427,11 @@
         this.UpdateDens = function(){
             let mult = this.selectors.abs_mult.val() / this.m_currentShot.override.abs_mult;
             this.m_currentShot.override.abs_mult = this.selectors.abs_mult.val();
-
-            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
-                if (this.m_currentShot.events[event_ind].error === null) {
-                    for(let poly_ind = 0; poly_ind < this.m_currentShot.events[event_ind]['T_e'].length; poly_ind++){
-                        if(this.m_currentShot.events[event_ind].T_e[poly_ind].error === null){
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n *= mult;
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n_err *= mult;
-                        }
-                    }
-                }
-            }
+            this.updateMainDens(mult);
 
             this.selectors.ccmPopup.setAttribute('hidden', true);
             this.DrawMain();
-
-            if(this.m_current_ccm.ok){
-                for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
-                    if(! 'error' in this.m_current_ccm.data[arr_ind]){
-                        this.m_current_ccm.data[arr_ind].data.nl *= mult;
-                        this.m_current_ccm.data[arr_ind].data.nl_err *= mult;
-                        this.m_current_ccm.data[arr_ind].data.nl_eq *= mult;
-                        this.m_current_ccm.data[arr_ind].data.nl_eq_err *= mult;
-                        this.m_current_ccm.data[arr_ind].data.vol_w *= mult;
-                        this.m_current_ccm.data[arr_ind].data.w_err *= mult;
-                    }
-                }
-            }
-            this.DrawCCM();
+            this.UpdateCCMDens(mult);
         };
 
         this.Filter = function(list, request){
