@@ -1904,11 +1904,21 @@
                     ver: this.m_plasma_shots[shot_ind].versions[ver_ind].ver
                 },
                     function (resp) {
-                        //console.log(resp);
                         if(resp.ok){
                             Object.assign(this.m_currentShot, resp.res);
                             this.m_currentShot.shotn = shotn;
+
+                            this.selectors.abs_mult.off();
+                            this.selectors.abs_mult.val(this.m_currentShot.override.abs_mult);
+                            this.selectors.abs_mult.on('change', this, this.UpdateDens.bind(this));
+
                             this.ShotLoaded();
+                            this.m_timestamp_chart.navigator.slider.set("maximum", this.m_currentShot.override.t_stop);
+                            this.m_timestamp_chart.navigator.slider.set("minimum", this.m_currentShot.override.t_start);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
                         }
                     }.bind(this)
                 );
@@ -2358,6 +2368,8 @@
         };
 
         this.Save = function(){
+            this.m_currentShot.override.t_start = this.m_timestamp_chart.navigator.slider.get("minimum");
+            this.m_currentShot.override.t_stop = this.m_timestamp_chart.navigator.slider.get("maximum");
             this.Request(
                 {
                     reqtype: 'save_shot',
@@ -2807,7 +2819,11 @@
                     this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
                         this.m_currentShot.shotn + this.m_defaults.w_evo_title;
                     if(this.m_current_ccm.ok){
-                        this.UpdateCCMDens(this.m_currentShot.override.abs_mult);
+                        if(! ('version' in this.m_current_ccm)){
+                            this.UpdateCCMDens(this.m_currentShot.override.abs_mult);
+                        }else{
+                            this.DrawCCM();
+                        }
                     }else{
                         alert('CFM data error! See console for details.');
                     }

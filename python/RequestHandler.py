@@ -86,7 +86,8 @@ class Handler:
                 'calc_cfm': self.calc_cfm
             },
             'db': {
-                'get_shot': self.get_db_shot
+                'get_shot': self.get_db_shot,
+                'get_shot_verified': self.get_db_shot_ver
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -602,6 +603,10 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
+        if 'version' in req['shot']:
+            with open('%s%s/v%02d/cfm_res.%s' % (self.plasma_verified_path, req['shot']['shotn'], req['shot']['version'], FILE_EXT), 'r') as file:
+                return json.load(file)
+
         if 'start' not in req:
             resp['ok'] = False
             resp['description'] = '"start" field is missing from request.'
@@ -614,10 +619,6 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"r" field is missing from request.'
             return resp
-
-        if 'version' in req['shot']:
-            with open('%s%s/v%02d/cfm_res.%s' % (self.plasma_verified_path, req['shot']['shotn'], req['shot']['version'], FILE_EXT), 'r') as file:
-                return json.load(file)
 
         if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
             return {
@@ -900,6 +901,44 @@ class Handler:
                 'aux': data
             }
         return data
+
+    def get_db_shot_ver(self, req):
+
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+        if not isinstance(req['shotn'], int):
+            return {
+                'ok': False,
+                'description': '"%s" is not a valid integer shotnumber.' % req['shotn']
+            }
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(req['shotn']))
+        if not os.path.isdir(result_folder):
+            return {
+                'ok': False,
+                'description': 'Verified shotn "%s" does not exist' % req['shotn']
+            }
+
+        if 'ver' not in req:
+            req['ver'] = -1
+            with open('%sdefault.txt' % result_folder, 'r') as file:
+                req['ver'] = 'v%02d' % int(file.readline())
+            if req['ver'] == -1:
+                return {
+                    'ok': False,
+                    'description': 'Corrupted default version'
+                }
+
+        resp = {
+            'shot': self.get_version(req)['res']
+        }
+        if not resp['shot']['ok']:
+            return resp
+        resp['cfm'] = self.load_ccm(resp)
+        return resp
 
     def get_configs(self, req):
         resp = {}
