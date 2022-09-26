@@ -124,6 +124,8 @@
             ">
             <button class="btn btn-success" id="shotModal_button">Load Shot</button>
             <button class="btn btn-success glyphicon glyphicon-cloud-upload" id="save_shot">Save to DB</button>
+            <label for="set_default">set as default</label>
+                <input type="checkbox" id="set_default">
             <button class="btn btn-success glyphicon glyphicon-download" id="export">Export</button>
             <label for="export_old">Include old format?</label>
                 <input type="checkbox" id="export_old">
@@ -218,32 +220,44 @@
     </div>
 
     <div class="modal fade" id="shotSelectModal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog" role="document" style="width: 900px;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="ModalLabel">Select tokamak shot</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
+                    <h4 class="modal-title" id="ModalLabel">Select tokamak shot</h4>
                 </div>
                 <div class="modal-body">
-                    <ul>
-                        <li>
-                            <label for="shot_select">Shot №:</label><select id="shot_select"></select>
-                        </li>
-                        <li>
-                            <label for="viewerConfig_select">Configuration:</label>
-                                <select id="viewerConfig_select" class="configs"></select>
-                        </li>
-                        <li>
-                            <label for="viewerSpectral_select">Spectral calibration:</label>
-                                <select id="viewerSpectral_select" class="sp_calibrations"></select>
-                        </li>
-                        <li>
-                            <label for="viewerAbs_select">Absolute calibration:</label>
-                                <select id="viewerAbs_select" class="abs_calibrations"></select>
-                        </li>
-                    </ul>
+                        <div class="row align-items-center">
+                            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                <input class="form-control" style="width: 100%;" id="shot_select" type="number" placeholder="Shot №">
+                            </div>
+                            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                <ul class="list-group" id="shotn_list" style="width: 100%; max-height: 300px; margin-bottom: 10px; overflow-x:clip; overflow-y:scroll; -webkit-overflow-scrolling: touch;">
+                                </ul>
+                            </div>
+                            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                <ul class="list-group" id="version_list" style="width: 100%; max-height: 300px; margin-bottom: 10px; overflow-x:clip; overflow-y:scroll; -webkit-overflow-scrolling: touch;">
+                                </ul>
+                            </div>
+                            <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                <ul style="width: 100%;">
+                                    <li>
+                                        <label for="viewerConfig_select">Configuration:</label>
+                                            <select id="viewerConfig_select" class="configs"></select>
+                                    </li>
+                                    <li>
+                                        <label for="viewerSpectral_select">Spectral calibration:</label>
+                                            <select id="viewerSpectral_select" class="sp_calibrations"></select>
+                                    </li>
+                                    <li>
+                                        <label for="viewerAbs_select">Absolute calibration:</label>
+                                            <select id="viewerAbs_select" class="abs_calibrations"></select>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -500,7 +514,8 @@
             chi_count: $('#chi_pointCount'),
             chi_offscale: $('#chi_offscale'),
             poly_radius: $('.poly_radius'),
-            shotn: $('#shot_select'),
+            shotn: $('#shotn_list'),
+            version_list: $('#version_list'),
             chord_time: $('#chord_time'),
             chord_length: $('#chord_len'),
             chord_nl: $('#chord_nl'),
@@ -916,6 +931,16 @@
             toolTip: {
                 shared: true,
                 contentFormatter: function(e){
+                    let ind = -1;
+                    for(let i = 0; i < e.entries.length; i++){
+                        if('ccm_ind' in e.entries[i].dataPoint){
+                            ind = i;
+                            break;
+                        }
+                    }
+                    if(ind === -1){
+                        return null;
+                    }
                     let mult = this.selectors.abs_mult.val();
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
                     let chord_length = (1e-2 * (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.nl_profile[0].z -
@@ -998,8 +1023,10 @@
                 shared: true,
                 contentFormatter: function(e){
                     let text = '<p>time = ' + e.entries[0].dataPoint.x.toFixed(1) + ' ms</p>';
+                    //text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
+                    //    (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.selectors.abs_mult.val()).toFixed(0) + ' [J]</p>';
                     text += '<p style="color:' + e.entries[0].dataSeries.color + ';">W<sub>e</sub> = ' + e.entries[0].dataPoint.y.toFixed(0) + ' ± ' +
-                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err * this.selectors.abs_mult.val()).toFixed(0) + ' [J]</p>';
+                        (this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.w_err).toFixed(0) + ' [J]</p>';
                     text += '<p style="color: #000000;">Plasma volume = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.vol.toFixed(3) + ' [m<sup>3</sup>]</p>';
                     text += '<p style="color: #000000;">Separatrix area = ' + this.m_current_ccm.data[e.entries[0].dataPoint.ccm_ind].data.area.toFixed(3) + ' [m<sup>2</sup>]</p>';
                     return text;
@@ -1586,7 +1613,7 @@
                 }
                 , function (resp) {
                     this.m_plasma_shots = resp['plasma'];
-                    this.m_debug_shots = resp['debug'];
+                    //this.m_debug_shots = resp['debug'];
                     this.m_config_list = resp['config'];
                     this.m_spectralConf_list = resp['spectral_cal'];
                     this.m_absConf_list = resp['abs_cal'];
@@ -1597,10 +1624,40 @@
 
         this.UpdateShotSelect = function() {
             let options = [];
-            this.m_plasma_shots.forEach(shot => options.push("<option>" + shot + "</option>"));
+            $("#shotn_list button").remove();
+            $("#version_list button").remove();
+            this.m_plasma_shots.forEach(shot => options.push("<button type=\"button\" class=\"list-group-item list-group-item-action\">" + shot['#'] + "</button>"));
             this.selectors.shotn.html(options);
+            $("#shotn_list button").on('click', function(ev){
+                if(!$(ev.target).hasClass('active')){
+                    $("#shotn_list .active").toggleClass("active");
+                    $(ev.target).toggleClass("active");
 
-            //options = ['<option>2020.12.10</option>'];
+                    let versions = [];
+                    let active_ver_ind = -1;
+                    if('versions' in this.m_plasma_shots[$(ev.target).index()]){
+                        active_ver_ind = this.m_plasma_shots[$(ev.target).index()].versions.length
+                        for(let ver_ind = 0; ver_ind < this.m_plasma_shots[$(ev.target).index()].versions.length; ver_ind++){
+                            versions.push("<button type=\"button\" class=\"list-group-item list-group-item-action\">" + this.m_plasma_shots[$(ev.target).index()].versions[ver_ind].ver + "</button>");
+                            if(this.m_plasma_shots[$(ev.target).index()].versions[ver_ind].ver === this.m_plasma_shots[$(ev.target).index()].default_version){
+                                active_ver_ind = ver_ind;
+                            }
+                        }
+                    }
+                    versions.push("<button type=\"button\" class=\"list-group-item list-group-item-action\"> + </button>");
+                    this.selectors.version_list.html(versions);
+                    $("#version_list button").get(active_ver_ind).classList.add("active");
+                    this.SelectVersion(active_ver_ind);
+                    $("#version_list button").on('click', function(ev) {
+                        if(!$(ev.target).hasClass('active')) {
+                            $("#version_list .active").toggleClass("active");
+                            $(ev.target).toggleClass("active");
+                            this.SelectVersion($(ev.target).index());
+                        }
+                    }.bind(this));
+                }
+            }.bind(this));
+
             options = [];
             this.m_config_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('.configs').html(options);
@@ -1612,6 +1669,26 @@
             options = [];
             this.m_spectralConf_list.forEach(entry => options.push("<option>" + entry + "</option>"));
             $('.sp_calibrations').html(options);
+        };
+
+        this.SelectVersion = function(ver_ind) {
+            let shot_ind = $("#shotn_list .active").index();
+
+            if('versions' in this.m_plasma_shots[shot_ind] && this.m_plasma_shots[shot_ind].versions.length > ver_ind && ver_ind >= 0) {
+                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].config);
+                $('#viewerConfig_select').prop('disabled', true);
+                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].sp_cal);
+                $('#viewerSpectral_select').prop('disabled', true);
+                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].abs_cal);
+                $('#viewerAbs_select').prop('disabled', true);
+            }else{
+                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].default_configs.config);
+                $('#viewerConfig_select').prop('disabled', false);
+                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].default_configs.spectral_cal);
+                $('#viewerSpectral_select').prop('disabled', false);
+                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].default_configs.abs_cal);
+                $('#viewerAbs_select').prop('disabled', false);
+            }
         };
 
         this.DrawMain = function(){
@@ -1806,14 +1883,47 @@
         };
 
         this.Select = function(){
-            let shotn = this.selectors.shotn.val();
             $('#shotSelectModal').modal('hide');
             for (let member in this.m_currentShot) delete this.m_currentShot[member];
             for (let member in this.m_current_ccm) delete this.m_current_ccm[member];
             for (let member in this.m_current_sht) delete this.m_current_ccm[member];
+            for (let member in this.m_current_event_raw) delete this.m_current_event_raw[member];
+            for (let member in this.m_current_event_sig) delete this.m_current_event_sig[member];
+            for (let member in this.m_expected) delete this.m_expected[member];
+            for (let member in this.m_current_chord) delete this.m_current_chord[member];
 
+            let shot_ind = $("#shotn_list .active").index();
+            let ver_ind = $("#version_list .active").index();
+            let shotn = this.m_plasma_shots[shot_ind]['#'];
 
-            this.Request(
+            if('versions' in this.m_plasma_shots[shot_ind] && this.m_plasma_shots[shot_ind].versions.length > ver_ind) {
+                this.Request(
+                {
+                    reqtype: 'load_version',
+                    shotn: shotn,
+                    ver: this.m_plasma_shots[shot_ind].versions[ver_ind].ver
+                },
+                    function (resp) {
+                        if(resp.ok){
+                            Object.assign(this.m_currentShot, resp.res);
+                            this.m_currentShot.shotn = shotn;
+
+                            this.selectors.abs_mult.off();
+                            this.selectors.abs_mult.val(this.m_currentShot.override.abs_mult);
+                            this.selectors.abs_mult.on('change', this, this.UpdateDens.bind(this));
+
+                            this.ShotLoaded();
+                            this.m_timestamp_chart.navigator.slider.set("maximum", this.m_currentShot.override.t_stop);
+                            this.m_timestamp_chart.navigator.slider.set("minimum", this.m_currentShot.override.t_start);
+                            this.RangeChanged({
+                                minimum: this.m_timestamp_chart.navigator.slider.get("minimum"),
+                                maximum: this.m_timestamp_chart.navigator.slider.get("maximum")
+                            });
+                        }
+                    }.bind(this)
+                );
+            }else{
+                this.Request(
                 {
                     reqtype: 'get_shot',
                     is_plasma: true,
@@ -1821,45 +1931,83 @@
                     config: $('#viewerConfig_select').val(),
                     abs_cal: $('#viewerAbs_select').val(),
                     sp_cal: $('#viewerSpectral_select').val()
-                }, function (resp) {
-                    //console.log(resp);
-                    this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.timestamp_title;
-                    this.m_radius_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.radius_title;
-                    this.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.T_evo_title;
-                    this.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.T_prof_title;
-                    this.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.n_evo_title;
-                    this.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
-                        shotn + this.m_defaults.n_prof_title;
+                },
+                    function (resp) {
+                        Object.assign(this.m_currentShot, resp);
+                        this.m_currentShot.shotn = shotn;
+                        this.m_currentShot.override = {
+                            'abs_mult': this.selectors.abs_mult.val()
+                        };
+                        this.updateMainDens(this.m_currentShot.override.abs_mult);
+                        this.ShotLoaded();
+                    }.bind(this)
+                );
+            }
+        };
 
-                    Object.assign(this.m_currentShot, resp);
-                    this.m_currentShot.shotn = shotn;
-                    this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
-                    $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
+        this.updateMainDens = function(mult){
+            for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
+                if (this.m_currentShot.events[event_ind].error === null) {
+                    for(let poly_ind = 0; poly_ind < this.m_currentShot.events[event_ind]['T_e'].length; poly_ind++){
+                        if(this.m_currentShot.events[event_ind].T_e[poly_ind].error === null){
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n *= mult;
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n_err *= mult;
+                        }
+                    }
+                }
+            }
+        };
 
-                    this.DrawTimeline();
-                    this.DrawMain();
-                    this.DrawPoloidal();
+        this.ShotLoaded = function(){
+            this.m_timestamp_chart.options.charts[0].title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.timestamp_title;
+            this.m_radius_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.radius_title;
+            this.m_T_evo_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.T_evo_title;
+            this.m_T_profile_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.T_prof_title;
+            this.m_n_evo_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.n_evo_title;
+            this.m_n_profile_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.n_prof_title;
+            this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
+                this.m_currentShot.shotn + this.m_defaults.nl_evo_title;
 
+            this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
+            $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
+
+            this.DrawTimeline();
+            this.DrawMain();
+            this.DrawPoloidal();
+
+            this.LoadSHT();
+
+            if(this.m_current_ccm !== {}){
+
+            }
+            this.m_ccm_surf_chart.options.data = [];
+            this.DrawCCM();
+            this.UpdateCCMPopup();
+
+            this.Request({
+                reqtype: 'calc_cfm',
+                shotn: this.m_currentShot.shotn
+            }, function(resp){
+                if(resp.ok){
+                    this.LoadCCM();
                     this.LoadSHT();
+                }
+            }.bind(this))
 
-                    this.m_ccm_surf_chart.options.data = [];
 
-                    this.DrawCCM();
-                    this.UpdateCCMPopup();
 
-                    this.Draw3D();
-                }.bind(this)
-            );
+            //this.Draw3D();
         };
 
         this.MainChartsSetPoint = function(event_ind, poly_ind){
             let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
-            let mult = this.selectors.abs_mult.val();
+            //let mult = this.selectors.abs_mult.val();
             if(this.m_currentShot.events[event_ind].error !== null ||
                     this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
                     this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
@@ -1935,14 +2083,17 @@
                 this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
                     }
                 );
                 this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
                     }
                 );
 
@@ -1962,14 +2113,17 @@
                 this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
                     }
                 );
                 this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                            (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
+                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
                     }
                 );
             }
@@ -2095,7 +2249,6 @@
                         Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2,
                             this.m_expected.T_arr[this.m_expected.T_arr.length - 1]);
                     this.m_fitting_chart.render();
-
                 }.bind(this)
             );
         };
@@ -2113,6 +2266,7 @@
                 }
                 , function (resp) {
                     Object.assign(this.m_current_event_raw, resp);
+                    //console.log(this.m_current_event_raw);
                     let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
                     this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
                     this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
@@ -2214,12 +2368,20 @@
         };
 
         this.Save = function(){
+            this.m_currentShot.override.t_start = this.m_timestamp_chart.navigator.slider.get("minimum");
+            this.m_currentShot.override.t_stop = this.m_timestamp_chart.navigator.slider.get("maximum");
             this.Request(
                 {
                     reqtype: 'save_shot',
-                    shot: this.m_currentShot
+                    shot: this.m_currentShot,
+                    cfm: this.m_current_ccm,
+                    default: $('#set_default')[0].checked
                 }, function (resp) {
-                    alert('saved');
+                    if(resp.ok) {
+                        alert('saved version = ' + resp.ver);
+                    }else{
+                        alert(resp.description);
+                    }
                 }.bind(this)
             );
         };
@@ -2233,7 +2395,7 @@
                     shot: this.m_currentShot,
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
-                    correction: this.selectors.abs_mult.val(),
+                    //correction: this.selectors.abs_mult.val(),
                     aux: this.m_current_ccm.data,
                     old: $('#export_old')[0].checked
                 }, function (resp) {
@@ -2242,9 +2404,18 @@
                         spectral_name: this.m_currentShot.spectral_name,
                         absolute_name: this.m_currentShot.absolute_name,
                         process_timestamp: this.m_currentShot.timestamp,
-                        absolute_correction: this.selectors.abs_mult.val()
+                        absolute_correction: this.m_currentShot.override.abs_mult
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
+
+                    /*
+                    this.SavePNG('T_evo_chart');
+                    this.SavePNG('n_evo_chart');
+                    this.SavePNG('T_profile_chart');
+                    this.SavePNG('n_profile_chart');
+                    this.SavePNG('nl_evo_chart');
+                    this.SavePNG('w_evo_chart');
+                     */
 
                     this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
                     this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
@@ -2258,6 +2429,8 @@
                         this.DownloadFile(resp.old.nR, (this.m_currentShot.shotn + '_n(R)_old.csv'));
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
+
+
 
                     //this.DownloadSHT();
 
@@ -2646,13 +2819,33 @@
                     this.m_w_evo_chart.options.title.text = 'Globus-M2 #' +
                         this.m_currentShot.shotn + this.m_defaults.w_evo_title;
                     if(this.m_current_ccm.ok){
-                        this.DrawCCM();
+                        if(! ('version' in this.m_current_ccm)){
+                            this.UpdateCCMDens(this.m_currentShot.override.abs_mult);
+                        }else{
+                            this.DrawCCM();
+                        }
                     }else{
                         alert('CFM data error! See console for details.');
                     }
                 }.bind(this)
             );
         };
+
+        this.UpdateCCMDens = function(mult){
+            if(this.m_current_ccm.ok){
+                for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
+                    if(!('error' in this.m_current_ccm.data[arr_ind])){
+                        this.m_current_ccm.data[arr_ind].data.nl *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq *= mult;
+                        this.m_current_ccm.data[arr_ind].data.nl_eq_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.vol_w *= mult;
+                        this.m_current_ccm.data[arr_ind].data.w_err *= mult;
+                    }
+                }
+            }
+            this.DrawCCM();
+        }
 
         this.DrawCCM = function(){
             let nl_points = [];
@@ -2662,7 +2855,7 @@
             let w_points = [];
             let w_errors = [];
             if(this.m_current_ccm.ok){
-                let mult = this.selectors.abs_mult.val();
+                //let mult = this.selectors.abs_mult.val();
                 for(let arr_ind = 0; arr_ind < this.m_current_ccm.data.length; arr_ind++){
                     if('error' in this.m_current_ccm.data[arr_ind]){
                         nl_points.push({
@@ -2700,49 +2893,69 @@
                     } else {
                         nl_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.nl * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.nl * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.nl,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         nl_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
+                            /*
                             y: [
                                 (this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err) *
                                 mult
                             ]
+                            */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.nl - this.m_current_ccm.data[arr_ind].data.nl_err,
+                                this.m_current_ccm.data[arr_ind].data.nl + this.m_current_ccm.data[arr_ind].data.nl_err
+                            ]
                         });
 
                         nl_eq_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.nl_eq * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.nl_eq * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.nl_eq,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         nl_eq_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: [
+                            /*y: [
                                 (this.m_current_ccm.data[arr_ind].data.nl_eq - this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.nl_eq + this.m_current_ccm.data[arr_ind].data.nl_eq_err) *
                                 mult
                             ]
+
+                             */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.nl_eq - this.m_current_ccm.data[arr_ind].data.nl_eq_err,
+                                this.m_current_ccm.data[arr_ind].data.nl_eq + this.m_current_ccm.data[arr_ind].data.nl_eq_err
+                            ]
                         });
 
                         w_points.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                            //y: this.m_current_ccm.data[arr_ind].data.vol_w * mult,
+                            y: this.m_current_ccm.data[arr_ind].data.vol_w,
                             global_ind: this.m_current_ccm.data[arr_ind].event_index,
                             ccm_ind: arr_ind
                         });
                         w_errors.push({
                             x: this.m_currentShot.events[this.m_current_ccm.data[arr_ind].event_index].timestamp,
-                            y: [
+                            /*y: [
                                 (this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err) *
                                 mult,
                                 (this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err) *
                                 mult
+                            ]
+                            */
+                            y: [
+                                this.m_current_ccm.data[arr_ind].data.vol_w - this.m_current_ccm.data[arr_ind].data.w_err,
+                                this.m_current_ccm.data[arr_ind].data.vol_w + this.m_current_ccm.data[arr_ind].data.w_err
                             ]
                         });
                     }
@@ -2822,7 +3035,7 @@
                         y: this.m_current_ccm.data[index].data.surfaces[poly_ind].z[param]
                     })
                 }
-                let color = '#000000';
+                let color = '#FF00FF';
                 if(poly_ind !== 0){
                     color = this.palette[this.m_current_ccm.data[index].data.surfaces[poly_ind].ind];
                 }
@@ -2868,7 +3081,8 @@
             let points = [];
             for(let arr_ind = 0; arr_ind < this.m_current_ccm.data[index].data.nl_profile.length; arr_ind++){
                 points.push({
-                    x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne * this.selectors.abs_mult.val(),
+                    //x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne * this.selectors.abs_mult.val(),
+                    x: this.m_current_ccm.data[index].data.nl_profile[arr_ind].ne,
                     y: this.m_current_ccm.data[index].data.nl_profile[arr_ind].z,
                     surf: this.m_current_ccm.data[index].data.nl_profile[arr_ind].surf_ind
                 });
@@ -3080,10 +3294,9 @@
                 });
             }
             this.m_poloidal_chart.options.data.push({
+                markerType: "none",
                 color: '#000000',
                 type: "line",
-                markerType: "none",
-                showInLegend: true,
                 name: 'last',
                 dataPoints: points
             });
@@ -3228,9 +3441,13 @@
         };
 
         this.UpdateDens = function(){
+            let mult = this.selectors.abs_mult.val() / this.m_currentShot.override.abs_mult;
+            this.m_currentShot.override.abs_mult = this.selectors.abs_mult.val();
+            this.updateMainDens(mult);
+
             this.selectors.ccmPopup.setAttribute('hidden', true);
             this.DrawMain();
-            this.DrawCCM();
+            this.UpdateCCMDens(mult);
         };
 
         this.Filter = function(list, request){
@@ -3335,6 +3552,13 @@
             }.bind(this))
 
             $('#show_signal').on('click', this, this.AddSHTSignals.bind(this));
+
+            $("#shot_select").on("keyup", function() {
+                let value = $(this).val();
+                $("#shotn_list button").filter(function() {
+                  $(this).toggle($(this).text().indexOf(value) > -1)
+                });
+              });
         };
 
         this.HideMainRightTooltips = function(){

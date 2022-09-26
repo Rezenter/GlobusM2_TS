@@ -3,6 +3,7 @@ import os
 import logging
 import time
 import requests
+import ijson
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -21,13 +22,15 @@ DEBUG_SHOTS = 'debug/'
 CONFIG = 'config/'
 SPECTRAL_CAL = 'calibration/expected/'
 ABS_CAL = 'calibration/abs/processed/'
-#EXPECTED_FOLDER = 'calibration/expected/'
+EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
 CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
+CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
+CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
@@ -69,6 +72,7 @@ class Handler:
             },
             'view': {
                 'refresh': self.refresh_shots,
+                'load_version': self.get_version,
                 'get_shot': self.get_shot,
                 'get_event_sig': self.get_event_sig,
                 'get_event_raw': self.get_event_raw,
@@ -82,7 +86,8 @@ class Handler:
                 'calc_cfm': self.calc_cfm
             },
             'db': {
-                'get_shot': self.get_db_shot
+                'get_shot': self.get_db_shot,
+                'get_shot_verified': self.get_db_shot_ver
             }
         }
         self.plasma_path = '%s%s' % (DB_PATH, PLASMA_SHOTS)
@@ -90,6 +95,7 @@ class Handler:
         self.config_path = '%s%s' % (DB_PATH, CONFIG)
         self.spectral_path = '%s%s' % (DB_PATH, SPECTRAL_CAL)
         self.abs_path = '%s%s' % (DB_PATH, ABS_CAL)
+        self.plasma_verified_path = '%s%s/' % (self.plasma_path, 'verified')
         self.raw_processor = None
         self.fine_processor = None
         self.sht = None
@@ -127,18 +133,42 @@ class Handler:
             resp['description'] = 'Directory for debug shots "%s" does not exist.' % (self.debug_path + RAW_FOLDER)
             return resp
 
-        resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
-        resp['processed'] = sorted(os.listdir(self.plasma_path + RES_FOLDER), reverse=True)
-        resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
+        #resp['plasma'] = sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True)
+        #resp['processed'] = sorted(os.listdir(self.plasma_path + RES_FOLDER), reverse=True)
 
-        resp['good'] = []
-        for shotn in sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True):
-            entry = {
-                '#': shotn,
-            }
-            if shotn in resp['processed']:
-                entry['proc'] = True
-            resp['good'].append(entry)
+        if 'debug' in req:
+            resp['debug'] = sorted(os.listdir(self.debug_path + RAW_FOLDER), reverse=True)
+        else:
+            resp['plasma'] = []
+            for shotn in sorted(os.listdir(self.plasma_path + RAW_FOLDER), reverse=True):
+                entry = {
+                    '#': shotn,
+                }
+                result_folder = '%s%s/' % (self.plasma_verified_path, shotn)
+                if os.path.isdir(result_folder):
+                    versions = sorted([name for name in os.listdir(result_folder) if os.path.isdir(os.path.join(result_folder, name))], reverse=True)
+                    entry['versions'] = []
+                    for ver in versions:
+                        with open('%s%s/result.json' % (result_folder, ver), 'r') as file:
+                            res = json.load(file)
+                            entry['versions'].append({
+                                'ver': ver,
+                                'rating': 0,
+                                'comment': '',
+                                'config': res['config_name'],
+                                'abs_cal': res['absolute_name'],
+                                'sp_cal': res['spectral_name']
+                            })
+                    #load header of each entry
+
+                    with open('%sdefault.txt' % result_folder, 'r') as file:
+                        entry['default_version'] = 'v%02d' % int(file.readline())
+                with open(self.plasma_path + RAW_FOLDER + shotn + '/header.json', 'r') as file:
+                    header = json.load(file)
+                    if 'aux' in header:
+                        entry['default_configs'] = header['aux']
+
+                resp['plasma'].append(entry)
 
         tmp = sorted(os.listdir(self.config_path), reverse=True)
         resp['config'] = []
@@ -166,27 +196,15 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
-        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
-            return {
-                'ok': False,
-                'description': 'server has another shotn loaded'
-            }
-        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another config'
-            }
-        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another spectral calibration'
-            }
-        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another absolute calibration'
-            }
-        expected = self.fine_processor.expected
+
+        expected_full_name = '%s%s%s.%s' % (DB_PATH, EXPECTED_FOLDER, req['shot']['spectral_name'], FILE_EXT)
+        expected = {}
+        with open(expected_full_name, 'r') as expected_file:
+            obj = ijson.kvitems(expected_file, '', use_float=True)
+            for k, v in obj:
+                expected[k] = v
+        expected['modification'] = os.path.getmtime(expected_full_name)
+
         expected['ok'] = True
         resp = expected
         return resp
@@ -233,54 +251,72 @@ class Handler:
         resp['ok'] = True
         return resp
 
-    def save_shot(self, req):
-        if 'is_plasma' not in req:
-            return {
-                'ok': False,
-                'description': '"is-plasma" field is missing from request.'
-            }
+    def get_version(self, req):
+        self.raw_processor = None
+        self.fine_processor = None
+        self.sht = None
+        resp = {}
         if 'shotn' not in req:
+            resp['ok'] = False
+            resp['description'] = '"shotn" field is missing from request.'
+            return resp
+        if 'ver' not in req:
+            resp['ok'] = False
+            resp['description'] = '"ver" field is missing from request.'
+            return resp
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(req['shotn']))
+        if not os.path.isdir(result_folder):
+            resp['ok'] = False
+            resp['description'] = 'Verified shotn "%s" does not exist' % req['shotn']
+        result_folder = '%s%s/' % (result_folder, req['ver'])
+        if not os.path.isdir(result_folder):
+            resp['ok'] = False
+            resp['description'] = 'Verified shotn "%s" with version "%s" does not exist' % (req['shotn'], req['ver'])
+
+        with open('%sresult.%s' % (result_folder, FILE_EXT), 'r') as file:
+            resp['res'] = json.load(file)
+
+        resp['ok'] = True
+        return resp
+
+    def save_shot(self, req):
+        data = req['shot']
+
+        if self.raw_processor is None or self.raw_processor.is_plasma != True or \
+                self.raw_processor.shotn != int(data['shotn']):
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(data['shotn']), True, data['config_name'])
+        if len(data['events']) != len(self.raw_processor.processed):
             return {
                 'ok': False,
-                'description': '"shotn" field is missing from request.'
+                'description': 'Event count differs'
             }
-        if 'events' not in req:
-            return {
-                'ok': False,
-                'description': '"events" field is missing from request.'
-            }
-        if 'abs_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"abs_cal" field is missing from request.'
-            }
-        if 'sp_cal' not in req:
-            return {
-                'ok': False,
-                'description': '"sp_cal" field is missing from request.'
-            }
-        if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
-            self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
-                                                      shotn=int(req['shotn']),
-                                                      is_plasma=req['is_plasma'],
-                                                      expected_id=req['sp_cal'],
-                                                      absolute_id=req['abs_cal'])
-            err = self.fine_processor.get_error()
-            if err is not None:
-                return {
-                    'ok': False,
-                    'description': err
-                }
-        ok = self.fine_processor.update_events(req['events'])
-        if ok:
-            return {
-                'ok': True
-            }
-        else:
-            return {
-                'ok': False,
-                'descrioption': self.fine_processor.get_error()
-            }
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(data['shotn']))
+        if not os.path.isdir(result_folder):
+            os.mkdir(result_folder)
+            req['default'] = True
+        version = 1
+        while os.path.isdir('%sv%02d' % (result_folder, version)):
+            version += 1
+        result_folder += 'v%02d/' % version
+        os.mkdir(result_folder)
+        data['version'] = version
+        with open('%sresult.%s' % (result_folder, FILE_EXT), 'w') as out_file:
+            json.dump(data, out_file, indent=1)
+        req['cfm']['version'] = version
+        with open('%scfm_res.%s' % (result_folder, FILE_EXT), 'w') as out_file:
+            json.dump(req['cfm'], out_file, indent=1)
+        if req['default']:
+            with open('%s%05d/default.txt' % (self.plasma_verified_path, int(data['shotn'])), 'w') as out_file:
+                out_file.write('%d' % version)
+
+        self.raw_processor.save_processed('%ssignal.%s' % (result_folder, FILE_EXT), version)
+
+        return {
+            'ok': True,
+            'ver': version
+        }
 
     def export_shot(self, req):
         if 'shot' not in req:
@@ -444,6 +480,12 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
+        if 'version' in req['shot']:
+            with open('%s%s/v%02d/signal.%s' % (self.plasma_verified_path, req['shot']['shotn'], req['shot']['version'], FILE_EXT), 'r') as file:
+                resp = json.load(file)['data'][req['event']]
+                resp['ok'] = True
+                return resp
+
         if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
             return {
                 'ok': False,
@@ -486,40 +528,46 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
-        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
-            return {
-                'ok': False,
-                'description': 'server has another shotn loaded'
-            }
-        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another config'
-            }
-        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another spectral calibration'
-            }
-        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another absolute calibration'
-            }
-
-        shot_path = '%s%s%05d' % (self.plasma_path, RAW_FOLDER, self.fine_processor.shotn)
-        if not req['is_plasma']:
-            shot_path = '%s%s%05d' % (self.debug_path, RAW_FOLDER, self.fine_processor.shotn)
-        if not os.path.isdir(shot_path):
-            resp['ok'] = False
-            resp['description'] = 'Requested shotn is missing: %s.' % shot_path
-            return resp
-        if self.raw_processor is None:
-            self.raw_processor = raw_proc.Integrator(DB_PATH, self.fine_processor.shotn, True, req['shot']['config_name'])
         if 'poly' not in req:
             resp['ok'] = False
             resp['description'] = '"poly" field is missing from request.'
             return resp
+        if 'version' not in req['shot']:
+            if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
+                return {
+                    'ok': False,
+                    'description': 'server has another shotn loaded'
+                }
+            if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
+                return {
+                    'ok': False,
+                    'description': 'server has shot loaded with another config'
+                }
+            if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
+                return {
+                    'ok': False,
+                    'description': 'server has shot loaded with another spectral calibration'
+                }
+            if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
+                return {
+                    'ok': False,
+                    'description': 'server has shot loaded with another absolute calibration'
+                }
+        else:
+            self.raw_processor = None
+            self.fine_processor = None
+            self.sht = None
+        shot_path = '%s%s%s' % (self.plasma_path, RAW_FOLDER, req['shot']['shotn'])
+        if not req['is_plasma']:
+            shot_path = '%s%s%s' % (self.debug_path, RAW_FOLDER, req['shot']['shotn'])
+        if not os.path.isdir(shot_path):
+            resp['ok'] = False
+            resp['description'] = 'Requested shotn is missing: %s.' % shot_path
+            return resp
+
+        if self.raw_processor is None:
+            self.raw_processor = raw_proc.Integrator(DB_PATH, int(req['shot']['shotn']), True, req['shot']['config_name'])
+
         if not self.raw_processor.loaded:
             self.raw_processor.load_raw()
         event = []
@@ -555,6 +603,23 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
+        if 'version' in req['shot']:
+            with open('%s%s/v%02d/cfm_res.%s' % (self.plasma_verified_path, req['shot']['shotn'], req['shot']['version'], FILE_EXT), 'r') as file:
+                return json.load(file)
+
+        if 'start' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'stop' not in req:
+            resp['ok'] = False
+            resp['description'] = '"start" field is missing from request.'
+            return resp
+        if 'r' not in req:
+            resp['ok'] = False
+            resp['description'] = '"r" field is missing from request.'
+            return resp
+
         if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
             return {
                 'ok': False,
@@ -575,18 +640,7 @@ class Handler:
                 'ok': False,
                 'description': 'server has shot loaded with another absolute calibration'
             }
-        if 'start' not in req:
-            resp['ok'] = False
-            resp['description'] = '"start" field is missing from request.'
-            return resp
-        if 'stop' not in req:
-            resp['ok'] = False
-            resp['description'] = '"start" field is missing from request.'
-            return resp
-        if 'r' not in req:
-            resp['ok'] = False
-            resp['description'] = '"r" field is missing from request.'
-            return resp
+
         stored_calc = ccm_energy.StoredCalculator(self.fine_processor.shotn, self.fine_processor.get_data())
         if stored_calc.error is not None:
             return {
@@ -848,6 +902,44 @@ class Handler:
             }
         return data
 
+    def get_db_shot_ver(self, req):
+
+        if 'shotn' not in req:
+            return {
+                'ok': False,
+                'description': '"shotn" field is missing from request.'
+            }
+        if not isinstance(req['shotn'], int):
+            return {
+                'ok': False,
+                'description': '"%s" is not a valid integer shotnumber.' % req['shotn']
+            }
+
+        result_folder = '%s%05d/' % (self.plasma_verified_path, int(req['shotn']))
+        if not os.path.isdir(result_folder):
+            return {
+                'ok': False,
+                'description': 'Verified shotn "%s" does not exist' % req['shotn']
+            }
+
+        if 'ver' not in req:
+            req['ver'] = -1
+            with open('%sdefault.txt' % result_folder, 'r') as file:
+                req['ver'] = 'v%02d' % int(file.readline())
+            if req['ver'] == -1:
+                return {
+                    'ok': False,
+                    'description': 'Corrupted default version'
+                }
+
+        resp = {
+            'shot': self.get_version(req)['res']
+        }
+        if not resp['shot']['ok']:
+            return resp
+        resp['cfm'] = self.load_ccm(resp)
+        return resp
+
     def get_configs(self, req):
         resp = {}
 
@@ -877,24 +969,43 @@ class Handler:
                 'ok': False,
                 'description': '"shotn" field is missing from request.'
             }
-        return requests.post(CFM_ADDR, json={
-            'changedPropIds': ["btn-2.n_clicks"],
-            'inputs': [
-                {
-                    'id': "btn-2",
-                    'property': "n_clicks",
-                    'value': 1
+
+        filename = '%smcc_%s.json' % (CFM_DB, req['shotn'])
+        if not os.path.isfile(filename):
+            filename = '%smcc_%s.json' % (CFM_DB_NEW, req['shotn'])
+            if not os.path.isfile(filename):
+                serv_resp = requests.post(CFM_ADDR, json={
+                    'changedPropIds': ["btn-2.n_clicks"],
+                    'inputs': [
+                        {
+                            'id': "btn-2",
+                            'property': "n_clicks",
+                            'value': 1
+                        }
+                    ],
+                    'output': "my-output1.children",
+                    'outputs': {
+                        'id': "my-output1",
+                        'property': "children"
+                    },
+                    'state': [
+                        {
+                            'id': "shot_number_input",
+                            'property': "value",
+                            'value': req['shotn']}
+                    ]
+                })
+
+                if serv_resp.json()['response']['my-output1']['children'].startswith(' Good! '):
+                    return {
+                        'ok': True
+                    }
+                return {
+                    'ok': False,
+                    'description': serv_resp.json()['response']['children']
                 }
-            ],
-            'output': "my-output1.children",
-            'outputs': {
-                'id': "my-output1",
-                'property': "children"
-            },
-            'state': [
-                {
-                    'id': "shot_number_input",
-                    'property': "value",
-                    'value': req['shotn']}
-            ]
-        }).text
+        return {
+            'ok': True
+        }
+
+

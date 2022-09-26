@@ -141,14 +141,22 @@ def process_point(point, stray=None):
                 poly[poly_ind][ch_ind]['measured_w/o_stray'] = poly[poly_ind][ch_ind]['measured'] - \
                                                                stray['poly'][poly_ind][ch_ind]['measured']
                 total_sig = 0
+                #j = 2
                 for line in lines:
                     #total_sig += line['line'] * filters.transmission(ch=ch_ind + 1, wl=line['wl']) * detector.aw(wl=line['wl']) / (line['wl'] * 1e-9)
                     total_sig += line['line'] * filters.transmission(ch=ch_ind + 1, wl=line['wl']) * detector.aw(wl=line['wl']) / line['wl']
+                    #if poly_ind == 5 and ch_ind == 0:
+                    #    print('J = %d, sigma_RS*F = %.1e, T = %.1e, R = %.1e, lambda = %.2f' % (j, line['line'], filters.transmission(ch=ch_ind + 1, wl=line['wl']), detector.aw(wl=line['wl']), line['wl']))
+                    #    j += 1
+
                 if aux.math.isnan(total_sig) or total_sig < 1e-49:
                     poly[poly_ind][ch_ind]['A'] = -1
                 else:
                     #poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * aux.phys_const.q_e / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * config['laser'][0]['wavelength'] * total_sig)
                     poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * total_sig * n_N2)
+                    #if poly_ind == 5 and ch_ind == 0:
+                    #    print('A = %.1e, N_RS = %.1e, nl_corr= %.1e, ae= %.1e, Elas= %.1e, sum= %.1e, n_n2= %.1e, ' % (poly[poly_ind][ch_ind]['A'], poly[poly_ind][ch_ind]['measured_w/o_stray'], nl_correction,  stray['spectral']['poly'][poly_ind]['ae'][ch_ind], abs_calibration['laser_energy'], total_sig, n_N2))
+                    #    fuck
 
     result['J_from_int'] = abs_calibration['laser_energy'] / measured_energy
     result['poly'] = poly

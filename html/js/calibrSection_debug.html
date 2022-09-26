@@ -1575,10 +1575,10 @@
         this.Refresh = function() {
             this.Request(
                 {
-                    reqtype: 'refresh'
+                    reqtype: 'refresh',
+                    debug: true
                 }
                 , function (resp) {
-                    this.m_plasma_shots = resp['plasma'];
                     this.m_debug_shots = resp['debug'];
                     this.m_config_list = resp['config'];
                     this.m_spectralConf_list = resp['spectral_cal'];

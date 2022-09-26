@@ -229,7 +229,7 @@ class ControlUnit:
             timeout = 10 - curr_time + self.lastTime
             if timeout < 0:
                 timeout += 60  # warm-up finished
-            self.state = 2.5
+                self.state = 2.5
             if timeout < 0:
                 self.set_state_1()
             # self.disp('Холостой ход. (Накачка и ЗГ рассогласованы)')
@@ -360,11 +360,11 @@ class Coolant:
         #self.connect()
 
     def __connect(self):
-        if self.client and self.client.is_open():
+        if self.client and self.client.is_open:
             self.close()
         self.client = ModbusClient(host=self.ip, port=self.port, unit_id=self.unit_id, auto_open=True)
         self.client.read_input_registers(30, 2)  # needed for is_open function
-        if not self.client.is_open():
+        if not self.client.is_open:
             return
 
         self.worker = threading.Thread(target=self.receive)
@@ -383,7 +383,7 @@ class Coolant:
         print('coolant: ' + datetime.now().strftime("%H:%M:%S ") + message)
 
     def receive(self):
-        while self.client.is_open():
+        while self.client.is_open:
             resp = self.client.read_input_registers(30, 2)
             if resp:
                 f = resp[0].to_bytes(2, 'big')
