@@ -2837,6 +2837,16 @@
                         this.m_current_ccm.data[arr_ind].data.nl_eq_err *= mult;
                         this.m_current_ccm.data[arr_ind].data.vol_w *= mult;
                         this.m_current_ccm.data[arr_ind].data.w_err *= mult;
+                        this.m_current_ccm.data[arr_ind].data.n_vol *= mult;
+                        this.m_current_ccm.data[arr_ind].data.n_vol_err *= mult;
+                        for(let prof_ind = 0; prof_ind < this.m_current_ccm.data[arr_ind].data.nl_profile.length; prof_ind++){
+                            this.m_current_ccm.data[arr_ind].data.nl_profile[prof_ind].ne *= mult;
+                            this.m_current_ccm.data[arr_ind].data.nl_profile[prof_ind].ne_err *= mult;
+                        }
+                        for(let surf_ind = 0; surf_ind < this.m_current_ccm.data[arr_ind].data.surfaces.length; surf_ind++){
+                            this.m_current_ccm.data[arr_ind].data.surfaces[surf_ind].ne *= mult;
+                            this.m_current_ccm.data[arr_ind].data.surfaces[surf_ind].ne_err *= mult;
+                        }
                     }
                 }
             }

@@ -341,14 +341,13 @@ class Handler:
                 'ok': False,
                 'description': '"old" field is missing from request.'
             }
+
         if 'cfm' not in req:
             resp = self.to_csv(req['shot'], req['from'], req['to'])
-            if req['old']:
-                resp['old'] = self.to_old_csv(req['shot'], req['from'], req['to'])
         else:
             resp = self.to_csv(req['shot'], req['from'], req['to'], req['cfm'])
-            if req['old']:
-                resp['old'] = self.to_old_csv(req['shot'], req['from'], req['to'], req['aux'])
+        if req['old']:
+            resp['old'] = self.to_old_csv(req['shot'], req['from'], req['to'])
         return resp
 
     def get_chord_integrals(self, req):
@@ -1260,8 +1259,8 @@ class Handler:
                 'y': serialised[poly_ind]['n'],
                 'err': serialised[poly_ind]['ne']
             }
-        packed = shtRipper.ripper.write(path='%s%s%05d/' % (self.plasma_path, RES_FOLDER, shot['shotn']),
-                                        filename='TS_%05d.sht' % shot['shotn'], data=to_pack)
+        packed = shtRipper.ripper.write(path='%s%s%s/' % (self.plasma_path, RES_FOLDER, shot['shotn']),
+                                        filename='TS_%s.sht' % shot['shotn'], data=to_pack)
         if len(packed) != 0:
             print('sht packing error: "%s"' % packed)
 
@@ -1364,7 +1363,7 @@ class Handler:
             'aux': dynamics
         }
 
-    def to_old_csv(self, shot, x_from, x_to, aux_data=None):
+    def to_old_csv(self, shot, x_from, x_to):
         temp_evo = ''
         line = 't, '
         for poly in shot['config']['poly']:
