@@ -4,6 +4,8 @@ import logging
 import time
 import requests
 import ijson
+import math
+import shtRipper
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -324,26 +326,6 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
-        if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
-            return {
-                'ok': False,
-                'description': 'server has another shotn loaded'
-            }
-        if self.fine_processor.get_data()['config_name'] != req['shot']['config_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another config'
-            }
-        if self.fine_processor.get_data()['spectral_name'] != req['shot']['spectral_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another spectral calibration'
-            }
-        if self.fine_processor.get_data()['absolute_name'] != req['shot']['absolute_name']:
-            return {
-                'ok': False,
-                'description': 'server has shot loaded with another absolute calibration'
-            }
         if 'from' not in req:
             return {
                 'ok': False,
@@ -354,25 +336,19 @@ class Handler:
                 'ok': False,
                 'description': '"to" field is missing from request.'
             }
-        if 'correction' not in req:
-            return {
-                'ok': False,
-                'description': '"correction" field is missing from request.'
-            }
         if 'old' not in req:
             return {
                 'ok': False,
                 'description': '"old" field is missing from request.'
             }
-        if 'aux' not in req:
-            resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']))
+        if 'cfm' not in req:
+            resp = self.to_csv(req['shot'], req['from'], req['to'])
             if req['old']:
-                resp['old'] = self.fine_processor.to_old_csv(req['from'], req['to'], float(req['correction']))
+                resp['old'] = self.to_old_csv(req['shot'], req['from'], req['to'])
         else:
-            resp = self.fine_processor.to_csv(req['from'], req['to'], float(req['correction']), req['aux'])
+            resp = self.to_csv(req['shot'], req['from'], req['to'], req['cfm'])
             if req['old']:
-                resp['old'] = self.fine_processor.to_old_csv(req['from'], req['to'], float(req['correction']), req['aux'])
-
+                resp['old'] = self.to_old_csv(req['shot'], req['from'], req['to'], req['aux'])
         return resp
 
     def get_chord_integrals(self, req):
@@ -1008,4 +984,462 @@ class Handler:
             'ok': True
         }
 
+    def dump_dynamics(self, shot, data, x_from: float, x_to:float):
+        to_pack = {}
+        aux = ''
+        if data is not None:
+            timestamps = []
+            nl42 = []
+            nl42_err = []
+            # расстояние до сепаратрисы
+            # температура и концентрация на сепаратрисе
+            # градиент на сепаратрисе
+            nl_ave = []
+            nl_ave_err = []
+            n_ave = []
+            n_ave_err = []
+            t_ave = []
+            t_ave_err = []
+            we = []
+            we_err = []
+            dwe = []
+            vol = []
+            t_c = []
+            t_c_err = []
+            n_c = []
+            n_c_err = []
+            t_p = []
+            n_p = []
+            r_sep_arr = []
+            cfm_timestamps = []
+            nl_eq = []
+            nl_eq_err = []
+            eq_length = []
+            nl_eq_ave = []
+            nl_eq_ave_err = []
+
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3\n'
+            for event_ind_aux in range(len(data)):
+                event = data[event_ind_aux]
+
+                event_ind = event['event_index']
+                if 'error' in event:
+                    continue
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    if 'error' not in event['data'] and len(event['data']['nl_profile']) != 0:
+                        length = (event['data']['nl_profile'][0]['z'] - event['data']['nl_profile'][-1]['z']) * 1e-2
+                        length_eq = math.sqrt(math.pow((event['data']['surfaces'][0]['r_max']), 2) - (17 * 17)) * 2 * 1e-2
+                        eq_length.append(length_eq)
+                        we_derivative = 0
+                        if len(data) > 1:
+                            if 'error' in data[event_ind_aux]:
+                                we_derivative = 0
+                            elif event_ind_aux == 0:
+                                if 'error' not in data[event_ind_aux + 1]:
+                                    we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] - event['data'][
+                                        'vol_w']) / (shot['events'][
+                                                                      data[event_ind_aux + 1]['event_index']]['timestamp'] -
+                                                                  shot['events'][event_ind]['timestamp'])
+                            elif event_ind_aux == len(data) - 1:
+                                if 'error' not in data[event_ind_aux - 1]:
+                                    we_derivative = (data[event_ind_aux - 1]['data']['vol_w'] - event['data'][
+                                        'vol_w']) / (shot['events'][
+                                                                      data[event_ind_aux - 1]['event_index']]['timestamp'] -
+                                                                  shot['events'][event_ind]['timestamp'])
+
+                            elif len(data) > 2 and 'error' not in data[event_ind_aux - 1] and 'error' not in data[event_ind_aux + 1] and 'error' not in data[event_ind_aux - 1]['data'] and 'error' not in data[event_ind_aux + 1]['data']:
+                                we_derivative = (data[event_ind_aux + 1]['data']['vol_w'] -
+                                                 data[event_ind_aux - 1]['data']['vol_w']) / \
+                                                (shot['events'][data[event_ind_aux + 1]['event_index']][
+                                                     'timestamp'] -
+                                                 shot['events'][data[event_ind_aux - 1]['event_index']][
+                                                     'timestamp'])
+
+                        timestamps.append(shot['events'][event_ind]['timestamp'] * 1e-3)
+                        nl42.append(event['data']['nl'])
+                        nl42_err.append(event['data']['nl_err'])
+
+                        nl_ave.append(event['data']['nl'] / length)
+                        nl_ave_err.append(event['data']['nl_err'] / length)
+
+                        n_ave.append(event['data']['n_vol'])
+                        n_ave_err.append(event['data']['n_vol_err'])
+
+                        t_ave.append(event['data']['t_vol'])
+                        t_ave_err.append(event['data']['t_vol_err'])
+
+                        we.append(event['data']['vol_w'])
+                        we_err.append(event['data']['w_err'])
+
+                        dwe.append(we_derivative)
+                        vol.append(event['data']['vol'])
+
+                        t_c.append(event['data']['surfaces'][-1]['Te'])
+                        t_c_err.append(event['data']['surfaces'][-1]['Te_err'])
+
+                        n_c.append(event['data']['surfaces'][-1]['ne'])
+                        n_c_err.append(event['data']['surfaces'][-1]['ne_err'])
+
+                        t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
+                        n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
+
+                        nl_eq.append(event['data']['nl_eq'])
+                        nl_eq_err.append(event['data']['nl_eq_err'])
+
+                        nl_eq_ave.append(event['data']['nl_eq'] / length_eq)
+                        nl_eq_ave_err.append(event['data']['nl_eq_err'] / length_eq)
+
+                        surf = event['data']['surfaces'][0]
+                        r_sep_val = -1
+                        for surf_ind in range(len(surf['z']) - 1):
+                            if surf['z'][surf_ind] >= 0 > surf['z'][surf_ind + 1] and surf['r'][surf_ind] > 40:
+                                r_sep_val = surf['r'][surf_ind]
+                                r_sep_arr.append(r_sep_val)
+                                cfm_timestamps.append(timestamps[-1])
+                                break
+                            else:
+                                r_sep_val = -1
+
+
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e\n' % \
+                               (event_ind, shot['events'][event_ind]['timestamp'],
+                                event['data']['nl'], event['data']['nl_err'],
+                                length,
+                                event['data']['nl'] / length, event['data']['nl_err'] / length,
+                                event['data']['n_vol'], event['data']['n_vol_err'],
+                                event['data']['t_vol'], event['data']['t_vol_err'],
+                                event['data']['vol_w'], event['data']['w_err'], we_derivative,
+                                event['data']['vol'],
+                                event['data']['surfaces'][-1]['Te'], event['data']['surfaces'][-1]['Te_err'],
+                                event['data']['surfaces'][-1]['ne'],
+                                event['data']['surfaces'][-1]['ne_err'],
+                                event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'],
+                                event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'],
+                                r_sep_val,
+                                event['data']['nl_eq'], event['data']['nl_eq_err'],
+                                length_eq,
+                                event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq
+                        )
+                    else:
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                               (event_ind, shot['events'][event_ind]['timestamp'])
+            to_pack = {
+                'nl42 (m^-2)': {
+                    'comment': 'линейная концентрация по хорде R=42',
+                    'unit': 'nl42(m^-2)',
+                    'x': timestamps,
+                    'y': nl42,
+                    'err': nl42_err
+                },
+                'nl_eq (m^-2)': {
+                    'comment': 'линейная концентрация по экваториальной хорде',
+                    'unit': 'nl_eq(m^-2)',
+                    'x': timestamps,
+                    'y': nl_eq,
+                    'err': nl_eq_err
+                },
+                '<nl42> (m^-3)': {
+                    'comment': 'средняя концентрация по хорде R=42',
+                    'unit': '<nl42>(m^-3)',
+                    'x': timestamps,
+                    'y': nl_ave,
+                    'err': nl_ave_err
+                },
+                '<nl_eq> (m^-3)': {
+                    'comment': 'средняя концентрация по экваториальной хорде',
+                    'unit': '<nl_eq>(m^-3)',
+                    'x': timestamps,
+                    'y': nl_eq_ave,
+                    'err': nl_eq_ave_err
+                },
+                '<ne> (m^-3)': {
+                    'comment': 'средняя по объёму концентрация',
+                    'unit': '<n>(m^-3)',
+                    'x': timestamps,
+                    'y': n_ave,
+                    'err': n_ave_err
+                },
+                '<Te>': {
+                    'comment': 'средняя по объёму температура',
+                    'unit': '<Te>(eV)',
+                    'x': timestamps,
+                    'y': t_ave,
+                    'err': t_ave_err
+                },
+                'We': {
+                    'comment': 'энергозапас в электронном компоненте',
+                    'unit': 'We(J)',
+                    'x': timestamps,
+                    'y': we,
+                    'err': we_err
+                },
+                'dWe/dt': {
+                    'comment': 'производная энергозапаса в электронном компоненте',
+                    'unit': 'dWe/dt(kW)',
+                    'x': timestamps,
+                    'y': dwe
+                },
+                'plasma volume': {
+                    'comment': 'объём плазмы внутри сепаратрисы',
+                    'unit': 'V(m^-3)',
+                    'x': timestamps,
+                    'y': vol
+                },
+                'Te central': {
+                    'comment': 'температура в ближайшей к центру точке',
+                    'unit': 'Te(eV)',
+                    'x': timestamps,
+                    'y': t_c,
+                    'err': t_c_err
+                },
+                'ne central (m^-3)': {
+                    'comment': 'концентрация в ближайшей к центру точке',
+                    'unit': 'ne(m^-3)',
+                    'x': timestamps,
+                    'y': n_c,
+                    'err': n_c_err
+                },
+                'Te peaking': {
+                    'comment': 'мера пикированности профиля температуры = (Te central) / <Te>',
+                    'unit': 'пикированность(1)',
+                    'x': timestamps,
+                    'y': t_p
+                },
+                'ne peaking': {
+                    'comment': 'мера пикированности профиля концентрации = (ne central) / <ne>',
+                    'unit': 'пикированность(1)',
+                    'x': timestamps,
+                    'y': n_p
+                },
+                'R_sep положение сепаратрисы': {
+                    'comment': 'Большой радиус сепаратрисы в экваториальной плоскости вакуумной камеры на стороне слабого поля',
+                    'unit': 'R_sep (cm)',
+                    'x': cfm_timestamps,
+                    'y': r_sep_arr
+                },
+                'len_eq (m)': {
+                    'comment': 'длина экваториальной хорды',
+                    'unit': 'l_eq(m)',
+                    'x': timestamps,
+                    'y': eq_length
+                },
+            }
+
+        serialised = [{
+            'x': [],
+            't': [],
+            'te': [],
+            'n': [],
+            'ne': []
+        } for poly in shot['config']['poly']]
+
+        for event_ind in range(len(shot['events'])):
+            if 'timestamp' in shot['events'][event_ind]:
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    for poly_ind in range(len(shot['events'][event_ind]['T_e'])):
+                        poly = shot['events'][event_ind]['T_e'][poly_ind]
+                        if poly['error'] is None and not ('hidden' in poly and poly['hidden']):
+                            serialised[poly_ind]['x'].append(shot['events'][event_ind]['timestamp'] * 1e-3)
+                            serialised[poly_ind]['t'].append(poly['T'])
+                            serialised[poly_ind]['te'].append(poly['Terr'])
+                            serialised[poly_ind]['n'].append(poly['n'])
+                            serialised[poly_ind]['ne'].append(poly['n_err'])
+        for poly_ind in range(len(serialised)):
+            to_pack['Te R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                    'comment': 'локальная температура электронов',
+                    'unit': 'Te(eV)',
+                    'x': serialised[poly_ind]['x'],
+                    'y': serialised[poly_ind]['t'],
+                    'err': serialised[poly_ind]['te']
+                }
+            to_pack['ne R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                'comment': 'm^-3, локальная концентрация электронов',
+                'unit': 'ne(m^-3)',
+                'x': serialised[poly_ind]['x'],
+                'y': serialised[poly_ind]['n'],
+                'err': serialised[poly_ind]['ne']
+            }
+        packed = shtRipper.ripper.write(path='%s%s%05d/' % (self.plasma_path, RES_FOLDER, shot['shotn']),
+                                        filename='TS_%05d.sht' % shot['shotn'], data=to_pack)
+        if len(packed) != 0:
+            print('sht packing error: "%s"' % packed)
+
+        if len(aux) == 0:
+            return None
+        return aux[:-1]
+
+    def to_csv(self, shot, x_from, x_to, aux_data=None):
+        temp_evo = ''
+        line = 't, '
+        for poly in shot['config']['poly']:
+            line += '%.1f, err, ' % poly['R']
+        temp_evo += line[:-2] + '\n'
+        line = 'ms, '
+        for poly in shot['config']['poly']:
+            line += 'eV, eV, '
+        temp_evo += line[:-2] + '\n'
+        for event_ind in range(len(shot['events'])):
+            if 'timestamp' in shot['events'][event_ind]:
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.1f, ' % shot['events'][event_ind]['timestamp']
+                    for poly in shot['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
+                    temp_evo += line[:-2] + '\n'
+        temp_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, err, ' % event['timestamp']
+                    units += 'eV, eV, '
+        temp_prof += names[:-2] + '\n'
+        temp_prof += units[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+            temp_prof += line[:-2] + '\n'
+
+        dens_evo = ''
+        line = 't, '
+        for poly in shot['config']['poly']:
+            line += '%.1f, err, ' % poly['R']
+        dens_evo += line[:-2] + '\n'
+        line = 'ms, '
+        for poly in shot['config']['poly']:
+            line += 'm-3, m-3, '
+        dens_evo += line[:-2] + '\n'
+        for event_ind in range(len(shot['events'])):
+            if 'timestamp' in shot['events'][event_ind]:
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.1f, ' % shot['events'][event_ind]['timestamp']
+                    for poly in shot['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.2e, %.2e, ' % (poly['n'] , poly['n_err'])
+                    dens_evo += line[:-2] + '\n'
+
+        dens_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, err, ' % event['timestamp']
+                    units += 'm-3, m-3, '
+        dens_prof += names[:-2] + '\n'
+        dens_prof += units[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'],
+                                                      event['T_e'][poly_ind]['n_err'])
+            dens_prof += line[:-2] + '\n'
+
+        dynamics = self.dump_dynamics(shot, aux_data, x_from, x_to)
+        return {
+            'ok': True,
+            'Tt': temp_evo,
+            'TR': temp_prof,
+            'nt': dens_evo,
+            'nR': dens_prof,
+            'aux': dynamics
+        }
+
+    def to_old_csv(self, shot, x_from, x_to, aux_data=None):
+        temp_evo = ''
+        line = 't, '
+        for poly in shot['config']['poly']:
+            line += '%.4fcm, %.4fcm, ' % (poly['R'] * 1e-3, poly['R'] * 1e-3)
+        temp_evo += line[:-2] + '\n'
+        for event_ind in range(len(shot['events'])):
+            if 'timestamp' in shot['events'][event_ind]:
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.4f, ' % (shot['events'][event_ind]['timestamp'] * 1e-3)
+                    for poly in shot['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.1f, %.1f, ' % (poly['T'], poly['Terr'])
+                    temp_evo += line[:-2] + '\n'
+        temp_prof = ''
+        names = 'R, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.4fs, %.4fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+        temp_prof += names[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.4f, ' % (shot['config']['poly'][poly_ind]['R'] * 1e-3)
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+            temp_prof += line[:-2] + '\n'
+
+        dens_evo = ''
+        line = 't, '
+        for poly in shot['config']['poly']:
+            line += '%.4fcm, %.4fcm, ' % (poly['R'] * 1e-3, poly['R'] * 1e-3)
+        dens_evo += line[:-2] + '\n'
+        for event_ind in range(len(shot['events'])):
+            if 'timestamp' in shot['events'][event_ind]:
+                if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
+                    line = '%.4f, ' % (shot['events'][event_ind]['timestamp'] * 1e-3)
+                    for poly in shot['events'][event_ind]['T_e']:
+                        if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.2e, %.2e, ' % (poly['n'] * 1e-6, poly['n_err'] * 1e-6)
+                    dens_evo += line[:-2] + '\n'
+
+        dens_prof = ''
+        names = 'R, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.4fs, %.4fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
+        dens_prof += names[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.4f, ' % (shot['config']['poly'][poly_ind]['R'] * 1e-3)
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '1, 1, '
+                        else:
+                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * 1e-6,
+                                                      event['T_e'][poly_ind]['n_err'] * 1e-6)
+            dens_prof += line[:-2] + '\n'
+
+        return {
+            'ok': True,
+            'Tt': temp_evo,
+            'TR': temp_prof,
+            'nt': dens_evo,
+            'nR': dens_prof
+        }
 

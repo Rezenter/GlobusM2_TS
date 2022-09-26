@@ -2395,8 +2395,7 @@
                     shot: this.m_currentShot,
                     from: this.m_T_evo_chart.options.axisX.minimum,
                     to: this.m_T_evo_chart.options.axisX.maximum,
-                    //correction: this.selectors.abs_mult.val(),
-                    aux: this.m_current_ccm.data,
+                    cfm: this.m_current_ccm.data,
                     old: $('#export_old')[0].checked
                 }, function (resp) {
                     let info = {
@@ -2407,15 +2406,6 @@
                         absolute_correction: this.m_currentShot.override.abs_mult
                     };
                     this.DownloadFile(JSON.stringify(info), (this.m_currentShot.shotn + '_info.json'));
-
-                    /*
-                    this.SavePNG('T_evo_chart');
-                    this.SavePNG('n_evo_chart');
-                    this.SavePNG('T_profile_chart');
-                    this.SavePNG('n_profile_chart');
-                    this.SavePNG('nl_evo_chart');
-                    this.SavePNG('w_evo_chart');
-                     */
 
                     this.DownloadFile(resp.TR, (this.m_currentShot.shotn + '_T(R).csv'));
                     this.DownloadFile(resp.Tt, (this.m_currentShot.shotn + '_T(t).csv'));
@@ -2430,8 +2420,14 @@
                         this.DownloadFile(resp.old.nt, (this.m_currentShot.shotn + '_n(t)_old.csv'));
                     }
 
-
-
+                    /*
+                    this.SavePNG('T_evo_chart');
+                    this.SavePNG('n_evo_chart');
+                    this.SavePNG('T_profile_chart');
+                    this.SavePNG('n_profile_chart');
+                    this.SavePNG('nl_evo_chart');
+                    this.SavePNG('w_evo_chart');
+                     */
                     //this.DownloadSHT();
 
                 }.bind(this)

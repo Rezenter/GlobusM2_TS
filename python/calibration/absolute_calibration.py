@@ -73,7 +73,8 @@ class Spectrum:
 calibr_path = 'calibration/abs/'
 PROCESSED_PATH = 'processed/'
 abs_filename = '2022.05.31_raw'
-nl_correction = 0.65
+#nl_correction = 0.65
+nl_correction = 1.0
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
     abs_calibration = aux.json.load(file)
