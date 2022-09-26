@@ -1,6 +1,6 @@
 import ijson
 
-shotn = 40459
+shotn = 39629
 adc_ind = 2
 adc_chs = [
     {
@@ -22,53 +22,29 @@ adc_chs = [
 ]  #p0
 adc_chs = [
     {
-        'gr': 3,
-        'ch': 0
-    },    {
-        'gr': 3,
-        'ch': 1
-    },    {
-        'gr': 4,
-        'ch': 0
-    },    {
-        'gr': 4,
-        'ch': 1
-    },    {
-        'gr': 5,
-        'ch': 0
-    },
-]
-'''adc_chs = [
-    {
-        'gr': 3,
-        'ch': 0
-    },    {
-        'gr': 3,
-        'ch': 1
-    },    {
-        'gr': 4,
-        'ch': 0
-    },    {
-        'gr': 4,
-        'ch': 1
-    },    {
-        'gr': 5,
-        'ch': 0
-    },
-] #p7'''
-
-adc_chs = [
-    {
         'gr': 0,
         'ch': 0
     },
     {
-        'gr': 0,
+        'gr': 5,
         'ch': 1
-    }
-]
+    },    {
+        'gr': 6,
+        'ch': 0
+    },    {
+        'gr': 6,
+        'ch': 1
+    },    {
+        'gr': 7,
+        'ch': 0
+    },    {
+        'gr': 7,
+        'ch': 1
+    },
+]  #p8
 
-event_ind = 49
+
+event_ind = 71
 
 print('Loading raw...')
 with open('d:/data/db/plasma/raw/%05d/%d.json' % (shotn, adc_ind), 'rb') as board_file:
