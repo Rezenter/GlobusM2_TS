@@ -146,7 +146,7 @@ class Integrator:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
         for board_ind in range(len(self.config['adc']['sync'])):
             extension = self.JSON_EXT
-            if self.version == 2:
+            if self.version >= 2:
                 extension = self.BINARY_EXT
 
             if not os.path.isfile('%s%d%s' % (shot_folder, board_ind, extension)):
@@ -159,6 +159,8 @@ class Integrator:
                         self.data[board_ind].append(event['groups'])
                 else:
                     self.data[board_ind] = msgpack.unpackb(board_file.read())
+            if self.version == 3:
+                self.header['triggerThreshold'] = 100
             print('Board %d loaded.' % board_ind)
         print('All data is loaded.')
         return self.check_raw_integrity()

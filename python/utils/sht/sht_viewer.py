@@ -1,17 +1,27 @@
 import shtRipper
+from pathlib import Path
 
-SHT_LOCATION = 'Z:/'
+SHT_LOCATIONS = ['Z:/', 'X:/']
 
 
 class sht:
     def __init__(self, shotn: int):
         self.shotn: int = shotn
-        self.data = shtRipper.ripper.read('%ssht%d.SHT' % (SHT_LOCATION, shotn), [
-                'nl 42 cm (1.5мм) 64pi',
-                'Nl_42_УПЧ',
-                'NL_42_No_Filtr'
-            ])
-
+        for location in SHT_LOCATIONS:
+            path = Path('%ssht%d.SHT' % (location, shotn))
+            if not path.is_file():
+                continue
+            self.data = shtRipper.ripper.read('%ssht%d.SHT' % (location, shotn), [
+                    'nl 42 cm (1.5мм) 64pi',
+                    'Nl_42_УПЧ',
+                    'NL_42_No_Filtr'
+                ])
+            break
+        else:
+            self.data = {
+                'ok': False,
+                'description': 'Requested shotn does not exist in DB.'
+            }
     def get_names(self):
         return list(self.data.keys())
 
