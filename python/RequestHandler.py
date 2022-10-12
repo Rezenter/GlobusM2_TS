@@ -6,6 +6,8 @@ import requests
 import ijson
 import math
 import shtRipper
+from pathlib import Path
+import shutil
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -30,9 +32,11 @@ RES_FOLDER = 'result/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
-CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
+#CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
+CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
 CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
+PUB_PATH = 'Y:/!!!TS_RESULTS/2022/'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
@@ -315,6 +319,7 @@ class Handler:
 
         self.raw_processor.save_processed('%ssignal.%s' % (result_folder, FILE_EXT), version)
 
+        self.publish(req=req, result=data)
         return {
             'ok': True,
             'ver': version
@@ -1441,4 +1446,61 @@ class Handler:
             'nt': dens_evo,
             'nR': dens_prof
         }
+    def publish(self, req, result):
+        path = Path('%s%s/' % (PUB_PATH, result['shotn']))
+        if not path.is_dir():
+            path.mkdir()
+        path = Path('%s/v%d/' % (path, result['version']))
+        if not path.is_dir():
+            path.mkdir()
 
+        with open('%s/result.%s' % (path, FILE_EXT), 'w') as out_file:
+            json.dump(result, out_file, indent=1)
+        with open('%s/cfm_res.%s' % (path, FILE_EXT), 'w') as out_file:
+            json.dump(req['cfm'], out_file, indent=1)
+        with open('%s/info.%s' % (path, FILE_EXT), 'w') as out_file:
+            json.dump({
+                'config_name': result['config_name'],
+                'spectral_name': result['spectral_name'],
+                'absolute_name': result['absolute_name'],
+                'process_timestamp': result['timestamp'],
+                'absolute_correction': result['override']['abs_mult']
+            }, out_file, indent=1)
+        self.raw_processor.save_processed('%s/signal.%s' % (path, FILE_EXT), result['version'])
+
+
+        req['from'] = result['override']['t_start']
+        req['to'] = result['override']['t_stop']
+        req['old'] = True
+        req['cfm'] = req['cfm']['data']
+        csv = self.export_shot(req)
+
+        with open('%s/%s_T(R).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['TR'])
+        with open('%s/%s_T(t).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['Tt'])
+        with open('%s/%s_n(R).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['nR'])
+        with open('%s/%s_n(t).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['nt'])
+        with open('%s/%s_dynamics.csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['aux'])
+
+        with open('%s/%s_T(R)_old.csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['old']['TR'])
+        with open('%s/%s_T(t)_old.csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['old']['Tt'])
+        with open('%s/%s_n(R)_old.csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['old']['nR'])
+        with open('%s/%s_n(t)_old.csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['old']['nt'])
+
+        shutil.copy2(src='%s%s%s%s/TS_%s.sht' % (DB_PATH, PLASMA_SHOTS, RES_FOLDER, result['shotn'], result['shotn']),
+                     dst=path)
+
+        if req['default']:
+            for filename in path.iterdir():
+                shutil.copy2(src=filename, dst=path.parent)
+            with open('%s/default.txt' % path, 'w') as out_file:
+                out_file.write('%d' % result['version'])
+        print('Published OK')
