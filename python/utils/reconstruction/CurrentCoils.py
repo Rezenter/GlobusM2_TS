@@ -122,11 +122,19 @@ class CCM:
 
         r = []
         z = []
+
+        curr_sep_ind = 0
         for theta_ind in range(theta_count + 1):
             theta = theta_step * theta_ind
+
+            while 0:
+                pass
+
             r.append(params['R'] + shift +
                      a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
             z.append(params['Z'] + a * elong * math.sin(theta))
+
+            # limit to separatrix!!!
         return r, z
 
     def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):
