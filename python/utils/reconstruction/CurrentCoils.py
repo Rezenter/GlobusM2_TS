@@ -19,6 +19,12 @@ linear_count = 3
 def angle(x1, y1, cx, cy):
     return math.atan2((y1-cy), (x1 - cx))
 
+def angle_pos(x1, y1, cx, cy):
+    tmp = angle(x1, y1, cx, cy)
+    if tmp < 0:
+        tmp += math.tau
+    return tmp
+
 
 def interpol(x_prev, x, x_next, y_prev, y_next):
     return y_prev + (y_next - y_prev) * (x - x_prev) / (x_next - x_prev)
@@ -108,7 +114,6 @@ class CCM:
         if ra == 1:
             return sep_r, sep_z
         if ra > 1 or ra < 0:
-            print(ra)
             fuck
 
         theta_step = (math.tau / theta_count)
@@ -123,18 +128,36 @@ class CCM:
         r = []
         z = []
 
-        curr_sep_ind = 0
+        curr_theta_ind = 0
         for theta_ind in range(theta_count + 1):
-            theta = theta_step * theta_ind
-
-            while 0:
-                pass
+            theta = math.tau - theta_step * theta_ind
+            if theta < 0:
+                theta += math.tau
 
             r.append(params['R'] + shift +
                      a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
             z.append(params['Z'] + a * elong * math.sin(theta))
 
-            # limit to separatrix!!!
+            theta = angle_pos(r[-1], z[-1], params['R'] + shift, params['Z'])
+            while 1:
+                a1 = angle_pos(sep_r[curr_theta_ind], sep_z[curr_theta_ind], params['R'] + shift, params['Z'])
+                a2 = angle_pos(sep_r[curr_theta_ind - 1], sep_z[curr_theta_ind - 1], params['R'] + shift, params['Z'])
+
+                if a2 < a1 <= theta + math.tau < a2 + math.tau:
+                    break
+                if a2 < a1 <= theta < a2 + math.tau:
+                    break
+                if a1 < theta <= a2:
+                    break
+                curr_theta_ind += 1
+                if curr_theta_ind == len(sep_r):
+                    curr_theta_ind = 0
+
+            r_sep_point = (sep_r[curr_theta_ind] - params['R'] - shift) ** 2 + (sep_z[curr_theta_ind] - params['Z']) ** 2
+            r_surf_point = (r[-1] - params['R'] - shift) ** 2 + (z[-1] - params['Z']) ** 2
+            if r_surf_point > r_sep_point:
+                r[-1] = sep_r[curr_theta_ind]
+                z[-1] = sep_z[curr_theta_ind]
         return r, z
 
     def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):

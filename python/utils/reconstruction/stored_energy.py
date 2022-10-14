@@ -196,7 +196,6 @@ class StoredCalculator:
 
     def calc_laser_shot(self, requested_time, nl_r):
         t_ind = 0
-        #print(t_ind, requested_time, 'CALC shot')
         for t_ind in range(len(self.ccm_data.timestamps) - 1):
             if self.ccm_data.timestamps[t_ind] <= requested_time < self.ccm_data.timestamps[t_ind + 1]:
                 if (requested_time - self.ccm_data.timestamps[t_ind]) >= (self.ccm_data.timestamps[t_ind + 1] - requested_time):
