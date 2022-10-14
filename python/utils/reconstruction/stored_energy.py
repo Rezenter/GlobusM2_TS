@@ -201,6 +201,11 @@ class StoredCalculator:
                 if (requested_time - self.ccm_data.timestamps[t_ind]) >= (self.ccm_data.timestamps[t_ind + 1] - requested_time):
                     t_ind += 1
                 break
+        self.ccm_data.data['boundary']['rbdy']['variable'][t_ind], self.ccm_data.data['boundary']['zbdy']['variable'][t_ind] = \
+            self.ccm_data.clockwise(self.ccm_data.data['boundary']['rbdy']['variable'][t_ind],
+                                    self.ccm_data.data['boundary']['zbdy']['variable'][t_ind],
+                                    t_ind)
+
         poly_a = self.ccm_data.find_poly(self.polys, t_ind)
         if 'error' in poly_a:
             return {
