@@ -19,6 +19,12 @@ linear_count = 3
 def angle(x1, y1, cx, cy):
     return math.atan2((y1-cy), (x1 - cx))
 
+def angle_pos(x1, y1, cx, cy):
+    tmp = angle(x1, y1, cx, cy)
+    if tmp < 0:
+        tmp += math.tau
+    return tmp
+
 
 def interpol(x_prev, x, x_next, y_prev, y_next):
     return y_prev + (y_next - y_prev) * (x - x_prev) / (x_next - x_prev)
@@ -69,7 +75,6 @@ class CCM:
         self.calculated = [{'calculated': False} for t in self.timestamps]
 
     def clockwise(self, r, z, t_ind):  # called multiple times for one time?
-        #print('clockwize', t_ind, self.data['time']['variable'][t_ind])
         params = self.get_surface_parameters(t_ind)
 
         count = len(r) // 10
@@ -102,13 +107,11 @@ class CCM:
         return [], []
 
     def get_surface(self, t_ind, ra=1, theta_count=360):
-        sep_r, sep_z = self.clockwise(self.data['boundary']['rbdy']['variable'][t_ind],
-                                      self.data['boundary']['zbdy']['variable'][t_ind],
-                                      t_ind)
+        sep_r = self.data['boundary']['rbdy']['variable'][t_ind]
+        sep_z = self.data['boundary']['zbdy']['variable'][t_ind]
         if ra == 1:
             return sep_r, sep_z
         if ra > 1 or ra < 0:
-            print(ra)
             fuck
 
         theta_step = (math.tau / theta_count)
@@ -123,22 +126,42 @@ class CCM:
         r = []
         z = []
 
-        curr_sep_ind = 0
+        curr_theta_ind = 0
         for theta_ind in range(theta_count + 1):
-            theta = theta_step * theta_ind
-
-            while 0:
-                pass
+            theta = math.tau - theta_step * theta_ind
+            if theta < 0:
+                theta += math.tau
 
             r.append(params['R'] + shift +
                      a * (math.cos(theta) - triang * math.pow(math.sin(theta), 2)))
             z.append(params['Z'] + a * elong * math.sin(theta))
 
-            # limit to separatrix!!!
+            theta = angle_pos(r[-1], z[-1], params['R'] + shift, params['Z'])
+            while 1:
+                a1 = angle_pos(sep_r[curr_theta_ind], sep_z[curr_theta_ind], params['R'] + shift, params['Z'])
+                a2 = angle_pos(sep_r[curr_theta_ind - 1], sep_z[curr_theta_ind - 1], params['R'] + shift, params['Z'])
+
+                if a2 < a1 - math.pi <= theta + math.tau < a2 + math.tau:
+                    break
+                if a2 < a1 <= theta < a2 + math.tau:
+                    break
+                if a1 < theta <= a2:
+                    break
+                curr_theta_ind += 1
+                if curr_theta_ind == len(sep_r):
+                    curr_theta_ind = 0
+
+
+
+            r_sep_point = (sep_r[curr_theta_ind] - params['R'] - shift) ** 2 + (sep_z[curr_theta_ind] - params['Z']) ** 2
+            r_surf_point = (r[-1] - params['R'] - shift) ** 2 + (z[-1] - params['Z']) ** 2
+            if r_surf_point > r_sep_point:
+                r[-1] = sep_r[curr_theta_ind]
+                z[-1] = sep_z[curr_theta_ind]
         return r, z
 
     def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):
-        tolerance = 0.1
+        tolerance = 0.05
 
         min_a = 0
         iteration = 1
@@ -181,9 +204,8 @@ class CCM:
             return {
                 'error': params['error']
             }
-        sep_r, sep_z = self.clockwise(self.data['boundary']['rbdy']['variable'][t_ind],
-                                      self.data['boundary']['zbdy']['variable'][t_ind],
-                                      t_ind)
+        sep_r = self.data['boundary']['rbdy']['variable'][t_ind]
+        sep_z = self.data['boundary']['zbdy']['variable'][t_ind]
         if len(sep_r) == 0 or len(sep_z) == 0:
             return []
         equator_r = -1

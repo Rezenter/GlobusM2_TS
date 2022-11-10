@@ -1501,6 +1501,6 @@ class Handler:
         if req['default']:
             for filename in path.iterdir():
                 shutil.copy2(src=filename, dst=path.parent)
-            with open('%s/default.txt' % path, 'w') as out_file:
+            with open('%s%s/default.txt' % (PUB_PATH, result['shotn']), 'w') as out_file:
                 out_file.write('%d' % result['version'])
         print('Published OK')
