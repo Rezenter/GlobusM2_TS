@@ -36,6 +36,7 @@ def __bin_to_JSON(path_in: Path) -> list:
     with path_in.open(mode='rb') as file:
         raw = file.read()
         count = len(raw) / (8 * 1024 * 4 + 8)
+        print(len(raw))
         if not int(count) == count:
             fuck
         count = int(count)
@@ -46,11 +47,11 @@ def __bin_to_JSON(path_in: Path) -> list:
                 'ch': []
             }
             for ch in range(8):
-                event['ch'].append(struct.unpack_from('1024f', raw, (event_ind * (8 * 1024 * 4 + 8)) + ch * 1024 * 4))
-            event['t'] = event_ind #struct.unpack_from('d', raw, (event_ind * (8 * 1024 * 4 + 8)) + 8 * 1024 * 4)[0]
+                event['ch'].append(struct.unpack_from('1024f', raw, (event_ind * (8 * 1024 * 4)) + ch * 1024 * 4))
+            event['t'] = struct.unpack_from('Q', raw, (count * (8 * 1024 * 4)) + 8 * event_ind)[0]
             data.append(event)
+        print(count * (8 * 1024 * 4 + 8))
     return data
-
 
 def __ascii_to_JSON(path_in: Path) -> list:
     data: list = []
