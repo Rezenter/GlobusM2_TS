@@ -286,6 +286,8 @@ class Integrator:
             if self.version == 1:
                 adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            elif self.version == 3:
+                signal = [self.header['offset'] - 1250 + v * 2500/4096 for v in self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]
             maximum = float('-inf')
@@ -392,6 +394,8 @@ class Integrator:
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
             if self.version == 1:
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+            elif self.version == 3:
+                signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]
             integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +

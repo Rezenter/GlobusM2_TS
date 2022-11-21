@@ -913,6 +913,7 @@ class Handler:
                 }
 
         resp = {
+            'ok': True,
             'shot': self.get_version(req)['res']
         }
         if not resp['shot']['ok']:
@@ -1472,6 +1473,8 @@ class Handler:
         req['from'] = result['override']['t_start']
         req['to'] = result['override']['t_stop']
         req['old'] = True
+        if 'cfm' not in req or 'data' not in req['cfm']:
+            req['cfm'] = {}
         req['cfm'] = req['cfm']['data']
         csv = self.export_shot(req)
 
