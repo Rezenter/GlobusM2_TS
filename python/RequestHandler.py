@@ -1278,7 +1278,7 @@ class Handler:
         temp_evo = ''
         line = 't, '
         for poly in shot['config']['poly']:
-            line += '%.1f, err, ' % poly['R']
+            line += '%.1f, %.1f_err, ' % (poly['R'], poly['R'])
         temp_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in shot['config']['poly']:
@@ -1300,7 +1300,7 @@ class Handler:
         for event in shot['events']:
             if 'timestamp' in event:
                 if x_from <= event['timestamp'] <= x_to:
-                    names += '%.1f, err, ' % event['timestamp']
+                    names += '%.1f, %.1f_err, ' % (event['timestamp'], event['timestamp'])
                     units += 'eV, eV, '
         temp_prof += names[:-2] + '\n'
         temp_prof += units[:-2] + '\n'
@@ -1319,7 +1319,7 @@ class Handler:
         dens_evo = ''
         line = 't, '
         for poly in shot['config']['poly']:
-            line += '%.1f, err, ' % poly['R']
+            line += '%.1f, %.1f_err, ' % (poly['R'], poly['R'])
         dens_evo += line[:-2] + '\n'
         line = 'ms, '
         for poly in shot['config']['poly']:
@@ -1342,7 +1342,7 @@ class Handler:
         for event in shot['events']:
             if 'timestamp' in event:
                 if x_from <= event['timestamp'] <= x_to:
-                    names += '%.1f, err, ' % event['timestamp']
+                    names += '%.1f, %.1f_err, ' % (event['timestamp'], event['timestamp'])
                     units += 'm-3, m-3, '
         dens_prof += names[:-2] + '\n'
         dens_prof += units[:-2] + '\n'
