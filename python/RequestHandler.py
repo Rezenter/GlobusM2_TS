@@ -19,6 +19,7 @@ import python.subsyst.tokamak as tokamak
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
+from python.subsyst.slowADC import SlowADC
 
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
@@ -29,6 +30,7 @@ ABS_CAL = 'calibration/abs/processed/'
 EXPECTED_FOLDER = 'calibration/expected/'
 RAW_FOLDER = 'raw/'
 RES_FOLDER = 'result/'
+SLOW_RAW_FOLDER = 'slow/raw/'
 HEADER_FILE = 'header'
 FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
@@ -64,6 +66,11 @@ class Handler:
                 'status': self.diag_status,
                 'get_conf': self.get_configs,
                 'auth': authenticate
+            },
+            'slow_adc': {
+                'status': self.slow_status,
+                'arm': self.slow_arm,
+                'disarm': self.slow_disarm
             },
             'adc': {
                 'status': self.fast_status,
@@ -107,6 +114,7 @@ class Handler:
         self.sht = None
         self.las = laser1064.ControlUnit()
         self.state = {}
+        self.slow = None
 
         print('connecting udp...')
         self.tokamak = tokamak.Sync(self.diag_disarm)
@@ -668,6 +676,50 @@ class Handler:
         resp['signal'] = self.sht.get_sig(req['name'])
         resp['ok'] = True
         return resp
+
+    def slow_status(self, req):
+        self.slow = SlowADC('%s/%s/%s/' % (DB_PATH, PLASMA_SHOTS, SLOW_RAW_FOLDER))
+        if not self.slow.ready or not self.slow.satus():
+            print('slow connection error')
+            self.state['slow'] = {
+                'ok': False,
+                'description': ('Connection error')
+            }
+        else:
+            self.state['slow'] = {
+                'ok': True
+            }
+        return self.state['slow']
+
+    def slow_arm(self, req):
+        shot_filename = SHOTN_FILE
+        if not os.path.isfile(shot_filename):
+            self.state['slow'] = {
+                'ok': False,
+                'description': 'Shotn file "%s" not found.' % shot_filename
+            }
+            return self.state['slow']
+        else:
+            with open(shot_filename, 'r') as shotn_file:
+                line = shotn_file.readline()
+                shotn = int(line)
+
+        self.slow.arm(shotn=shotn)
+
+        self.state['slow'] = {
+            'ok': True,
+            'armed': True,
+            'shotn': shotn
+        }
+        return self.state['slow']
+
+    def slow_disarm(self, req):
+        self.slow.disarm()
+        self.state['slow'] = {
+            'ok': True,
+            'armed': False
+        }
+        return self.state['slow']
 
     def fast_status(self, req):
         #print('status...')

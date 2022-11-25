@@ -6,7 +6,7 @@
 </head>
 <body>
     <div class="row">
-        <p>ADC control</p>
+        <p>fast ADC control</p>
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <p id="ADC_state">No connection</p>
             <button class="btn btn-info" id="ADC_refresh_button">Refresh</button>
@@ -21,6 +21,20 @@
         <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
             <button class="btn btn-success" id="ADC_arm_button">Arm</button>
             <button class="btn btn-danger" id="ADC_disarm_button">Disarm</button>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <p>slow ADC control</p>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <p id="slow_ADC_state">No connection</p>
+            <button class="btn btn-info" id="slow_ADC_refresh_button">Refresh</button>
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+        </div>
+        <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <button class="btn btn-success" id="slow_ADC_arm_button">Arm</button>
+            <button class="btn btn-danger" id="slow_ADC_disarm_button">Disarm</button>
         </div>
     </div>
     <hr>
@@ -130,6 +144,78 @@
             ]
         });
         this.m_coolant_chart.render();
+
+        this.slowRequestADC = function (req, callback) {
+            req.subsystem = 'slow_adc';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
+
+        this.slowADCRefresh = function(ev){
+            let state = $('#slow_ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.slowRequestADC(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    //console.log(resp);
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Connected');
+                        $('#next_shot_number').val(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.slowADCArm = function(ev) {
+            let state = $('#slow_ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let req = {
+                reqtype: 'arm'
+            }
+            this.slowRequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','yellow');
+                        state.html('Armed');
+                        alert(resp.shotn);
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
+
+        this.slowADCDisarm = function(ev){
+            let state = $('#slow_ADC_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            let req = {
+                reqtype: 'disarm'
+            }
+            this.slowRequestADC(
+                req, function (resp) {
+                    if(resp.ok){
+                        state.css('background-color','green');
+                        state.html('Disarmed');
+                    }else{
+                        state.css('background-color','red');
+                        state.html('No connection');
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }
+            );
+        }.bind(this);
 
         this.RequestADC = function (req, callback) {
             req.subsystem = 'adc';
@@ -461,6 +547,10 @@
         }.bind(this);
 
         this.ConnectControls = function () {
+            $('#slow_ADC_refresh_button').on('click', this, this.slowADCRefresh);
+            $('#slow_ADC_arm_button').on('click', this, this.slowADCArm);
+            $('#slow_ADC_disarm_button').on('click', this, this.slowADCDisarm);
+
             $('#ADC_refresh_button').on('click', this, this.ADCRefresh);
             $('#ADC_arm_button').on('click', this, this.ADCArm);
             $('#ADC_disarm_button').on('click', this, this.ADCDisarm);

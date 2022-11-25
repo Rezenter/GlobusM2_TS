@@ -103,7 +103,7 @@ class Processor:
         if 'type version' not in self.result['config']:
             return self.result
         res = self.result.copy()
-        if res['config']['type version'] == 1:
+        if res['config']['type version'] >= 1:
             for poly in res['config']['poly']:
                 poly['R'] = res['config']['fibers'][poly['fiber']]['R']
                 poly['l05'] = res['config']['fibers'][poly['fiber']]['poloidal_length'] * 0.5
@@ -228,26 +228,29 @@ class Processor:
         for event_ind in range(len(self.signal['data'])):
             error = None
             if self.signal['data'][event_ind]['error'] is not None:
+                error = self.signal['data'][event_ind]['error']
                 self.result['events'].append({
                     'error': self.signal['data'][event_ind]['error']
                 })
                 continue
+
+
+            poly = []
+            if 'type version' not in self.result['config'] or self.result['config']['type version'] == 1:
+                energy = self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
+            else:
+                energy = self.result['config']['laser'][0]['E']
+
+            for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
+                temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
+                                      stray[poly_ind], energy, event_ind)
+                poly.append(temp)
             proc_event = {
                 'timestamp': self.signal['data'][event_ind]['timestamp'],
-                'energy': self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
+                'energy': energy,
+                'T_e': poly,
+                'error': error
             }
-            if self.signal['data'][event_ind]['error'] is not None:
-                error = self.signal['data'][event_ind]['error']
-            else:
-                poly = []
-                energy = self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
-
-                for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
-                    temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
-                                          stray[poly_ind], energy, event_ind)
-                    poly.append(temp)
-                proc_event['T_e'] = poly
-            proc_event['error'] = error
             self.result['events'].append(proc_event)
         self.save_result()
 

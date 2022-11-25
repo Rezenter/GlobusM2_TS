@@ -1682,12 +1682,12 @@
                 $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].versions[ver_ind].abs_cal);
                 $('#viewerAbs_select').prop('disabled', true);
             }else{
-                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].default_configs.config);
                 $('#viewerConfig_select').prop('disabled', false);
-                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].default_configs.spectral_cal);
                 $('#viewerSpectral_select').prop('disabled', false);
-                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].default_configs.abs_cal);
                 $('#viewerAbs_select').prop('disabled', false);
+                $('#viewerConfig_select').val(this.m_plasma_shots[shot_ind].default_configs.config);
+                $('#viewerSpectral_select').val(this.m_plasma_shots[shot_ind].default_configs.spectral_cal);
+                $('#viewerAbs_select').val(this.m_plasma_shots[shot_ind].default_configs.abs_cal);
             }
         };
 

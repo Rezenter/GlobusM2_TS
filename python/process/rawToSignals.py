@@ -183,11 +183,13 @@ class Integrator:
         print('Processing shot...')
         if self.version == 1:
             combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
+        elif self.version == 3:
+            combiscope_zero = self.data[0][0]['t']
         else:
             combiscope_zero = self.data[0][0]['t'] - self.config['adc']['first_shot']
         expect_sync = True
         for event_ind in range(self.laser_count):
-            # print('Event %d' % event_ind)
+
             laser, error = self.process_laser_event(event_ind, expect_sync)
             if 'sync' in laser and laser['sync']:
                 if self.version == 1:
@@ -197,6 +199,8 @@ class Integrator:
                 for correction_ind in range(event_ind):
                     if self.version == 1:
                         self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
+                    if self.version == 3:
+                        self.processed[correction_ind]['timestamp'] = combiscope_zero
                     else:
                         self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind]['t'] - combiscope_zero
                 expect_sync = False
@@ -204,6 +208,8 @@ class Integrator:
                 #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
                 if self.version == 1:
                     timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
+                elif self.version == 3:
+                    timestamp = self.data[0][event_ind]['t']
                 else:
                     timestamp = self.data[0][event_ind]['t'] - combiscope_zero
             else:
