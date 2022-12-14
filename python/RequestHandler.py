@@ -1527,7 +1527,8 @@ class Handler:
         req['old'] = True
         if 'cfm' not in req or 'data' not in req['cfm']:
             req['cfm'] = {}
-        req['cfm'] = req['cfm']['data']
+        else:
+            req['cfm'] = req['cfm']['data']
         csv = self.export_shot(req)
 
         with open('%s/%s_T(R).csv' % (path, result['shotn']), 'w') as out_file:

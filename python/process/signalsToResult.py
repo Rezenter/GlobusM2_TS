@@ -259,7 +259,7 @@ class Processor:
         if not os.path.isdir(result_folder):
             os.mkdir(result_folder)
         with open('%s%05d%s' % (result_folder, self.shotn, self.FILE_EXT), 'w') as out_file:
-            json.dump(self.result, out_file)
+            json.dump(self.result, out_file, indent=1)
         #self.to_csv()
 
     def calc_temp(self, event, poly, stray, E, event_ind):
