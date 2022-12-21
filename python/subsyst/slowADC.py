@@ -37,7 +37,7 @@ class SlowADC:
             sock.connect((ip, self.PORT))
             #sock.send(b'\x02\x04\x00\x2c\x02') #запуск от soft, 10В диап
             sock.send(b'\x02\x05\x00\x2c\x02') #настройки, запуск от триггера, 10В диап
-            #sock.send(b'\x02\x05\x01\x2c\x03') #настройки, запуск от триггера, 5В диап
+            #sock.send(b'\x02\x05\x01\x2c\x02') #настройки, запуск от триггера, 5В диап
             #print('ADC_ip = %s configured' % ip)
             sock.close()
             print(ip, ' ARMED')
@@ -73,4 +73,4 @@ class SlowADC:
 
     def get_data(self, board: int):
         subprocess.run(["pscp", "-pw", self.secret, "-batch", '-C', '%s@%s:adc_data.slow' % (self.user, self.ADC_IP[board]), '%s/%s.slow' % (self.current_path, self.ADC_IP[board])])
-
+        # to sht

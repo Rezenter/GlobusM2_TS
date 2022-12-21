@@ -443,6 +443,8 @@ class Integrator:
                                                        matching_gain)
             if self.config['preamp']['voltageDivider']:
                 photoelectrons *= 2
+            #if poly['ind'] == 3 and ch_ind == 2:
+            #    photoelectrons *= 0.87294
             pre_std = statistics.stdev(signal[:integration_from], zero)
             err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
             res['ch'].append({

@@ -566,7 +566,7 @@ class Handler:
                 adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
                 event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
             else:
-                event.append(self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']])
+                event.append(list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']]))
             starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
 
         board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
@@ -574,7 +574,7 @@ class Handler:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
             las = self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch]
         else:
-            las = self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]
+            las = (list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]))
         resp = {
             'data': event,
             'laser': las,
