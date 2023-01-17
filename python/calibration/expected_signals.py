@@ -2,12 +2,12 @@ import scipy.special as sci
 import auxiliary as aux
 
 # change only these lines!
-config_name: str = '2022.09.01_polySwap'
-spectral_raw_name: str = '2022.05.12'
+config_name: str = '2023.01.16_G2-10'
+spectral_raw_name: str = '2023.01.12'
 WL_STEP: float = 0.1  # [nm]. integration step, 0.1
 T_LOW: float = 1.0  # [eV]
 T_HIGH: float = 5e3  # [eV]
-T_MULT: float = 1.02
+T_MULT: float = 1.01
 # change only these lines!
 
 class TS_spectrum:
