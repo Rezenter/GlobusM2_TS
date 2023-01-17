@@ -345,7 +345,7 @@ class Integrator:
                 laser['ave']['pre_std'] += laser['boards'][-1]['pre_std']
                 laser['ave']['int'] += integral
             else:
-                print('Warning! T15 patch!')
+                print('Warning! T15 patch!', board_ind)
             #laser['ave']['int_len'] += stop_ind
             board_count += 1
         sync = True
@@ -363,7 +363,7 @@ class Integrator:
             #error = 'not all boards got laser signal'
             print('not all boards got laser signal, but commented for t15')
         else:
-            if board_count >= 8:
+            if board_count > 8:
                 board_count = 8
                 print('Warning! T15 patch!')
             laser['ave']['pre_std'] /= board_count
@@ -380,7 +380,7 @@ class Integrator:
                     if board_ind != 8:
                         error = 'integrals differ'
                     else:
-                        print('Warning! T15 patch!')
+                        print('Warning! T15 patch!', "???")
         if error is not None:
             print(error, event_ind)
         return laser, error

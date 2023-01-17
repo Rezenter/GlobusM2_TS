@@ -40,14 +40,18 @@ class Spectrum:
             (1 / self.lambda_las) + self.get_raman_shift(j)
         )
 
-    def get_raman_section(self, j: int):  # [m^2 / sr] return differential cross-section
+    def get_raman_section(self, j: int, polar: bool = False):  # [m^2 / sr] return differential cross-section
         first = 64 * aux.math.pow(aux.math.pi, 4) / 45
         if j > 0:
             sec = 3 * j * (j - 1) / (2 * (2 * j + 1) * (2 * j - 1))  # antistocs
         else:
             sec = (3 * (-j + 1) * (-j + 2)) / (2 * (2 * -j + 1) * (2 * -j + 3))
         third = aux.math.pow((1 / self.lambda_las) + self.get_raman_shift(j), 4)
-        return first * sec * third * self.gamma_sq * (8 * aux.math.pi * 2.5 / 3)
+        #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 2.5 / 3)
+        res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
+        if polar:
+            return res  # depolarized rejected
+        return res * (1 + 0.75)  # depolarized accepted
 
     def normalise(self):
         q_val = 0
@@ -55,14 +59,14 @@ class Spectrum:
             q_val += self.get_fraction(j)
         self.Q_norm = q_val
 
-    def __init__(self, lambda_las: float, temperature: float):
+    def __init__(self, lambda_las: float, temperature: float, polar: bool = False):
         self.lambda_las: float = lambda_las
         self.temperature = temperature
         self.normalise()
         self.lines = []
         for j in range(2, self.J_max + 1):
             fj = self.get_fraction(j)
-            sigma = self.get_raman_section(j)
+            sigma = self.get_raman_section(j, polar=polar)
             self.lines.append({
                 'J': j,
                 'wl': self.get_raman_wavelength(j) * 1e9,
@@ -72,7 +76,7 @@ class Spectrum:
 
 calibr_path = 'calibration/abs/'
 PROCESSED_PATH = 'processed/'
-abs_filename = '2022.09.01_raw'
+abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
 nl_correction = 0.7
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
@@ -90,9 +94,12 @@ def process_point(point, stray=None):
         'shotn': [],
         'pressure': point['pressure'],
         'temperature': abs_calibration['temperature'],
+        'polarizator': False,
         'laser_energy': abs_calibration['laser_energy'],
         'laser_shots': []
     }
+    if 'polar' in abs_calibration:
+        result['polarizator'] = abs_calibration['polar']
 
     poly = []
     laser = 0
@@ -104,7 +111,6 @@ def process_point(point, stray=None):
                 config = integrator.config
                 poly = [[{
                         'signals': [],
-                        'signals_norm': [],
                         'weight': 0.0,
                         'val': 0.0
                     } for ch in poly['channels']]
@@ -126,10 +132,10 @@ def process_point(point, stray=None):
                         poly[int(poly_ind)][ch_ind]['weight'] += aux.math.pow(event['poly'][poly_ind]['ch'][ch_ind]['err'], -2)
                         poly[int(poly_ind)][ch_ind]['val'] += event['poly'][poly_ind]['ch'][ch_ind]['ph_el'] *\
                                                     aux.math.pow(event['poly'][poly_ind]['ch'][ch_ind]['err'], -2)
-                        poly[int(poly_ind)][ch_ind]['signals_norm'].append(event['poly'][poly_ind]['ch'][ch_ind]['ph_el'] / event['laser']['ave']['int'])
     measured_energy: float = laser / las_count
     lines = Spectrum(lambda_las=config['laser'][0]['wavelength'] * 1e-9,
-                     temperature=aux.phys_const.cels_to_kelv(abs_calibration['temperature'])).lines
+                     temperature=aux.phys_const.cels_to_kelv(abs_calibration['temperature']),
+                     polar=result['polarizator']).lines
     for poly_ind in range(len(poly)):
         filters = aux.Filters(config['poly'][poly_ind]['filter_set'])
         detector = aux.APD(config['poly'][poly_ind]['detectors'])
