@@ -201,7 +201,10 @@ class StoredCalculator:
                 if (requested_time - self.ccm_data.timestamps[t_ind]) >= (self.ccm_data.timestamps[t_ind + 1] - requested_time):
                     t_ind += 1
                 break
-
+        if len(self.ccm_data.data['boundary']['rbdy']['variable'][t_ind]) == 0:
+            return {
+                'error': 'no boundary'
+            }
         self.ccm_data.data['boundary']['rbdy']['variable'][t_ind], self.ccm_data.data['boundary']['zbdy']['variable'][t_ind] = \
             self.ccm_data.clockwise(self.ccm_data.data['boundary']['rbdy']['variable'][t_ind],
                                     self.ccm_data.data['boundary']['zbdy']['variable'][t_ind],
@@ -279,10 +282,17 @@ class StoredCalculator:
                     poly['Te_err'] = event['T_e'][poly['ind']]['Terr']
                     poly['ne_err'] = event['T_e'][poly['ind']]['n_err']
                 #print('calc dynamics', event['timestamp'])
-                result.append({
-                    'event_index': event_ind,
-                    'data': copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
-                })
+                data = copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
+                if 'error' in data:
+                    result.append({
+                        'event_index': event_ind,
+                        'error': data['error']
+                    })
+                else:
+                    result.append({
+                        'event_index': event_ind,
+                        'data': data
+                    })
         return {
             'ok': True,
             'data': result
