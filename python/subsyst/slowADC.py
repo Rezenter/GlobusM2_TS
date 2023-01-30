@@ -37,7 +37,7 @@ class SlowADC:
             sock.connect((ip, self.PORT))
             #sock.send(b'\x02\x04\x00\x2c\x02') #запуск от soft, 10В диап
             sock.send(b'\x02\x05\x00\x2c\x02') #настройки, запуск от триггера, 10В диап
-            #sock.send(b'\x02\x05\x01\x2c\x02') #настройки, запуск от триггера, 5В диап
+           #sock.send(b'\x02\x05\x01\x2c\x02') #настройки, запуск от триггера, 5В диап
             #print('ADC_ip = %s configured' % ip)
             sock.close()
             print(ip, ' ARMED')
@@ -51,6 +51,7 @@ class SlowADC:
             success += 1
             self.get_data(ip_ind)
         if success == len(self.ADC_IP):
+
             print('slow ADC disarmed OK')
         else:
             print('Only %d of %d slow ADCs ready' % (success, len(self.ADC_IP)))

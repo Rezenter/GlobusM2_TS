@@ -38,7 +38,7 @@ GUI_CONFIG = 'config/'
 CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
 CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
-PUB_PATH = 'Y:/!!!TS_RESULTS/2022/'
+PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
@@ -692,13 +692,15 @@ class Handler:
         return self.state['slow']
 
     def slow_arm(self, req):
-        shot_filename = SHOTN_FILE
+        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
+        if req['isPlasma']:
+            shot_filename = SHOTN_FILE
         if not os.path.isfile(shot_filename):
-            self.state['slow'] = {
+            self.state['fast'] = {
                 'ok': False,
                 'description': 'Shotn file "%s" not found.' % shot_filename
             }
-            return self.state['slow']
+            return self.state['fast']
         else:
             with open(shot_filename, 'r') as shotn_file:
                 line = shotn_file.readline()

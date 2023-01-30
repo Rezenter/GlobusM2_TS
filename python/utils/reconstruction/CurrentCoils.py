@@ -225,15 +225,17 @@ class CCM:
         center_r = params['R'] + shaf_shift
         lfs_poly = []
         hfs_poly = []
+
         for poly_ind in range(len(polys)):
             poly = polys[poly_ind]
             if poly['skip']:
                 continue
             if poly['R'] >= center_r:
-                lfs_poly.append(poly)
+                if params['eq_lfs_R'] >= poly['R']:
+                    lfs_poly.append(poly)
             else:
-                hfs_poly.insert(0, poly)
-
+                if params['eq_hfs_R'] <= poly['R']:
+                    hfs_poly.insert(0, poly)
         if len(lfs_poly) == 0 and len(hfs_poly) == 0:
             return []
         result = [{
@@ -250,7 +252,6 @@ class CCM:
             result.append(poly)
         last_a = 1
         for poly in hfs_poly:
-            #check poly inside separatrix!
             last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r, lfs=False)
             poly['a'] = last_a
             for res_ind in range(len(result)):
@@ -316,10 +317,11 @@ class CCM:
 
     def get_surface_parameters(self, t_ind):
         if not self.calculated[t_ind]['calculated']:
-            left = 0
-            right = 0
-            top = 0
-            bot = 0
+            left: int = 0
+            right: int = 0
+            top: int = 0
+            bot: int = 0
+            equator: list[float] = []
             if len(self.data['boundary']['rbdy']['variable'][t_ind]) != len(self.data['boundary']['zbdy']['variable'][t_ind]):
                 print('Bad CCM data for t_ind = %d.' % t_ind)
                 fuck_off
@@ -338,7 +340,9 @@ class CCM:
                         top = i
                     elif self.data['boundary']['zbdy']['variable'][t_ind][bot] > self.data['boundary']['zbdy']['variable'][t_ind][i]:
                         bot = i
-
+                    if self.data['boundary']['zbdy']['variable'][t_ind][i] * self.data['boundary']['zbdy']['variable'][t_ind][i - 1] <= 0:
+                        equator.append(self.data['boundary']['rbdy']['variable'][t_ind][i - 1] + (self.data['boundary']['rbdy']['variable'][t_ind][i] - self.data['boundary']['rbdy']['variable'][t_ind][i - 1]) / (self.data['boundary']['zbdy']['variable'][t_ind][i] - self.data['boundary']['zbdy']['variable'][t_ind][i - 1]) * (-self.data['boundary']['zbdy']['variable'][t_ind][i - 1]))
+                #print('equator', equator)
                 self.calculated[t_ind] = {
                     'calculated': True,
                     'left': {
@@ -368,6 +372,8 @@ class CCM:
                              (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]),
                     'elong': (self.data['boundary']['zbdy']['variable'][t_ind][top] - self.data['boundary']['zbdy']['variable'][t_ind][bot]) /
                              (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]),
-                    'a': (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]) * 0.5
+                    'a': (self.data['boundary']['rbdy']['variable'][t_ind][right] - self.data['boundary']['rbdy']['variable'][t_ind][left]) * 0.5,
+                    'eq_hfs_R': min(equator),
+                    'eq_lfs_R': max(equator)
                 }
         return self.calculated[t_ind]

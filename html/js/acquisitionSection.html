@@ -177,7 +177,8 @@
             state.css('background-color','grey');
             state.html('Requesting...');
             let req = {
-                reqtype: 'arm'
+                reqtype: 'arm',
+                isPlasma: $('#is_plasma')[0].checked,
             }
             this.slowRequestADC(
                 req, function (resp) {
