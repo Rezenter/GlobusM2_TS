@@ -137,7 +137,7 @@ class Processor:
     def load(self):
         self.result = {}
         result_path = '%s%s%05d/%05d%s' % (self.prefix, self.RESULT_FOLDER, self.shotn, self.shotn, self.FILE_EXT)
-        if os.path.isfile(result_path):
+        if False and os.path.isfile(result_path):
             print('Loading existing processed result.')
             with open(result_path, 'rb') as signal_file:
                 obj = ijson.kvitems(signal_file, '', use_float=True)

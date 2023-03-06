@@ -229,6 +229,7 @@ class StoredCalculator:
             for point in poly['z']:
                 poly['z_min'] = min(poly['z_min'], point)
                 poly['z_max'] = max(poly['z_max'], point)
+        #print('integrating...')
         integration = self.integrate(poly_a, nl_r)
         return {
             'area': integration['area'],

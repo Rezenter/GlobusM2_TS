@@ -117,7 +117,8 @@ class Integrator:
             self.version = self.header['version']
 
         signal_path = '%s%s%05d%s' % (self.prefix, self.SIGNAL_FOLDER, self.shotn, self.JSON_EXT)
-        if os.path.isfile(signal_path):
+
+        if False and os.path.isfile(signal_path):
             print('Loading existing processed signals.')
             with open(signal_path, 'rb') as signal_file:
                 obj = ijson.items(signal_file, 'common.config_name', use_float=True)
@@ -184,7 +185,7 @@ class Integrator:
         print('Processing shot...')
         if self.version == 1:
             combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
-        elif self.version == 4:
+        elif self.version >= 4:
             combiscope_zero = self.data[0][0]['t']
         else:
             combiscope_zero = self.data[0][0]['t'] - self.config['adc']['first_shot']
@@ -200,7 +201,7 @@ class Integrator:
                 for correction_ind in range(event_ind):
                     if self.version == 1:
                         self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
-                    if self.version == 4:
+                    if self.version >= 4:
                         self.processed[correction_ind]['timestamp'] = combiscope_zero
                     else:
                         self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind]['t'] - combiscope_zero
@@ -209,7 +210,7 @@ class Integrator:
                 #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
                 if self.version == 1:
                     timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
-                elif self.version == 4:
+                elif self.version >= 4:
                     timestamp = self.data[0][event_ind]['t']
                 else:
                     timestamp = self.data[0][event_ind]['t'] - combiscope_zero
@@ -293,7 +294,7 @@ class Integrator:
             if self.version == 1:
                 adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            elif self.version == 4:
+            elif self.version >= 4:
                 signal = [self.header['offset'] - 1250 + v * 2500/4096 for v in self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]
@@ -402,7 +403,7 @@ class Integrator:
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
             if self.version == 1:
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            elif self.version == 4:
+            elif self.version >= 3:
                 signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]

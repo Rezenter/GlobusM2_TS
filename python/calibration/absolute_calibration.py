@@ -77,6 +77,7 @@ class Spectrum:
 calibr_path = 'calibration/abs/'
 PROCESSED_PATH = 'processed/'
 abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
+abs_filename = '2023.02.03_raw_330Hz_1.6J_G2-10_cleaned'
 nl_correction = 0.7
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
