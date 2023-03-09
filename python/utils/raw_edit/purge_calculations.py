@@ -12,6 +12,7 @@ FILE_EXT = 'json'
 
 
 def purge_calc(shotn: int):
+    print('Purge %d' % shotn)
     if is_plasma:
         prefix = '%s%s' % (DB_PATH, PLASMA_FOLDER)
     else:
@@ -26,6 +27,6 @@ def purge_calc(shotn: int):
         print('Removed result folder')
 
 
-purge_calc(42542)
+purge_calc(42123)
 
 print('OK')

@@ -1076,9 +1076,13 @@ class Handler:
             eq_length = []
             nl_eq_ave = []
             nl_eq_ave_err = []
+            t_max_meas = []
+            t_max_meas_err = []
+            n_max_meas = []
+            n_max_meas_err = []
 
-            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err\n'
-            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3\n'
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err, T_max_measured, T_max_err, n_max_measured, n_max_err\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3, eV, eV, m-3, m-3\n'
             for event_ind_aux in range(len(data)):
                 event = data[event_ind_aux]
 
@@ -1140,6 +1144,17 @@ class Handler:
                         n_c.append(event['data']['surfaces'][-1]['ne'])
                         n_c_err.append(event['data']['surfaces'][-1]['ne_err'])
 
+                        if len(event['data']['surfaces']) >= 4:
+                            t_max_meas.append((event['data']['surfaces'][-2]['Te'] / (event['data']['surfaces'][-2]['Te_err']**2) + event['data']['surfaces'][-3]['Te'] / (event['data']['surfaces'][-3]['Te_err']**2)) / (event['data']['surfaces'][-2]['Te_err']**-2 + event['data']['surfaces'][-3]['Te_err']**-2))
+                            t_max_meas_err.append(max(event['data']['surfaces'][-2]['Te_err'], event['data']['surfaces'][-3]['Te_err']))
+                            n_max_meas.append((event['data']['surfaces'][-2]['ne'] / (event['data']['surfaces'][-2]['ne_err']**2) + event['data']['surfaces'][-3]['ne'] / (event['data']['surfaces'][-3]['ne_err']**2)) / (event['data']['surfaces'][-2]['ne_err']**-2 + event['data']['surfaces'][-3]['ne_err']**-2))
+                            n_max_meas_err.append(max(event['data']['surfaces'][-2]['ne_err'], event['data']['surfaces'][-3]['ne_err']))
+                        else:
+                            t_max_meas.append(0)
+                            t_max_meas_err.append(1e100)
+                            n_max_meas.append(0)
+                            n_max_meas_err.append(1e100)
+
                         t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
                         n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
@@ -1161,7 +1176,7 @@ class Handler:
                                 r_sep_val = -1
 
 
-                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e\n' % \
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e, %.3e, %.3e, %.3e, %.3e\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'],
                                 event['data']['nl'], event['data']['nl_err'],
                                 length,
@@ -1178,10 +1193,12 @@ class Handler:
                                 r_sep_val,
                                 event['data']['nl_eq'], event['data']['nl_eq_err'],
                                 length_eq,
-                                event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq
+                                event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq,
+                                t_max_meas[-1], t_max_meas_err[-1],
+                                n_max_meas[-1], n_max_meas_err[-1]
                         )
                     else:
-                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'])
             to_pack = {
                 'nl42 (m^-2)': {
@@ -1246,14 +1263,14 @@ class Handler:
                     'y': vol
                 },
                 'Te central': {
-                    'comment': 'температура в ближайшей к центру точке',
+                    'comment': 'температура, экстраполированная в точку 0 в потоковых координатах',
                     'unit': 'Te(eV)',
                     'x': timestamps,
                     'y': t_c,
                     'err': t_c_err
                 },
                 'ne central (m^-3)': {
-                    'comment': 'концентрация в ближайшей к центру точке',
+                    'comment': 'концентрация, экстраполированная в точку 0 в потоковых координатах',
                     'unit': 'ne(m^-3)',
                     'x': timestamps,
                     'y': n_c,
@@ -1283,6 +1300,21 @@ class Handler:
                     'x': timestamps,
                     'y': eq_length
                 },
+                'Te max measured': {
+                    'comment': 'температура, усреднённая по двум центральным точкам измерения с учётом веса',
+                    'unit': 'Te(eV)',
+                    'x': timestamps,
+                    'y': t_max_meas,
+                    'err': t_max_meas_err
+                },
+                'ne max measured': {
+                    'comment': 'концентрация, усреднённая по двум центральным точкам измерения с учётом веса',
+                    'unit': 'ne(m^-3)',
+                    'x': timestamps,
+                    'y': n_max_meas,
+                    'err': n_max_meas_err
+                },
+
             }
 
         serialised = [{
