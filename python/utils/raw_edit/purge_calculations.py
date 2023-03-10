@@ -26,7 +26,3 @@ def purge_calc(shotn: int):
         shutil.rmtree(result_folder)
         print('Removed result folder')
 
-
-purge_calc(42123)
-
-print('OK')

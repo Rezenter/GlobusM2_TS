@@ -2,12 +2,15 @@ import json
 import os
 import logging
 import time
+
+import phys_const
 import requests
 import ijson
 import math
 import shtRipper
 from pathlib import Path
 import shutil
+
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -20,6 +23,7 @@ import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
 from python.subsyst.slowADC import SlowADC
+from python.utils.raw_edit import purge_calculations
 
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
@@ -248,6 +252,7 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"sp_cal" field is missing from request.'
             return resp
+        purge_calculations.purge_calc(int(req['shotn']))
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
                                                       shotn=int(req['shotn']),
@@ -1445,6 +1450,29 @@ class Handler:
                                                       event['T_e'][poly_ind]['n_err'])
             dens_prof += line[:-2] + '\n'
 
+        press_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, %.1f_err, ' % (event['timestamp'], event['timestamp'])
+                    units += 'Pa, Pa, '
+        press_prof += names[:-2] + '\n'
+        press_prof += units[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            p: float = event['T_e'][poly_ind]['T'] * event['T_e'][poly_ind]['n'] * phys_const.q_e
+                            line += '%.2e, %.2e, ' % (p, p * (event['T_e'][poly_ind]['n_err']/event['T_e'][poly_ind]['n'] + event['T_e'][poly_ind]['Terr']/event['T_e'][poly_ind]['T']))
+            press_prof += line[:-2] + '\n'
+
         dynamics = self.dump_dynamics(shot, aux_data, x_from, x_to)
         return {
             'ok': True,
@@ -1452,6 +1480,7 @@ class Handler:
             'TR': temp_prof,
             'nt': dens_evo,
             'nR': dens_prof,
+            'PR': press_prof,
             'aux': dynamics
         }
 
@@ -1575,6 +1604,8 @@ class Handler:
             out_file.write(csv['nt'])
         with open('%s/%s_dynamics.csv' % (path, result['shotn']), 'w') as out_file:
             out_file.write(csv['aux'])
+        with open('%s/%s_P(R).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['PR'])
 
         with open('%s/%s_T(R)_old.csv' % (path, result['shotn']), 'w') as out_file:
             out_file.write(csv['old']['TR'])
