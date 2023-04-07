@@ -2,8 +2,8 @@ import json
 import math
 import os.path
 
-CCM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
-CCM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
+CCM_DB = '//172.16.12.127/Pub/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
+CCM_DB_NEW = '//172.16.12.127/Pub/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 
 theta_count = 180
 gamma_shift = 1

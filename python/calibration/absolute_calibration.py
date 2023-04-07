@@ -48,6 +48,7 @@ class Spectrum:
             sec = (3 * (-j + 1) * (-j + 2)) / (2 * (2 * -j + 1) * (2 * -j + 3))
         third = aux.math.pow((1 / self.lambda_las) + self.get_raman_shift(j), 4)
         #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 2.5 / 3)
+        print('!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
         res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
         if polar:
             return res  # depolarized rejected
@@ -67,11 +68,22 @@ class Spectrum:
         for j in range(2, self.J_max + 1):
             fj = self.get_fraction(j)
             sigma = self.get_raman_section(j, polar=polar)
+            print(self.get_raman_wavelength(j) * 1e9, sigma)
             self.lines.append({
                 'J': j,
                 'wl': self.get_raman_wavelength(j) * 1e9,
                 'line': fj * sigma
             })
+
+
+
+lines = Spectrum(lambda_las=1064 * 1e-9,
+                     temperature=aux.phys_const.cels_to_kelv(21),
+                     polar=False).lines
+fuck
+
+
+
 
 
 calibr_path = 'calibration/abs/'
