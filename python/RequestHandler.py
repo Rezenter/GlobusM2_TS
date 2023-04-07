@@ -2,12 +2,15 @@ import json
 import os
 import logging
 import time
+
+import phys_const
 import requests
 import ijson
 import math
 import shtRipper
 from pathlib import Path
 import shutil
+
 
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
@@ -20,6 +23,7 @@ import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
 from python.subsyst.slowADC import SlowADC
+from python.utils.raw_edit import purge_calculations
 
 DB_PATH = 'd:/data/db/'
 PLASMA_SHOTS = 'plasma/'
@@ -38,7 +42,7 @@ GUI_CONFIG = 'config/'
 CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
 CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
-PUB_PATH = 'Y:/!!!TS_RESULTS/2022/'
+PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
 
 SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
@@ -248,6 +252,7 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"sp_cal" field is missing from request.'
             return resp
+        purge_calculations.purge_calc(int(req['shotn']))
         if self.fine_processor is None or self.fine_processor.shotn != req['shotn']:
             self.fine_processor = fine_proc.Processor(db_path=DB_PATH,
                                                       shotn=int(req['shotn']),
@@ -566,7 +571,7 @@ class Handler:
                 adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
                 event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
             else:
-                event.append(self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']])
+                event.append(list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']]))
             starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
 
         board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
@@ -574,7 +579,7 @@ class Handler:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
             las = self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch]
         else:
-            las = self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]
+            las = (list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]))
         resp = {
             'data': event,
             'laser': las,
@@ -692,13 +697,15 @@ class Handler:
         return self.state['slow']
 
     def slow_arm(self, req):
-        shot_filename = SHOTN_FILE
+        shot_filename = "%s%sSHOTN.TXT" % (DB_PATH, DEBUG_SHOTS)
+        if req['isPlasma']:
+            shot_filename = SHOTN_FILE
         if not os.path.isfile(shot_filename):
-            self.state['slow'] = {
+            self.state['fast'] = {
                 'ok': False,
                 'description': 'Shotn file "%s" not found.' % shot_filename
             }
-            return self.state['slow']
+            return self.state['fast']
         else:
             with open(shot_filename, 'r') as shotn_file:
                 line = shotn_file.readline()
@@ -1074,9 +1081,13 @@ class Handler:
             eq_length = []
             nl_eq_ave = []
             nl_eq_ave_err = []
+            t_max_meas = []
+            t_max_meas_err = []
+            n_max_meas = []
+            n_max_meas_err = []
 
-            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err\n'
-            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3\n'
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err, T_max_measured, T_max_err, n_max_measured, n_max_err\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3, eV, eV, m-3, m-3\n'
             for event_ind_aux in range(len(data)):
                 event = data[event_ind_aux]
 
@@ -1138,6 +1149,17 @@ class Handler:
                         n_c.append(event['data']['surfaces'][-1]['ne'])
                         n_c_err.append(event['data']['surfaces'][-1]['ne_err'])
 
+                        if len(event['data']['surfaces']) >= 4:
+                            t_max_meas.append((event['data']['surfaces'][-2]['Te'] / (event['data']['surfaces'][-2]['Te_err']**2) + event['data']['surfaces'][-3]['Te'] / (event['data']['surfaces'][-3]['Te_err']**2)) / (event['data']['surfaces'][-2]['Te_err']**-2 + event['data']['surfaces'][-3]['Te_err']**-2))
+                            t_max_meas_err.append(max(event['data']['surfaces'][-2]['Te_err'], event['data']['surfaces'][-3]['Te_err']))
+                            n_max_meas.append((event['data']['surfaces'][-2]['ne'] / (event['data']['surfaces'][-2]['ne_err']**2) + event['data']['surfaces'][-3]['ne'] / (event['data']['surfaces'][-3]['ne_err']**2)) / (event['data']['surfaces'][-2]['ne_err']**-2 + event['data']['surfaces'][-3]['ne_err']**-2))
+                            n_max_meas_err.append(max(event['data']['surfaces'][-2]['ne_err'], event['data']['surfaces'][-3]['ne_err']))
+                        else:
+                            t_max_meas.append(0)
+                            t_max_meas_err.append(1e100)
+                            n_max_meas.append(0)
+                            n_max_meas_err.append(1e100)
+
                         t_p.append(event['data']['surfaces'][-1]['Te'] / event['data']['t_vol'])
                         n_p.append(event['data']['surfaces'][-1]['ne'] / event['data']['n_vol'])
 
@@ -1159,7 +1181,7 @@ class Handler:
                                 r_sep_val = -1
 
 
-                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e\n' % \
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e, %.3e, %.3e, %.3e, %.3e\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'],
                                 event['data']['nl'], event['data']['nl_err'],
                                 length,
@@ -1176,10 +1198,12 @@ class Handler:
                                 r_sep_val,
                                 event['data']['nl_eq'], event['data']['nl_eq_err'],
                                 length_eq,
-                                event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq
+                                event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq,
+                                t_max_meas[-1], t_max_meas_err[-1],
+                                n_max_meas[-1], n_max_meas_err[-1]
                         )
                     else:
-                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'])
             to_pack = {
                 'nl42 (m^-2)': {
@@ -1244,14 +1268,14 @@ class Handler:
                     'y': vol
                 },
                 'Te central': {
-                    'comment': 'температура в ближайшей к центру точке',
+                    'comment': 'температура, экстраполированная в точку 0 в потоковых координатах',
                     'unit': 'Te(eV)',
                     'x': timestamps,
                     'y': t_c,
                     'err': t_c_err
                 },
                 'ne central (m^-3)': {
-                    'comment': 'концентрация в ближайшей к центру точке',
+                    'comment': 'концентрация, экстраполированная в точку 0 в потоковых координатах',
                     'unit': 'ne(m^-3)',
                     'x': timestamps,
                     'y': n_c,
@@ -1281,6 +1305,21 @@ class Handler:
                     'x': timestamps,
                     'y': eq_length
                 },
+                'Te max measured': {
+                    'comment': 'температура, усреднённая по двум центральным точкам измерения с учётом веса',
+                    'unit': 'Te(eV)',
+                    'x': timestamps,
+                    'y': t_max_meas,
+                    'err': t_max_meas_err
+                },
+                'ne max measured': {
+                    'comment': 'концентрация, усреднённая по двум центральным точкам измерения с учётом веса',
+                    'unit': 'ne(m^-3)',
+                    'x': timestamps,
+                    'y': n_max_meas,
+                    'err': n_max_meas_err
+                },
+
             }
 
         serialised = [{
@@ -1411,6 +1450,29 @@ class Handler:
                                                       event['T_e'][poly_ind]['n_err'])
             dens_prof += line[:-2] + '\n'
 
+        press_prof = ''
+        names = 'R, '
+        units = 'mm, '
+        for event in shot['events']:
+            if 'timestamp' in event:
+                if x_from <= event['timestamp'] <= x_to:
+                    names += '%.1f, %.1f_err, ' % (event['timestamp'], event['timestamp'])
+                    units += 'Pa, Pa, '
+        press_prof += names[:-2] + '\n'
+        press_prof += units[:-2] + '\n'
+        for poly_ind in range(len(shot['config']['poly'])):
+            line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            for event in shot['events']:
+                if 'timestamp' in event:
+                    if x_from <= event['timestamp'] <= x_to:
+                        if event['T_e'][poly_ind]['error'] is not None or \
+                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                            line += '--, --, '
+                        else:
+                            p: float = event['T_e'][poly_ind]['T'] * event['T_e'][poly_ind]['n'] * phys_const.q_e
+                            line += '%.2e, %.2e, ' % (p, p * (event['T_e'][poly_ind]['n_err']/event['T_e'][poly_ind]['n'] + event['T_e'][poly_ind]['Terr']/event['T_e'][poly_ind]['T']))
+            press_prof += line[:-2] + '\n'
+
         dynamics = self.dump_dynamics(shot, aux_data, x_from, x_to)
         return {
             'ok': True,
@@ -1418,6 +1480,7 @@ class Handler:
             'TR': temp_prof,
             'nt': dens_evo,
             'nR': dens_prof,
+            'PR': press_prof,
             'aux': dynamics
         }
 
@@ -1541,6 +1604,8 @@ class Handler:
             out_file.write(csv['nt'])
         with open('%s/%s_dynamics.csv' % (path, result['shotn']), 'w') as out_file:
             out_file.write(csv['aux'])
+        with open('%s/%s_P(R).csv' % (path, result['shotn']), 'w') as out_file:
+            out_file.write(csv['PR'])
 
         with open('%s/%s_T(R)_old.csv' % (path, result['shotn']), 'w') as out_file:
             out_file.write(csv['old']['TR'])
