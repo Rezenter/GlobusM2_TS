@@ -75,8 +75,9 @@ class Spectrum:
 
 
 calibr_path = 'calibration/abs/'
+ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
-abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
+#abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
 abs_filename = '2023.02.03_raw_330Hz_1.6J_G2-10_cleaned'
 nl_correction = 0.7
 
@@ -103,10 +104,21 @@ def process_point(point, stray=None):
         result['polarizator'] = abs_calibration['polar']
 
     poly = []
-    laser = 0
+    laser: float = 0
     las_count = 0
     config = None
-    for shotn in point['shotn']:
+    for i,shotn in enumerate(point['shotn']):
+        ophir_file = '%s%s959905_%d.txt' % (aux.DB_PATH, ophir_path, point['ophir'][i])
+        ophir = []
+        with open(ophir_file, 'r') as file:
+            first: bool = True
+            for line in file:
+                if line[0] == ';' or line[0] == '!' or len(line) <= 1:
+                    continue
+                if first:
+                    first = False
+                    continue
+                ophir.append(float(line.split()[1]))
         with rawToSignals.Integrator(db_path=aux.DB_PATH, shotn=shotn, is_plasma=False, config_name=abs_calibration['config']) as integrator:
             if len(poly) == 0:
                 config = integrator.config
@@ -118,21 +130,20 @@ def process_point(point, stray=None):
                  for poly in integrator.config['poly']]
 
             result['shotn'].append(shotn)
-            for event in integrator.processed:
+            for ind, event in enumerate(integrator.processed):
                 if event['error'] is not None:
                     print('%d event skipped!' % shotn)
                     continue
                 result['laser_shots'].append(event['laser']['ave']['int'])
-                laser += event['laser']['ave']['int']
+                #laser += event['laser']['ave']['int']
+                laser += ophir[ind]
                 las_count += 1
                 for poly_ind in event['poly']:
                     for ch_ind in range(len(integrator.config['poly'][int(poly_ind)]['channels'])):
                         if event['poly'][poly_ind]['ch'][ch_ind]['error'] is not None:
                             continue
-                        poly[int(poly_ind)][ch_ind]['signals'].append(event['poly'][poly_ind]['ch'][ch_ind]['ph_el'])
-                        poly[int(poly_ind)][ch_ind]['weight'] += aux.math.pow(event['poly'][poly_ind]['ch'][ch_ind]['err'], -2)
-                        poly[int(poly_ind)][ch_ind]['val'] += event['poly'][poly_ind]['ch'][ch_ind]['ph_el'] *\
-                                                    aux.math.pow(event['poly'][poly_ind]['ch'][ch_ind]['err'], -2)
+                        poly[int(poly_ind)][ch_ind]['signals'].append(event['poly'][poly_ind]['ch'][ch_ind]['ph_el'] / ophir[ind])
+
     measured_energy: float = laser / las_count
     lines = Spectrum(lambda_las=config['laser'][0]['wavelength'] * 1e-9,
                      temperature=aux.phys_const.cels_to_kelv(abs_calibration['temperature']),
@@ -142,7 +153,7 @@ def process_point(point, stray=None):
         detector = aux.APD(config['poly'][poly_ind]['detectors'])
 
         for ch_ind in range(len(poly[poly_ind])):
-            poly[poly_ind][ch_ind]['measured'] = poly[poly_ind][ch_ind]['val'] / poly[poly_ind][ch_ind]['weight']
+            poly[poly_ind][ch_ind]['measured'] = sum(poly[poly_ind][ch_ind]['signals']) / len(poly[poly_ind][ch_ind]['signals'])
             poly[poly_ind][ch_ind]['measured_std'] = aux.statistics.stdev(poly[poly_ind][ch_ind]['signals'], xbar=poly[poly_ind][ch_ind]['measured'])
             if stray is not None:
                 poly[poly_ind][ch_ind]['measured_w/o_stray'] = poly[poly_ind][ch_ind]['measured'] - \
@@ -160,12 +171,12 @@ def process_point(point, stray=None):
                     poly[poly_ind][ch_ind]['A'] = -1
                 else:
                     #poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * aux.phys_const.q_e / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * config['laser'][0]['wavelength'] * total_sig)
-                    poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * total_sig * n_N2)
+                    poly[poly_ind][ch_ind]['A'] = poly[poly_ind][ch_ind]['measured_w/o_stray'] * measured_energy / (nl_correction * stray['spectral']['poly'][poly_ind]['ae'][ch_ind] * abs_calibration['laser_energy'] * total_sig * n_N2)
                     #if poly_ind == 5 and ch_ind == 0:
                     #    print('A = %.1e, N_RS = %.1e, nl_corr= %.1e, ae= %.1e, Elas= %.1e, sum= %.1e, n_n2= %.1e, ' % (poly[poly_ind][ch_ind]['A'], poly[poly_ind][ch_ind]['measured_w/o_stray'], nl_correction,  stray['spectral']['poly'][poly_ind]['ae'][ch_ind], abs_calibration['laser_energy'], total_sig, n_N2))
                     #    fuck
 
-    result['J_from_int'] = abs_calibration['laser_energy'] / measured_energy
+    result['J_from_ophir'] = abs_calibration['laser_energy'] / measured_energy
     result['poly'] = poly
     return result
 
@@ -186,7 +197,8 @@ calibrated = {
     'abs_raw': abs_filename,
     'A': [],
     'nl_correction': nl_correction,
-    'J_from_int': result[0]['J_from_int']
+    'J_from_ophir': result[0]['J_from_ophir'],
+    'transmission_to_ophir': 1/result[0]['J_from_ophir']
 }
 for poly in result[0]['poly']:
     calibrated['A'].append(poly[0]['A'])

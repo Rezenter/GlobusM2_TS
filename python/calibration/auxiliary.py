@@ -27,7 +27,7 @@ class Filters:
                 't': [],
                 'wl': []
             }
-            print(ch_filename)
+            #print(ch_filename)
             with open(ch_filename, 'r') as filter_file:
                 for line in filter_file:
                     splitted = line.split(',')

@@ -33,8 +33,9 @@ def crc(packet):
 class ControlUnit:
     def __init__(self):
         #self.IP = '192.168.10.44'
-        self.IP = '192.168.10.42'
         #self.PORT = 4001
+
+        self.IP = '192.168.10.42'
         self.PORT = 4004
         self.SOCK_TIMEOUT = 1  # timeout for network operations
 

@@ -46,10 +46,15 @@
                 <button class="btn btn-info" id="laser_reconnect_button">Reconnect</button>
                 <p id="laser_connection">No connection</p>
             </div>
-            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
                 <p id="laser_enable">Disabled</p>
                 <p id="laser_sync">internal</p>
                 <p id="laser_remote">Local control</p>
+            </div>
+            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                <p id="ophir_connected">Ophir disconnected</p>
+                <p id="ophir_armed">Ophir disarmed</p>
+                <p id="ophir_ready">Ophir busy</p>
             </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                 <button class="btn btn-danger" id="laser_fire_button">Fire</button>
@@ -76,8 +81,6 @@
 </body>
 <script>
     function Main () {
-        this.m_laser_warm = null;
-        this.m_laser_warming = null;
         this.m_lasWatchdog = null;
 
         this.m_coolant_chart = new CanvasJS.Chart("coolant_chart", {
@@ -339,7 +342,7 @@
 
                     let state = $('#laser_state');
                     if(resp.ok){
-                        //console.log(resp);
+                        console.log(resp);
                         let string = '';
                         switch (resp.state){
                             case -1:
@@ -433,10 +436,7 @@
                 }
                 , function (resp) {
                     if(resp.ok){
-                        if(resp.code === 0 || resp.code === 1) {
-                            this.m_laser_warming = Date.now();
-                            return;
-                        }
+                        return
                     }
                     console.log(resp);
                     state.css('background-color','red');
@@ -455,11 +455,7 @@
                 }
                 , function (resp) {
                     if(resp.ok ){
-                        if(resp.code === 0 || resp.code === 1) {
-                            this.m_laser_warming = null;
-                            this.m_laser_warm = null;
-                            return
-                        }
+                        return;
                     }
                     console.log(resp);
                     state.css('background-color','red');
@@ -468,6 +464,11 @@
                 }.bind(this)
             );
         }.bind(this);
+
+        this.RequestOphir = function (req, callback) {
+            req.subsystem = 'ophir';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
 
         this.RequestDiag = function (req, callback) {
             req.subsystem = 'diag';
@@ -517,10 +518,7 @@
                 }
                 , function (resp) {
                     if(resp.ok){
-                        if(resp.code === 0 || resp.code === 1) {
-                            this.m_laser_warming = Date.now();
-                            return;
-                        }
+                        return;
                     }
                     console.log('diagArm', resp);
                     stateLas.css('background-color','red');

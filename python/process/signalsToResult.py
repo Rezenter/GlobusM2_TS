@@ -4,6 +4,8 @@ import ijson
 import json
 import math
 import phys_const as const
+import msgpack
+from pathlib import Path
 
 
 def calc_chi2(N_i, sigm2_i, f_i):
@@ -40,6 +42,7 @@ class Processor:
     DEBUG_FOLDER = 'debug/'
     SIGNAL_FOLDER = 'signal/'
     RESULT_FOLDER = 'result/'
+    OPHIR_FOLDER = 'ophir/'
     EXPECTED_FOLDER = 'calibration/expected/'
     ABSOLUTE_FOLDER = 'calibration/abs/processed/'
     HEADER_FILE = 'header'
@@ -53,6 +56,7 @@ class Processor:
         self.is_plasma = is_plasma
         self.expected_id = expected_id
         self.absolute_id = absolute_id
+        self.energy = []
         self.error = None
         if not os.path.isdir(db_path):
             self.error = 'Database path not found.'
@@ -190,6 +194,17 @@ class Processor:
             'events': []
         }
 
+        if self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
+            path: Path = Path('%s%s%05d.msgpk' % (self.prefix, self.OPHIR_FOLDER, self.shotn))
+            if not path.is_file():
+                print('Ophir file is requested but not found')
+                fuck
+            with open(path, 'rb') as file:
+                self.energy = [(0, 0)]
+                data = msgpack.unpackb(file.read())
+                for event in data:
+                    self.energy.append(event[1] * self.absolute['J_from_ophir'])
+
         print('Processing shot...')
 
         stray = [
@@ -238,6 +253,8 @@ class Processor:
             poly = []
             if 'type version' not in self.result['config'] or self.result['config']['type version'] == 1:
                 energy = self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
+            elif self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
+                energy = self.energy[event_ind]
             else:
                 energy = self.result['config']['laser'][0]['E']
 
