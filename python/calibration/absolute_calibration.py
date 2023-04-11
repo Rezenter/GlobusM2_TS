@@ -47,11 +47,12 @@ class Spectrum:
         else:
             sec = (3 * (-j + 1) * (-j + 2)) / (2 * (2 * -j + 1) * (2 * -j + 3))
         third = aux.math.pow((1 / self.lambda_las) + self.get_raman_shift(j), 4)
-        #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 2.5 / 3)
-        print('!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
-        res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
+        res = first * sec * third * self.gamma_sq
+        #print('!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
+        #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
         if polar:
             return res  # depolarized rejected
+        print('Polarizer ON!')
         return res * (1 + 0.75)  # depolarized accepted
 
     def normalise(self):
@@ -76,22 +77,12 @@ class Spectrum:
             })
 
 
-
-lines = Spectrum(lambda_las=1064 * 1e-9,
-                     temperature=aux.phys_const.cels_to_kelv(21),
-                     polar=False).lines
-fuck
-
-
-
-
-
 calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
 abs_filename = '2023.02.03_raw_330Hz_1.6J_G2-10_cleaned'
-nl_correction = 0.7
+nl_correction = 1.05e1
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
     abs_calibration = aux.json.load(file)
