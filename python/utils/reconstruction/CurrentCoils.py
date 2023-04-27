@@ -119,9 +119,9 @@ class CCM:
         if ra > 1 or ra < 0:
             fuck
 
-        theta_step = (math.tau / theta_count)
-
         params = self.get_surface_parameters(t_ind)
+
+        theta_step = (math.tau / theta_count)
         a = ra * (sep_r[0] - params['R'])
         triang = triang_mult * a * params['triag'] / params['a']
         elong = elong_0 + \
@@ -145,6 +145,7 @@ class CCM:
             loop: bool = False
             ind = last_theta
             while 1:
+                #bad here
                 if point_vs_line(sep_r[ind], sep_z[ind], params['R'] + shift, params['Z'], r[-1], z[-1]) * \
                         point_vs_line(sep_r[ind - 1], sep_z[ind - 1], params['R'] + shift, params['Z'], r[-1],
                                       z[-1]) <= 0:
@@ -171,11 +172,8 @@ class CCM:
         tolerance = 0.05
 
         min_a = 0
-        #print('guessing...')
         while 1:
-            #print('get')
             r, z = self.get_surface(t_ind, ra=((max_a + min_a) * 0.5))
-            #print('rz')
             for index in range(len(r) - 1):
                 if z[index] * z[index + 1] <= 0:
                     if lfs:
@@ -191,7 +189,6 @@ class CCM:
 
             candidate_r = interpol(z[index + 1], 0, z[index], r[index + 1], r[index])
 
-            #print(requested_r, candidate_r)
             if abs(candidate_r - requested_r) <= tolerance or max_a - min_a < 1e-4:
                 #print('FOUND:', (max_a + min_a) * 0.5, iteration, candidate_r, requested_r)
                 return (max_a + min_a) * 0.5, r, z
@@ -234,7 +231,6 @@ class CCM:
         center_r = params['R'] + shaf_shift
         lfs_poly = []
         hfs_poly = []
-
         for poly_ind in range(len(polys)):
             poly = polys[poly_ind]
             if poly['skip']:
@@ -259,13 +255,15 @@ class CCM:
             poly['a'] = last_a
             result.append(poly)
         last_a = 1
-        #print('lfs OK')
         for poly in hfs_poly:
+            #print(poly['R'])
             last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r, lfs=False)
             poly['a'] = last_a
+            #print('guessed')
             for res_ind in range(len(result)):
                 if result[res_ind]['a'] < last_a:
                     result.insert(res_ind, poly)
+                    #print('inserted')
                     break
             else:
                 result.append(poly)

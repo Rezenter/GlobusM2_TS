@@ -209,7 +209,9 @@ class StoredCalculator:
             self.ccm_data.clockwise(self.ccm_data.data['boundary']['rbdy']['variable'][t_ind],
                                     self.ccm_data.data['boundary']['zbdy']['variable'][t_ind],
                                     t_ind)
+        #print('clockwise')
         poly_a = self.ccm_data.find_poly(self.polys, t_ind)
+        #print('poly found')
         if 'error' in poly_a:
             return {
                 'error': poly_a['error']
@@ -229,7 +231,6 @@ class StoredCalculator:
             for point in poly['z']:
                 poly['z_min'] = min(poly['z_min'], point)
                 poly['z_max'] = max(poly['z_max'], point)
-        #print('integrating...')
         integration = self.integrate(poly_a, nl_r)
         return {
             'area': integration['area'],

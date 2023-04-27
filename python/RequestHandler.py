@@ -18,6 +18,7 @@ import python.subsyst.fastADC as caen
 import python.subsyst.laser1064 as laser1064
 import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
+import python.subsyst.ophir as ophirSubs
 #import python.subsyst.crate as crate
 import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
@@ -117,6 +118,7 @@ class Handler:
         self.fine_processor = None
         self.sht = None
         self.las = laser1064.ControlUnit()
+        self.ophir = ophirSubs.Ophir()
         self.state = {}
         self.slow = None
 
@@ -712,6 +714,7 @@ class Handler:
                 shotn = int(line)
 
         self.slow.arm(shotn=shotn)
+        self.ophir_arm(shotn=shotn)
 
         self.state['slow'] = {
             'ok': True,
@@ -722,6 +725,7 @@ class Handler:
 
     def slow_disarm(self, req):
         self.slow.disarm()
+        self.ophir_disarm()
         self.state['slow'] = {
             'ok': True,
             'armed': False
@@ -815,8 +819,11 @@ class Handler:
             })
             caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, injection])
             print(caen.read())
-
             caen.disconnect()
+            self.ophir_arm(req={
+                'isPlasma': isPlasma,
+                'shotn': shotn
+            })
 
             if not isPlasma and 'shotn' not in req:
                 with open(shot_filename, 'w') as shotn_file:
@@ -849,16 +856,19 @@ class Handler:
                 'ok': True,
                 'armed': False
             }
+        self.ophir_disarm()
         return self.state['fast']
 
     def las_connect(self, req):
         self.state['las'] = self.las.connect()
         self.state['las_cool'] = self.las_cool.connect()
         self.tokamak.connect()
+        self.ophir_connect(None)
         return self.state['las']
 
     def las_status(self, req):
         self.state['las'] = self.las.status()
+        self.state['las']['ophir'] = self.ophir_status()
         return self.state['las']
 
     def las_fire(self, req):
@@ -869,6 +879,22 @@ class Handler:
         self.state['las'] = self.las.set_state_1()
         return self.state['las']
 
+    def ophir_connect(self, req):
+        self.ophir.connect()
+        return self.ophir_status()
+
+    def ophir_status(self, req=None):
+        self.state['ophir'] = self.ophir.status()
+        return self.state['ophir']
+
+    def ophir_arm(self, shotn:int):
+        self.ophir.arm(is_plasma=True, shotn=shotn)
+        return self.ophir_status()
+
+    def ophir_disarm(self):
+        self.ophir.disarm()
+        return self.ophir_status()
+
     def diag_status(self, req):
         self.las_status({})
         self.state['las']['delays'] = self.las.get_energy()
@@ -876,6 +902,7 @@ class Handler:
         self.state['coolant'] = self.las_cool.log
         self.state['tokamak'] = self.tokamak.log
         #self.state['crate'] = self.crate.log
+
         return self.state
 
     def diag_disarm(self):
