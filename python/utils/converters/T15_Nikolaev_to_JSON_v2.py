@@ -48,7 +48,7 @@ def __bin_to_JSON(path_in: Path) -> list:
             }
             for ch in range(8):
                 event['ch'].append(struct.unpack_from('1024f', raw, (event_ind * (8 * 1024 * 4)) + ch * 1024 * 4))
-            event['t'] = struct.unpack_from('Q', raw, (count * (8 * 1024 * 4)) + 8 * event_ind)[0]
+            event['t'] = struct.unpack_from('L', raw, (count * (8 * 1024 * 4)) + 8 * event_ind)[0]
             data.append(event)
         print(count * (8 * 1024 * 4 + 8))
     return data
