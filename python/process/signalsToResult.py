@@ -194,7 +194,7 @@ class Processor:
             'events': []
         }
 
-        if self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
+        if 'type version' in self.result['config'] and self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
             path: Path = Path('%s%s%05d.msgpk' % (self.prefix, self.OPHIR_FOLDER, self.shotn))
             if not path.is_file():
                 print('Ophir file is requested but not found')
