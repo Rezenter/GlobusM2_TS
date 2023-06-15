@@ -10,7 +10,7 @@ gamma_shift = 1
 #elong_0 = 1.5
 elong_0 = 1
 #shaf_shift = 3
-shaf_shift = 5.5
+default_shaf_shift = 5.5
 #triang_mult = 1
 triang_mult = 0.5
 linear_count = 3
@@ -62,8 +62,12 @@ class CCM:
         print('Error! \n %s' % err)
         self.error = err
 
-    def __init__(self, shotn):
+    def __init__(self, shotn, shift=5.5):
         self.error = None
+        if shift != 999:
+            self.shaf_shift: float = shift
+        else:
+            self.shaf_shift: float = default_shaf_shift
         filename = '%smcc_%d.json' % (CCM_DB, shotn)
         if not os.path.isfile(filename):
             filename = '%smcc_%d.json' % (CCM_DB_NEW, shotn)
@@ -126,7 +130,7 @@ class CCM:
         triang = triang_mult * a * params['triag'] / params['a']
         elong = elong_0 + \
                 a * (params['elong'] - elong_0) / params['a']
-        shift = shaf_shift * math.pow((1 - math.pow(a / params['a'], 2)), gamma_shift)
+        shift = self.shaf_shift * math.pow((1 - math.pow(a / params['a'], 2)), gamma_shift)
 
         r = []
         z = []
@@ -228,7 +232,7 @@ class CCM:
         if equator_r < 0:
             return []
         '''
-        center_r = params['R'] + shaf_shift
+        center_r = params['R'] + self.shaf_shift
         lfs_poly = []
         hfs_poly = []
         for poly_ind in range(len(polys)):
