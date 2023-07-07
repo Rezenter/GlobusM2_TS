@@ -156,7 +156,7 @@ class Integrator:
                 return False
             with open('%s/%d%s' % (shot_folder, board_ind, extension), 'rb') as board_file:
                 self.data.append([])
-                if self.version == 1:
+                if self.version <= 1:
                     for event in ijson.items(board_file, 'item', use_float=True):
                         self.data[board_ind].append(event['groups'])
                 else:
@@ -183,7 +183,7 @@ class Integrator:
 
     def process_shot(self):
         print('Processing shot...')
-        if self.version == 1:
+        if self.version <= 1:
             combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
         elif self.version >= 4:
             combiscope_zero = self.data[0][0]['t']
@@ -194,12 +194,12 @@ class Integrator:
 
             laser, error = self.process_laser_event(event_ind, expect_sync)
             if 'sync' in laser and laser['sync']:
-                if self.version == 1:
+                if self.version <= 1:
                     combiscope_zero = self.data[0][event_ind][1]['timestamp']
                 else:
                     combiscope_zero = self.data[0][event_ind]['t']
                 for correction_ind in range(event_ind):
-                    if self.version == 1:
+                    if self.version <= 1:
                         self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
                     if self.version >= 4:
                         self.processed[correction_ind]['timestamp'] = combiscope_zero
@@ -208,7 +208,7 @@ class Integrator:
                 expect_sync = False
             if self.laser_count > 1:
                 #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
-                if self.version == 1:
+                if self.version <= 1:
                     timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
                 elif self.version >= 4:
                     timestamp = self.data[0][event_ind]['t']
@@ -291,7 +291,7 @@ class Integrator:
         sync_event = []
         for board_ind in range(len(self.config['adc']['sync'])):
             # print('Board %d' % board_ind)
-            if self.version == 1:
+            if self.version <= 1:
                 adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             elif self.version >= 4:
@@ -401,7 +401,7 @@ class Integrator:
                 })
                 continue
             adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
-            if self.version == 1:
+            if self.version <= 1:
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             elif self.version >= 3:
                 signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
@@ -434,7 +434,7 @@ class Integrator:
             if 'matchingFastGain' not in self.config['preamp']:
                 matching_gain = 1
                 print('WARNING! forgotten preamp gain')
-                fuck
+                #fuck
             else:
                 matching_gain = self.config['preamp']['matchingFastGain']
             photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *

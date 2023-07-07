@@ -51,8 +51,8 @@ class Spectrum:
         #print('!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
         #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
         if polar:
+            print('Polarizer ON!')
             return res  # depolarized rejected
-        print('Polarizer ON!')
         return res * (1 + 0.75)  # depolarized accepted
 
     def normalise(self):
@@ -81,8 +81,10 @@ calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
-abs_filename = '2023.02.03_raw_330Hz_1.6J_G2-10_cleaned'
+abs_filename = '2023.07.05_raw_DTS'
 nl_correction = 1.05e1
+use_first_shots: int = -1
+use_first_shots = 100
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
     abs_calibration = aux.json.load(file)
@@ -111,17 +113,22 @@ def process_point(point, stray=None):
     las_count = 0
     config = None
     for i,shotn in enumerate(point['shotn']):
-        ophir_file = '%s%s959905_%d.txt' % (aux.DB_PATH, ophir_path, point['ophir'][i])
+        #ophir_file = '%s%s959905_%d.txt' % (aux.DB_PATH, ophir_path, point['ophir'][i])
+        ophir_file = '%s%s%s.txt' % (aux.DB_PATH, ophir_path, point['ophir'][i])
         ophir = []
         with open(ophir_file, 'r') as file:
             first: bool = True
+            count: int = 0
             for line in file:
                 if line[0] == ';' or line[0] == '!' or len(line) <= 1:
                     continue
                 if first:
                     first = False
                     continue
+                if use_first_shots > 0 and count >= use_first_shots:
+                    break
                 ophir.append(float(line.split()[1]))
+                count += 1
         with rawToSignals.Integrator(db_path=aux.DB_PATH, shotn=shotn, is_plasma=False, config_name=abs_calibration['config']) as integrator:
             if len(poly) == 0:
                 config = integrator.config
@@ -133,6 +140,8 @@ def process_point(point, stray=None):
                  for poly in integrator.config['poly']]
 
             result['shotn'].append(shotn)
+            if use_first_shots > 0:
+                integrator.processed = integrator.processed[:use_first_shots]
             for ind, event in enumerate(integrator.processed):
                 if event['error'] is not None:
                     print('%d event skipped!' % shotn)

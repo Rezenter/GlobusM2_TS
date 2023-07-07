@@ -714,7 +714,8 @@ class Handler:
                 shotn = int(line)
 
         self.slow.arm(shotn=shotn)
-        self.ophir_arm(shotn=shotn)
+        print('OPHIR disabled!!!\n\n\n')
+#        self.ophir_arm(shotn=shotn)
 
         self.state['slow'] = {
             'ok': True,
@@ -725,7 +726,8 @@ class Handler:
 
     def slow_disarm(self, req):
         self.slow.disarm()
-        self.ophir_disarm()
+        print('OPHIR disabled!!!\n\n\n')
+#        self.ophir_disarm()
         self.state['slow'] = {
             'ok': True,
             'armed': False
@@ -820,11 +822,12 @@ class Handler:
             caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, injection])
             print(caen.read())
             caen.disconnect()
-            self.ophir_arm(req={
+            #print('OPHIR disabled!!!\n\n\n')
+
+            '''self.ophir_arm(req={
                 'isPlasma': isPlasma,
                 'shotn': shotn
-            })
-
+            })'''
             if not isPlasma and 'shotn' not in req:
                 with open(shot_filename, 'w') as shotn_file:
                     # shotn_file.seek(0)
@@ -856,19 +859,21 @@ class Handler:
                 'ok': True,
                 'armed': False
             }
-        self.ophir_disarm()
+            #print('OPHIR disabled!!!\n\n\n')
+            self.ophir_disarm()
         return self.state['fast']
 
     def las_connect(self, req):
         self.state['las'] = self.las.connect()
         self.state['las_cool'] = self.las_cool.connect()
         self.tokamak.connect()
+        #print('OPHIR disabled!!!\n\n\n')
         self.ophir_connect(None)
         return self.state['las']
 
     def las_status(self, req):
         self.state['las'] = self.las.status()
-        self.state['las']['ophir'] = self.ophir_status()
+        #self.state['las']['ophir'] = self.ophir_status()
         return self.state['las']
 
     def las_fire(self, req):

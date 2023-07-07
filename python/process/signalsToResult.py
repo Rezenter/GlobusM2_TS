@@ -107,7 +107,7 @@ class Processor:
         if 'type version' not in self.result['config']:
             return self.result
         res = self.result.copy()
-        if res['config']['type version'] >= 1:
+        if res['config']['type version'] >= 1 and res['config']['type version'] != 1.1:
             for poly in res['config']['poly']:
                 poly['R'] = res['config']['fibers'][poly['fiber']]['R']
                 poly['l05'] = res['config']['fibers'][poly['fiber']]['poloidal_length'] * 0.5
