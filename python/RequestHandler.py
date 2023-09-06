@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import time
+from datetime import datetime
 
 import phys_const
 import requests
@@ -44,9 +45,13 @@ CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
 CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
+#TOKAMAK_LOG = 'tokamak_starts.csv'
+TOKAMAK_LOG = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\tokamak_starts.csv'
 
-SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
+SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24 = Globus3
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
+
+SHT_PATH = 'Z:/'
 
 DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
@@ -714,8 +719,8 @@ class Handler:
                 shotn = int(line)
 
         self.slow.arm(shotn=shotn)
-        print('OPHIR disabled!!!\n\n\n')
-#        self.ophir_arm(shotn=shotn)
+        #print('OPHIR disabled!!!\n\n\n')
+        self.ophir_arm(shotn=shotn)
 
         self.state['slow'] = {
             'ok': True,
@@ -726,8 +731,8 @@ class Handler:
 
     def slow_disarm(self, req):
         self.slow.disarm()
-        print('OPHIR disabled!!!\n\n\n')
-#        self.ophir_disarm()
+        #print('OPHIR disabled!!!\n\n\n')
+        self.ophir_disarm()
         self.state['slow'] = {
             'ok': True,
             'armed': False
@@ -911,9 +916,43 @@ class Handler:
         return self.state
 
     def diag_disarm(self):
+        #watch for sht file with newer int and size!=0kb. created time?
+
+        timestamp = datetime.now().strftime("%H:%M:%S")
+
         self.fast_disarm({})
         self.las_idle({})
         print('auto disarmed')
+
+        shotn: str = ''
+        with open(SHOTN_FILE, 'r') as shotn_file:
+            shotn = shotn_file.readline()[:-1]
+        new_path: Path = Path('%ssht%s.SHT' % (SHT_PATH, shotn))
+        is_real: int = 0
+        print(shotn, timestamp, '%ssht%s.SHT' % (SHT_PATH, shotn))
+        if new_path.exists():
+            is_real = 1
+            print(shotn, timestamp, ' this ', new_path.stat().st_ctime)
+        new_path: Path = Path('%smhd%s.SHT' % (SHT_PATH, shotn))
+        if new_path.exists():
+            is_real = 2
+
+        with open(TOKAMAK_LOG, 'r') as file:
+            lines = file.readlines()
+            curr = len(lines) - 1
+            spl = lines[curr].split(', ')
+            while spl[0] == shotn:
+                print(spl)
+                if int(spl[-1]) >= 1:
+                    is_real = 3
+                    break
+                curr -= 1
+                spl = lines[curr].split(', ')
+
+
+        with open(TOKAMAK_LOG, 'a') as file:
+            file.write('%s, %s, %d\n' % (shotn, timestamp, is_real))
+
 
     def arm_all(self, req):
         shot_filename = SHOTN_FILE
