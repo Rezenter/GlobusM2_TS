@@ -2,7 +2,7 @@ import json
 import matplotlib.pyplot as plt
 import math
 
-shotn = 38800
+shotn = 42857
 event_ind = 39
 
 theta_count = 360
@@ -21,7 +21,7 @@ with open('\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD\\V3_zad7_mcc\\mcc_%d.j
 if data is None:
     fuck
 
-requested_time = 0.2#ts['events'][event_ind]['timestamp'] * 0.001
+requested_time = 0.2521#ts['events'][event_ind]['timestamp'] * 0.001
 timestamps = data['time']['variable']
 
 t_ind = 0
