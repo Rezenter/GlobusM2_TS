@@ -21,7 +21,7 @@ import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
 import python.subsyst.ophir as ophirSubs
 #import python.subsyst.crate as crate
-import python.utils.reconstruction.CurrentCoils as ccm
+#import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
 from python.subsyst.slowADC import SlowADC
@@ -376,7 +376,7 @@ class Handler:
         return resp
 
     def get_chord_integrals(self, req):
-        resp = {}
+        '''resp = {}
         if 'shotn' not in req:
             resp['ok'] = False
             resp['description'] = '"shotn" field is missing from request.'
@@ -419,6 +419,11 @@ class Handler:
                                  float(req['r']),
                                  float(req['start']),
                                  float(req['stop']))
+        '''
+        return {
+            'ok': False,
+            'description': 'function discarded'
+        }
 
     def get_integrals_shot(self, req):
         resp = {}
