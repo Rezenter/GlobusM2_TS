@@ -40,8 +40,11 @@ def process(data):
 
     # print('clockwise')
 
-    return cfm_data.get_surface_parameters(t_ind=t_ind)
-
+    return {
+        'summary': cfm_data.get_surface_parameters(t_ind=t_ind),
+        'rbdy': cfm_data.data['boundary']['rbdy']['variable'][t_ind],
+        'zbdy': cfm_data.data['boundary']['zbdy']['variable'][t_ind]
+    }
 
 cfm_data = cfm.CCM(shotn)
 out = process(cfm_data)
