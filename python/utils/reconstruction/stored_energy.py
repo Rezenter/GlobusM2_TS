@@ -204,10 +204,20 @@ class StoredCalculator:
             return {
                 'error': 'no boundary'
             }
+        for i in range(len(self.ccm_data.data['boundary']['zbdy']['variable'][t_ind])):
+            if self.ccm_data.data['boundary']['zbdy']['variable'][t_ind][i] * self.ccm_data.data['boundary']['zbdy']['variable'][t_ind][i - 1] < 0:
+                break
+        else:
+            print('bad plasma: LCFS does not cross equator')
+            return {
+                'error': 'bad plasma: LCFS does not cross equator'
+            }
+
         self.ccm_data.data['boundary']['rbdy']['variable'][t_ind], self.ccm_data.data['boundary']['zbdy']['variable'][t_ind] = \
             self.ccm_data.clockwise(self.ccm_data.data['boundary']['rbdy']['variable'][t_ind],
                                     self.ccm_data.data['boundary']['zbdy']['variable'][t_ind],
                                     t_ind)
+
         #print('clockwise')
         poly_a = self.ccm_data.find_poly(self.polys, t_ind)
         #print('poly found')
@@ -252,7 +262,7 @@ class StoredCalculator:
         }
 
     def calc_dynamics(self, t_from, t_to, nl_r=42):
-        print('calc dynamics')
+        #print('calc dynamics')
         result = []
         for event_ind in range(1, len(self.ts_data['events'])):
             event = self.ts_data['events'][event_ind]

@@ -254,13 +254,13 @@ class CCM:
         }]
         last_a = 1
         for poly in lfs_poly:
-            #print(poly['R'])
+            #print('lfs', poly['R'])
             last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r)
             poly['a'] = last_a
             result.append(poly)
         last_a = 1
         for poly in hfs_poly:
-            #print(poly['R'])
+            #print('hfs', poly['R'])
             last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r, lfs=False)
             poly['a'] = last_a
             #print('guessed')

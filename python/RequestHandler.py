@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import time
+from datetime import datetime
 
 import phys_const
 import requests
@@ -20,7 +21,7 @@ import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
 import python.subsyst.ophir as ophirSubs
 #import python.subsyst.crate as crate
-import python.utils.reconstruction.CurrentCoils as ccm
+#import python.utils.reconstruction.CurrentCoils as ccm
 import python.utils.reconstruction.stored_energy as ccm_energy
 import python.utils.sht.sht_viewer as sht
 from python.subsyst.slowADC import SlowADC
@@ -44,9 +45,13 @@ CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
 CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
 CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
 PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
+#TOKAMAK_LOG = 'tokamak_starts.csv'
+TOKAMAK_LOG = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\tokamak_starts.csv'
 
-SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24
+SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24 = Globus3
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
+
+SHT_PATH = 'Z:/'
 
 DT = 0.000005  # ms
 TOLERANCE_BETWEEN_SAMLONGS = DT * 10
@@ -371,7 +376,7 @@ class Handler:
         return resp
 
     def get_chord_integrals(self, req):
-        resp = {}
+        '''resp = {}
         if 'shotn' not in req:
             resp['ok'] = False
             resp['description'] = '"shotn" field is missing from request.'
@@ -414,6 +419,11 @@ class Handler:
                                  float(req['r']),
                                  float(req['start']),
                                  float(req['stop']))
+        '''
+        return {
+            'ok': False,
+            'description': 'function discarded'
+        }
 
     def get_integrals_shot(self, req):
         resp = {}
@@ -714,6 +724,7 @@ class Handler:
                 shotn = int(line)
 
         self.slow.arm(shotn=shotn)
+        #print('OPHIR disabled!!!\n\n\n')
         self.ophir_arm(shotn=shotn)
 
         self.state['slow'] = {
@@ -725,6 +736,7 @@ class Handler:
 
     def slow_disarm(self, req):
         self.slow.disarm()
+        #print('OPHIR disabled!!!\n\n\n')
         self.ophir_disarm()
         self.state['slow'] = {
             'ok': True,
@@ -820,11 +832,12 @@ class Handler:
             caen.send_cmd(caen.Commands.Arm, [shotn, isPlasma, injection])
             print(caen.read())
             caen.disconnect()
-            self.ophir_arm(req={
+            #print('OPHIR disabled!!!\n\n\n')
+
+            '''self.ophir_arm(req={
                 'isPlasma': isPlasma,
                 'shotn': shotn
-            })
-
+            })'''
             if not isPlasma and 'shotn' not in req:
                 with open(shot_filename, 'w') as shotn_file:
                     # shotn_file.seek(0)
@@ -856,19 +869,21 @@ class Handler:
                 'ok': True,
                 'armed': False
             }
-        self.ophir_disarm()
+            #print('OPHIR disabled!!!\n\n\n')
+            self.ophir_disarm()
         return self.state['fast']
 
     def las_connect(self, req):
         self.state['las'] = self.las.connect()
         self.state['las_cool'] = self.las_cool.connect()
         self.tokamak.connect()
+        #print('OPHIR disabled!!!\n\n\n')
         self.ophir_connect(None)
         return self.state['las']
 
     def las_status(self, req):
         self.state['las'] = self.las.status()
-        self.state['las']['ophir'] = self.ophir_status()
+        #self.state['las']['ophir'] = self.ophir_status()
         return self.state['las']
 
     def las_fire(self, req):
@@ -906,9 +921,43 @@ class Handler:
         return self.state
 
     def diag_disarm(self):
+        #watch for sht file with newer int and size!=0kb. created time?
+
+        timestamp = datetime.now().strftime("%H:%M:%S")
+
         self.fast_disarm({})
         self.las_idle({})
         print('auto disarmed')
+
+        shotn: str = ''
+        with open(SHOTN_FILE, 'r') as shotn_file:
+            shotn = shotn_file.readline()[:-1]
+        new_path: Path = Path('%ssht%s.SHT' % (SHT_PATH, shotn))
+        is_real: int = 0
+        print(shotn, timestamp, '%ssht%s.SHT' % (SHT_PATH, shotn))
+        if new_path.exists():
+            is_real = 1
+            print(shotn, timestamp, ' this ', new_path.stat().st_ctime)
+        new_path: Path = Path('%smhd%s.SHT' % (SHT_PATH, shotn))
+        if new_path.exists():
+            is_real = 2
+
+        with open(TOKAMAK_LOG, 'r') as file:
+            lines = file.readlines()
+            curr = len(lines) - 1
+            spl = lines[curr].split(', ')
+            while spl[0] == shotn:
+                print(spl)
+                if int(spl[-1]) >= 1:
+                    is_real = 3
+                    break
+                curr -= 1
+                spl = lines[curr].split(', ')
+
+
+        with open(TOKAMAK_LOG, 'a') as file:
+            file.write('%s, %s, %d\n' % (shotn, timestamp, is_real))
+
 
     def arm_all(self, req):
         shot_filename = SHOTN_FILE

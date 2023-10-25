@@ -11,15 +11,15 @@ aux_filter = None
 
 wl_start = 400
 wl_stop = 1099
-wl_step = 1
+wl_step = 0.5
 
 T_start = 1
-T_stop = 2500
+T_stop = 200
 T_mult = 1.02
-T_mult = 1.1
+#T_mult = 1.1
 
 print('Calculating kappa...')
-kappa = sp_cal.SpCal('2020.11.11', '2020.11.12', wl_start, wl_stop, wl_step, additional_filter=aux_filter)
+kappa = sp_cal.SpCal(calibr_filename='2020.11.11', config_filename='2020.11.12', wl_start=wl_start, wl_stop=wl_stop, wl_step=wl_step, additional_filter=aux_filter)
 print('Done.')
 
 

@@ -55,8 +55,8 @@ class Sync:
                         'time_f': t,
                         'time': time.localtime(t)
                     })
-                    self.callback()
                     self.disp("TOKAMAK START ____________")
+                    self.callback()
                 else:
                     self.disp("WTF")
             else:
