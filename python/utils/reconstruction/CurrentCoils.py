@@ -144,14 +144,25 @@ class CCM:
 
             loop: bool = False
             ind = last_theta
+            #print(ra, theta_ind, 'to infinity')
             while 1:
-                #bad here
                 if point_vs_line(sep_r[ind], sep_z[ind], params['R'] + shift, params['Z'], r[-1], z[-1]) * \
                         point_vs_line(sep_r[ind - 1], sep_z[ind - 1], params['R'] + shift, params['Z'], r[-1],
                                       z[-1]) <= 0:
 
                     if point_vs_line(r[-1], z[-1], params['R'] + shift, params['Z'], sep_r[ind - len(sep_r) // 4], sep_z[ind - len(sep_r) // 4]) * \
                        point_vs_line(sep_r[ind], sep_z[ind], params['R'] + shift, params['Z'], sep_r[ind - len(sep_r) // 4], sep_z[ind - len(sep_r) // 4]) < 0:
+
+
+
+
+                        #infinite here
+                        #Please! Rewrite me for Gods sake.
+
+
+
+
+
                         continue
 
                     r_sep_point = (sep_r[ind] - params['R'] - shift) ** 2 + (sep_z[ind] - params['Z']) ** 2
@@ -166,15 +177,22 @@ class CCM:
                         break
                     loop = True
             last_theta = ind
+            #print('and beyond')
         return r, z
 
     def guess_a(self, requested_r, t_ind, max_a, center_r, lfs=True):
         tolerance = 0.05
 
         min_a = 0
+
         while 1:
+            #print('alive')
             r, z = self.get_surface(t_ind, ra=((max_a + min_a) * 0.5))
+            #print('Hello?')
+
             for index in range(len(r) - 1):
+#                print(requested_r, r[index], z[index])
+#                fuck
                 if z[index] * z[index + 1] <= 0:
                     if lfs:
                         if r[index] > center_r:
@@ -190,7 +208,7 @@ class CCM:
             candidate_r = interpol(z[index + 1], 0, z[index], r[index + 1], r[index])
 
             if abs(candidate_r - requested_r) <= tolerance or max_a - min_a < 1e-4:
-                #print('FOUND:', (max_a + min_a) * 0.5, iteration, candidate_r, requested_r)
+                #print('FOUND:', (max_a + min_a) * 0.5, candidate_r, requested_r)
                 return (max_a + min_a) * 0.5, r, z
             if lfs:
                 if candidate_r > requested_r:

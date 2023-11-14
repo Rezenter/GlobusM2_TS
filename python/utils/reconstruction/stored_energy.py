@@ -1,5 +1,6 @@
 import json
 import math
+
 import phys_const as const
 import python.utils.reconstruction.CurrentCoils as ccm
 import copy
@@ -191,7 +192,8 @@ class StoredCalculator:
             'n_vol': n_ave * r_step * 1e-6 * math.tau,
             'n_vol_err': n_ave_err * r_step * 1e-6 * math.tau,
             'pressure': pressure,
-            'equator': equator
+            'equator': equator,
+            'Pe_vol': w * 1e-6 * const.q_e * r_step * math.tau / final_vol
         }
 
     def calc_laser_shot(self, requested_time, nl_r):
@@ -260,6 +262,7 @@ class StoredCalculator:
             'equator': integration['equator'],
             'nl_eq': integration['nl_eq'],
             'nl_eq_err': integration['nl_eq_err'],
+            'Pe_vol': integration['Pe_vol']
         }
 
     def calc_dynamics(self, t_from, t_to, nl_r):
