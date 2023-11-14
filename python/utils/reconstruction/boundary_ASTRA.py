@@ -1,7 +1,8 @@
 import python.utils.reconstruction.CurrentCoils as ccm
 
-shotn: int = 42611
-requested_time: float = 190.4  # ms
+shotn: int = 40034
+requested_time: float = 188.7  # ms
+requested_time *= 1e-3
 
 ccm_data = ccm.CCM(shotn)
 
@@ -18,7 +19,11 @@ ccm_data.data['boundary']['rbdy']['variable'][t_ind], ccm_data.data['boundary'][
 
 out: str = ''
 count = 0
+r_prev = 0
 for i in range(0, len(ccm_data.data['boundary']['rbdy']['variable'][t_ind]), 2):
+    if r_prev - 0.1 <= ccm_data.data['boundary']['rbdy']['variable'][t_ind][i] <= r_prev + 0.1:
+        continue
+    r_prev = ccm_data.data['boundary']['rbdy']['variable'][t_ind][i]
     out += '%.3f        %.3f\n' % (ccm_data.data['boundary']['rbdy']['variable'][t_ind][i] * 0.01, ccm_data.data['boundary']['zbdy']['variable'][t_ind][i] * 0.01)
     count += 1
 

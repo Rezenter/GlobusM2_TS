@@ -1,4 +1,3 @@
-import json
 import math
 
 import phys_const as const
@@ -13,8 +12,8 @@ def interpol(x_prev, x, x_next, y_prev, y_next):
 
 
 class StoredCalculator:
-    def __init__(self, shotn, ts_data):
-        self.ccm_data = ccm.CCM(shotn)
+    def __init__(self, shotn, ts_data, shift: float=999):
+        self.ccm_data = ccm.CCM(shotn=shotn, shift=shift)
         self.error = self.ccm_data.error
         if self.error is not None:
             return
@@ -95,7 +94,7 @@ class StoredCalculator:
 
         return sorted(profile, key=lambda point: point['z'], reverse=True)
 
-    def integrate(self, surfaces, nl_r):
+    def integrate(self, surfaces, nl_r=42):
         area = 0
         volume = 0
         w = 0
@@ -196,7 +195,7 @@ class StoredCalculator:
             'Pe_vol': w * 1e-6 * const.q_e * r_step * math.tau / final_vol
         }
 
-    def calc_laser_shot(self, requested_time, nl_r):
+    def calc_laser_shot(self, requested_time, nl_r=42, shaf_shift=999):
         t_ind = 0
         for t_ind in range(len(self.ccm_data.timestamps) - 1):
             if self.ccm_data.timestamps[t_ind] <= requested_time < self.ccm_data.timestamps[t_ind + 1]:
@@ -265,7 +264,7 @@ class StoredCalculator:
             'Pe_vol': integration['Pe_vol']
         }
 
-    def calc_dynamics(self, t_from, t_to, nl_r):
+    def calc_dynamics(self, t_from, t_to, nl_r=42):
         #print('calc dynamics')
         result = []
         for event_ind in range(1, len(self.ts_data['events'])):

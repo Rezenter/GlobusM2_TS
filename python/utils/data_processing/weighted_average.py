@@ -1,12 +1,11 @@
 # expected file structure: csv X|Y|Yerr|Y|Yerr...
 
-filename: str = '42119.csv'
-header_count: int = 1
+header_count: int = 0
 
-with open('in/%s' % filename, 'r') as file_in:
+with open('c:\\Users\\nz\\Downloads\\ne.csv', 'r') as file_in:
     for line in file_in:
         if header_count != 0:
-            header_count -= 1
+            hea                                                                                                                                                                                                                                                                                                                                                                         der_count -= 1
         else:
             spl = line.split(',')
             if len(spl) % 2 == 0:
