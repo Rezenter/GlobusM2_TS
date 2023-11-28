@@ -424,6 +424,7 @@ class Integrator:
                 error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
             elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
                 error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
+
             integral = 0
             if error is None:
                 for cell in range(integration_from, integration_to - 1):
@@ -446,7 +447,7 @@ class Integrator:
                 photoelectrons *= 2
             pre_std = statistics.stdev(signal[:integration_from], zero)
             #err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
-            err2 = math.pow(pre_std * 2 / poly['channels'][ch_ind]['fast_gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+            err2 = math.pow(pre_std / matching_gain, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
             res['ch'].append({
                 'from': integration_from,
                 'to': integration_to,
@@ -458,5 +459,6 @@ class Integrator:
                 'ph_el': photoelectrons,
                 'err': math.sqrt(math.fabs(err2) + math.fabs(photoelectrons) * 4),
                 'error': error
+
             })
         return res
