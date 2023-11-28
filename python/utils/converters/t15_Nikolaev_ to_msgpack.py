@@ -3,12 +3,12 @@ from pathlib import Path
 import json
 
 ch_count = 5
-shots = [42130]
+shots = [43387]
 for shotn in shots:
     print(shotn)
 
     #path = Path('\\\\172.16.12.130\\d\\data\\db\\plasma\\t15\\%d' % shotn)
-    path = Path('d:\\data\\db\\plasma\\t15\\%d' % shotn)
+    path = Path('v:\\data\\db\\plasma\\t15\\raw\\%d\\34\\DRS' % shotn)
     if not path.is_file():
         print('not found')
         continue
@@ -50,16 +50,7 @@ for shotn in shots:
             'ch': [[0 for cell in range(1024)] for ch in range(ch_count + 1)]
         })
 
-    with open('d:\\data\\db\\plasma\\raw\\%d\\8.msgpk' % shotn, 'wb') as file:
+    with open('8.msgpk', 'wb') as file:
         msgpack.dump(data, file)
 
-    header = ''
-    with open('d:\\data\\db\\plasma\\raw\\%d\\header.json' % shotn, 'r') as file:
-        header = json.load(file)
-        if len(header['boards']) == 8:
-            header['boards'].append(34)
-        elif len(header['boards']) == 9:
-            header['boards'][8] = 34
-    with open('d:\\data\\db\\plasma\\raw\\%d\\header.json' % shotn, 'w') as file:
-        json.dump(header, file)
 print('Code OK')
