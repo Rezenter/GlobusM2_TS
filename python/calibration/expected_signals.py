@@ -2,12 +2,13 @@ import scipy.special as sci
 import auxiliary as aux
 
 # change only these lines!
-config_name: str = '2023.07.04_DIVERTOR_G10'
-spectral_raw_name: str = '2023.07.05_DTS_simulated'
-WL_STEP: float = 0.1  # [nm]. integration step, 0.1
-T_LOW: float = 1.0  # [eV]
-T_HIGH: float = 200  # [eV]
-T_MULT: float = 1.01
+config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
+
+spectral_raw_name: str = '2023.10.06'
+WL_STEP: float = 0.05  # [nm]. integration step, 0.1
+T_LOW: float = 5.0  # [eV]
+T_HIGH: float = 5000  # [eV]
+T_MULT: float = 1.01  # default = 1.01
 # change only these lines!
 
 class TS_spectrum:
@@ -95,15 +96,21 @@ class TS_spectrum:
 class LampCalibration:
     threshold = 5e-7
 
-    def __init__(self, config, spectral_name: str):
-        self.config = config
-
-        if config['type version'] < 1:
-            fuck
+    def __init__(self, spectral_name: str):
         with open('%s%s%s%s%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.SPECTRAL_FOLDER, spectral_name, aux.JSON), 'r') as file:
             self.calibration = aux.json.load(file)
-            if self.calibration['type version'] < 2:
+            if self.calibration['version'] < 2:
                 fuck
+            else:
+                if self.calibration['version'] >= 3:
+                    with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, self.calibration['config'], aux.JSON), 'r') as file:
+                        self.config = aux.json.load(file)
+                else:
+                    with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, config_name, aux.JSON), 'r') as file:
+                        self.config = aux.json.load(file)
+
+        if self.config['type version'] < 1:
+            fuck
 
         self.lamp = {
             'x': [],  # [nm] wavelength
@@ -201,7 +208,7 @@ class ExpectedSignals:
         with open('%s%s%s%s_debug%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.EXPECTED_FOLDER, aux.date.today().strftime("%Y.%m.%d"), aux.JSON), 'w') as file:
             result = {
                 'type': 'expected signals',
-                'type version': 1,
+                'type version': 2,
                 'calculated_for_config': config_name,
                 'spectral_calibration': spectral_raw_name,
                 'wl_step': WL_STEP,
@@ -223,9 +230,6 @@ class ExpectedSignals:
             aux.json.dump(result, file, indent=2)
 
 
-with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, config_name, aux.JSON), 'r') as file:
-    config = aux.json.load(file)
-
-expected = ExpectedSignals(lamp_calibration=LampCalibration(config=config, spectral_name=spectral_raw_name))
+expected = ExpectedSignals(lamp_calibration=LampCalibration(spectral_name=spectral_raw_name))
 
 print('Code OK')

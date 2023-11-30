@@ -1,5 +1,7 @@
 # expected file structure: csv X|Y|Yerr|Y|Yerr...
 
+
+
 header_count: int = 0
 
 with open('c:\\Users\\nz\\Downloads\\ne.csv', 'r') as file_in:

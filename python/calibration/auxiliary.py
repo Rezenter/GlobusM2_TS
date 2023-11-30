@@ -5,7 +5,7 @@ import phys_const  # at least v1.3
 from datetime import date
 import statistics
 
-DB_PATH: str = 'd:/data/db/'
+DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'
 FIBER_FOLDER: str = 'fibers/calculated/'
 FILTER_FOLDER = 'filters/'
 APD_FOLDER = 'apd/'
