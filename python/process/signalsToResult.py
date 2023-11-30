@@ -48,8 +48,9 @@ class Processor:
     HEADER_FILE = 'header'
     FILE_EXT = '.json'
 
-    cross_section = (8.0 * math.pi / 3.0) * \
-                    math.pow((math.pow(const.q_e, 2) / (4 * math.pi * const.eps_0 * const.m_e * math.pow(const.c, 2))), 2)
+    #cross_section = (8.0 * math.pi / 3.0) * \
+    #                math.pow((math.pow(const.q_e, 2) / (4 * math.pi * const.eps_0 * const.m_e * math.pow(const.c, 2))), 2)
+    cross_section: float = 6.65e-29  # [m^2]
 
     def __init__(self, db_path, shotn, is_plasma, expected_id, absolute_id):
         self.shotn = shotn

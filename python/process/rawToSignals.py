@@ -378,7 +378,16 @@ class Integrator:
                     error = 'too large prehistory error'
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
+                    for board_ind in range(len(self.config['adc']['sync'])):
+                        print(board_ind, self.data[board_ind][event_ind]['t'], laser['ave']['int'], laser['boards'][board_ind]['int'])
+                    print('\n')
                     if board_ind != 8:
+                        '''
+                        for board_ind in range(len(self.config['adc']['sync'])):
+                            print(self.data[board_ind][event_ind]['t'])
+                        print('\n')
+                        '''
+                        #fuck
                         error = 'integrals differ'
                     else:
                         print('Warning! T15 patch!', "???")
@@ -447,7 +456,7 @@ class Integrator:
                 photoelectrons *= 2
             pre_std = statistics.stdev(signal[:integration_from], zero)
             #err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
-            err2 = math.pow(pre_std / matching_gain, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+            err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['fast_gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
             res['ch'].append({
                 'from': integration_from,
                 'to': integration_to,
