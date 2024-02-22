@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import logging
@@ -1089,7 +1090,8 @@ class Handler:
         filename = '%smcc_%s.json' % (CFM_DB, req['shotn'])
         if not os.path.isfile(filename):
             filename = '%smcc_%s.json' % (CFM_DB_NEW, req['shotn'])
-            if not os.path.isfile(filename):
+            if False and not os.path.isfile(filename):                          #DISABLED!!!!!!!!!!!!!!!!!!!!!!!!
+
                 serv_resp = requests.post(CFM_ADDR, json={
                     'changedPropIds': ["btn-2.n_clicks"],
                     'inputs': [
@@ -1120,6 +1122,7 @@ class Handler:
                     'ok': False,
                     'description': serv_resp.json()['response']['children']
                 }
+
         return {
             'ok': True
         }
@@ -1161,9 +1164,10 @@ class Handler:
             t_max_meas_err = []
             n_max_meas = []
             n_max_meas_err = []
+            area = []
 
-            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err, T_max_measured, T_max_err, n_max_measured, n_max_err\n'
-            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3, eV, eV, m-3, m-3\n'
+            aux += 'index, time, nl42, nl42_err, l42, <n>42, <n>42_err, <n>V, <n>V_err, <T>V, <T>V_err, We, We_err, dWe/dt, vol, T_center, T_c_err, n_center, n_c_err, T_peaking, n_peaking, R_sep, nl_eq, nl_eq_err, len_eq, <n>eq, <n>eq_err, T_max_measured, T_max_err, n_max_measured, n_max_err, S_pol\n'
+            aux += '1, ms, m-2, m-2, m, m-3, m-3, m-3, m-3, eV, eV, J, J, kW, m3, eV, eV, m-3, m-3, 1, 1, cm, m-2, m-2, m, m-3, m-3, eV, eV, m-3, m-3, m2\n'
             for event_ind_aux in range(len(data)):
                 event = data[event_ind_aux]
 
@@ -1218,6 +1222,7 @@ class Handler:
 
                         dwe.append(we_derivative)
                         vol.append(event['data']['vol'])
+                        area.append(event['data']['area'])
 
                         t_c.append(event['data']['surfaces'][-1]['Te'])
                         t_c_err.append(event['data']['surfaces'][-1]['Te_err'])
@@ -1257,7 +1262,7 @@ class Handler:
                                 r_sep_val = -1
 
 
-                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e, %.3e, %.3e, %.3e, %.3e\n' % \
+                        aux += '%d, %.1f, %.2e, %.2e, %.2f, %.2e, %.2e, %.2e, %.2e, %.2f, %.2f, %d, %d, %d, %.3f, %.2f, %.2f, %.2e, %.2e, %.3f, %.3f, %.2f, %.2e, %.2e, %.2f, %.2e, %.2e, %.3e, %.3e, %.3e, %.3e, %.3f\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'],
                                 event['data']['nl'], event['data']['nl_err'],
                                 length,
@@ -1276,10 +1281,11 @@ class Handler:
                                 length_eq,
                                 event['data']['nl_eq'] / length_eq, event['data']['nl_eq_err'] / length_eq,
                                 t_max_meas[-1], t_max_meas_err[-1],
-                                n_max_meas[-1], n_max_meas_err[-1]
+                                n_max_meas[-1], n_max_meas_err[-1],
+                                event['data']['area']
                         )
                     else:
-                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
+                        aux += '%d, %.1f, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --, --\n' % \
                                (event_ind, shot['events'][event_ind]['timestamp'])
             to_pack = {
                 'nl42 (m^-2)': {
@@ -1339,7 +1345,7 @@ class Handler:
                 },
                 'plasma volume': {
                     'comment': 'объём плазмы внутри сепаратрисы',
-                    'unit': 'V(m^-3)',
+                    'unit': 'V(m^3)',
                     'x': timestamps,
                     'y': vol
                 },
@@ -1395,8 +1401,26 @@ class Handler:
                     'y': n_max_meas,
                     'err': n_max_meas_err
                 },
+                'poloidal section area': {
+                    'comment': 'площадь полоидального сечения',
+                    'unit': 'S(m^2)',
+                    'x': timestamps,
+                    'y': area
+                }
 
             }
+            keys = copy.copy(list(to_pack.keys()))
+            for k in keys:
+                v = to_pack[k]
+                to_pack['%s v2' % k] = {
+                    'comment': v['comment'],
+                    'unit': v['unit'],
+                    'tMin': timestamps[0],
+                    'tMax': timestamps[-1],
+                    'offset': 0.0,
+                    'yRes': 0.0001*max(v['y']),
+                    'y': v['y']
+                }
 
         serialised = [{
             'x': [],
@@ -1404,6 +1428,11 @@ class Handler:
             'te': [],
             'n': [],
             'ne': []
+        } for poly in shot['config']['poly']]
+        serialised_no_gaps = [{
+            'x': [],
+            't': [],
+            'n': [],
         } for poly in shot['config']['poly']]
 
         for event_ind in range(len(shot['events'])):
@@ -1417,6 +1446,19 @@ class Handler:
                             serialised[poly_ind]['te'].append(poly['Terr'])
                             serialised[poly_ind]['n'].append(poly['n'])
                             serialised[poly_ind]['ne'].append(poly['n_err'])
+
+                            serialised_no_gaps[poly_ind]['x'].append(shot['events'][event_ind]['timestamp'] * 1e-3)
+                            serialised_no_gaps[poly_ind]['t'].append(poly['T'])
+                            serialised_no_gaps[poly_ind]['n'].append(poly['n'])
+                        else:
+                            serialised_no_gaps[poly_ind]['x'].append(shot['events'][event_ind]['timestamp'] * 1e-3)
+                            if len(serialised_no_gaps[poly_ind]['x']) == 1:
+                                serialised_no_gaps[poly_ind]['t'].append(0)
+                                serialised_no_gaps[poly_ind]['n'].append(0)
+                            else:
+                                serialised_no_gaps[poly_ind]['t'].append(serialised_no_gaps[poly_ind]['t'][-1])
+                                serialised_no_gaps[poly_ind]['n'].append(serialised_no_gaps[poly_ind]['n'][-1])
+
         for poly_ind in range(len(serialised)):
             to_pack['Te R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
                     'comment': 'локальная температура электронов',
@@ -1432,10 +1474,32 @@ class Handler:
                 'y': serialised[poly_ind]['n'],
                 'err': serialised[poly_ind]['ne']
             }
+            to_pack['Te R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                'comment': 'локальная температура электронов',
+                'unit': 'Te(eV)',
+                'tMin': serialised_no_gaps[poly_ind]['x'][0],
+                'tMax': serialised_no_gaps[poly_ind]['x'][-1],
+                'offset': 0.0,
+                'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['t']),
+                'y': serialised_no_gaps[poly_ind]['t']
+            }
+            to_pack['ne R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                'comment': 'm^-3, локальная концентрация электронов',
+                'unit': 'ne(m^-3)',
+                'tMin': serialised_no_gaps[poly_ind]['x'][0],
+                'tMax': serialised_no_gaps[poly_ind]['x'][-1],
+                'offset': 0.0,
+                'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['n']),
+                'y': serialised_no_gaps[poly_ind]['n']
+            }
+
+
+
         packed = shtRipper.ripper.write(path='%s%s%s/' % (self.plasma_path, RES_FOLDER, shot['shotn']),
                                         filename='TS_%s.sht' % shot['shotn'], data=to_pack)
         if len(packed) != 0:
             print('sht packing error: "%s"' % packed)
+
 
         if len(aux) == 0:
             return None

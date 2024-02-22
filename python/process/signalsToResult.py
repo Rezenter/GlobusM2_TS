@@ -201,7 +201,7 @@ class Processor:
                 print('Ophir file is requested but not found')
                 fuck
             with open(path, 'rb') as file:
-                self.energy = [(0, 0)]
+                self.energy = [1e-33]
                 data = msgpack.unpackb(file.read())
                 for event in data:
                     self.energy.append(event[1] * self.absolute['J_from_ophir'])
