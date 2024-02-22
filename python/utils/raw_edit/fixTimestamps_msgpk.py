@@ -3,7 +3,7 @@ from pathlib import Path
 import purge_calculations
 
 is_plasma: bool = True
-shotn: int = 43494
+shotn: int = 42530
 #shotn: int = 42516
 
 DB_PATH: str = 'd:/data/db/'

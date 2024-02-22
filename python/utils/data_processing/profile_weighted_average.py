@@ -1,15 +1,16 @@
 # expected file structure: csv: shotn, time
 
-req_file: int = 9
+req_file: int = 999
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
 
 request = []
 with open('in/%d.csv'%req_file, 'r') as file:
-    header = file.readline().split(',')
+    header = file.readline()[:-1].split(',')
     shotn_col = header.index('shotn')
     time_col = header.index('time')
+    file.readline() # units
     for line in file:
-        spl = line.split(',')
+        spl = line[:-1].split(',')
         request.append((int(spl[shotn_col]), float(spl[time_col])))
 
 r = []
@@ -102,5 +103,28 @@ with open('out/%d_n(R).csv'%req_file, 'w') as file:
         line += '%.1f, %.1f\n' % (ave_top / weight_sum, (1 / weight_sum) ** 0.5)
 
         file.write(line)
+
+for i in range(len(r)):
+    line = '%d ' % r[i]
+
+    te_top: float = 0
+    te_sum: float = 0
+    for col in te_out:
+        if col[1 + i][0] == '--':
+            continue
+
+        te_top += float(col[1 + i][0]) / float(col[1 + i][1]) ** 2
+        te_sum += float(col[1 + i][1]) ** -2
+
+    ne_top: float = 0
+    ne_sum: float = 0
+    for col in ne_out:
+        if col[1 + i][0] == '--':
+            continue
+
+        ne_top += float(col[1 + i][0]) / float(col[1 + i][1]) ** 2
+        ne_sum += float(col[1 + i][1]) ** -2
+    line += '%.1f %.1f %.2e %.2e' % (te_top / te_sum, (1 / te_sum) ** 0.5, ne_top / ne_sum, (1 / ne_sum) ** 0.5)
+    print(line)
 
 print('code OK')

@@ -49,13 +49,13 @@ class Spectrum:
         else:
             sec = (3 * (-j + 1) * (-j + 2)) / (2 * (2 * -j + 1) * (2 * -j + 3))
         third = aux.math.pow((1 / self.lambda_las) + self.get_raman_shift(j), 4)
-        res = first * sec * third * self.gamma_sq
-        #print('!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
-        #res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
+        #res = first * sec * third * self.gamma_sq
+        print('\n\n\n\n!!!!!!!!!!!!!!!!!!wtf!!!!!!!!!!!!!!!!\n\n\n\n')
+        res = first * sec * third * self.gamma_sq * (8 * aux.math.pi * 3)
         if polar:
             #print('Polarizer ON!')
             return res  # depolarized rejected
-        return res * (1 + 0.75)  # depolarized accepted
+        return res * (1 + 0.75)  # depolarized accepted = sigmaZZ * 7/4
 
     def normalise(self):
         q_val = 0
@@ -84,9 +84,9 @@ ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
 abs_filename = '2023.10.12_raw'
-nl_correction: float = 5.7 #5.8 #1.05e1
+nl_correction: float = 1.0 #5.8 #1.05e1
+#nl_correction: float = 5.7 #5.8 #1.05e1
 use_first_shots: int = 100 # or -1
-TS_cross: float = 6.65e10-29
 
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
@@ -234,6 +234,7 @@ calibrated = {
 }
 for poly in result[0]['poly']:
     calibrated['A'].append(poly[0]['A'])
+
 with open('%s%s%s%s%s' % (aux.DB_PATH, calibr_path, PROCESSED_PATH, aux.date.today().strftime("%Y.%m.%d"), aux.JSON), 'w') as out_file:
     aux.json.dump(calibrated, out_file, indent=2)
 
