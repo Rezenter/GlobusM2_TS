@@ -378,9 +378,9 @@ class Integrator:
                     error = 'too large prehistory error'
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
+                    print('\n')
                     for board_ind in range(len(self.config['adc']['sync'])):
                         print(board_ind, self.data[board_ind][event_ind]['t'], laser['ave']['int'], laser['boards'][board_ind]['int'])
-                    print('\n')
                     if board_ind != 8:
                         '''
                         for board_ind in range(len(self.config['adc']['sync'])):
