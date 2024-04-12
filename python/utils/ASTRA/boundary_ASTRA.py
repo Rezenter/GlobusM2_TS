@@ -1,7 +1,7 @@
 import python.utils.reconstruction.CurrentCoils as ccm
 
-shotn: int = 40031
-requested_time: float = 179.6  # ms
+shotn: int = 41114
+requested_time: float = 213.0  # ms
 requested_time *= 1e-3
 
 ccm_data = ccm.CCM(shotn)

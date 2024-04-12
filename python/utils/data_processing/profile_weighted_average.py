@@ -1,10 +1,10 @@
 # expected file structure: csv: shotn, time
 
-req_file: int = 999
+req_file: str = '41114'
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
 
 request = []
-with open('in/%d.csv'%req_file, 'r') as file:
+with open('in/%s.csv' % req_file, 'r') as file:
     header = file.readline()[:-1].split(',')
     shotn_col = header.index('shotn')
     time_col = header.index('time')
@@ -56,7 +56,7 @@ for req in request:
         ne_out.append(ne)
 
 
-with open('out/%d_T(R).csv'%req_file, 'w') as file:
+with open('out/%s_T(R).csv' % req_file, 'w') as file:
     line = 'R, '
     for col in te_out:
         line += '%.5d_%.1f, err, ' % (col[0])
@@ -74,13 +74,15 @@ with open('out/%d_T(R).csv'%req_file, 'w') as file:
                 continue
 
             line += '%s, %s, ' % col[1 + i]
-            ave_top += float(col[1 + i][0]) / float(col[1 + i][1]) ** 2
-            weight_sum += float(col[1 + i][1]) ** -2
+            #weight = float(col[1 + i][1]) ** -2
+            weight = (float(col[1 + i][1]) / float(col[1 + i][0])) ** -2
+            ave_top += float(col[1 + i][0]) * weight
+            weight_sum += weight
         line += '%.1f, %.1f\n' % (ave_top / weight_sum, (1 / weight_sum) ** 0.5)
 
         file.write(line)
 
-with open('out/%d_n(R).csv'%req_file, 'w') as file:
+with open('out/%s_n(R).csv' % req_file, 'w') as file:
     line = 'R, '
     for col in ne_out:
         line += '%.5d_%.1f, err, ' % col[0]
@@ -98,8 +100,10 @@ with open('out/%d_n(R).csv'%req_file, 'w') as file:
                 continue
 
             line += '%s, %s, ' % col[1 + i]
-            ave_top += float(col[1 + i][0]) / float(col[1 + i][1]) ** 2
-            weight_sum += float(col[1 + i][1]) ** -2
+            #weight = float(col[1 + i][1]) ** -2
+            weight = (float(col[1 + i][1]) / float(col[1 + i][0])) ** -2
+            ave_top += float(col[1 + i][0]) * weight
+            weight_sum += weight
         line += '%.1f, %.1f\n' % (ave_top / weight_sum, (1 / weight_sum) ** 0.5)
 
         file.write(line)

@@ -1,5 +1,7 @@
+from pathlib import Path
+
 #filename: str = 'D:\\data\\globus\\calc\\OH\\results\\runs\\1 loc low\\7\\ne=exp+anomaly\\OH_LOC_low_anomaly.data.OH.model.1'
-filename: str = 'd:\\data\\globus\\calc\\OH\\results\\runs\\1 loc low\\7\\ne=exp, Zeff=1\\OH_LOC_low_Zeff.data.OH.model.1'
+#filename: str = 'd:\\data\\globus\\calc\\OH\\results\\runs\\1 loc low\\7\\ne=exp, Zeff=1\\OH_LOC_low_Zeff.data.OH.model.1'
 
 #filename: str = 'D:\\data\\globus\\calc\\OH\\results\\runs\\1.5 loc med\\anomaly\\OH_loc_med_anomaly.data.OH.model.1'
 #filename: str = 'd:\\data\\globus\\calc\\OH\\results\\runs\\1.5 loc med\\neo, Zeff=1.3\\OH_LOC_med_Zeff.data.OH.model.1'
@@ -13,12 +15,17 @@ filename: str = 'd:\\data\\globus\\calc\\OH\\results\\runs\\1 loc low\\7\\ne=exp
 #filename: str = 'D:\\data\\globus\\calc\\OH\\results\\runs\\4 soc med\\anomaly\\OH_SOC_med_anomaly.data.OH.model.1'
 #filename: str = 'D:\\data\\globus\\calc\\OH\\results\\runs\\5 soc high\\anomaly\\OH_SOC_high_anomaly.data.OH.model.1'
 
+#filename: str = 'd:\\data\\globus\\calc\\NBI\\ASTRA\\41114\\41114.data.NBI.model.1'
+dir: Path = Path('a:\\home\\user\\soft\\astra\\ASTRA_7.02\\user\\dat')
+
 constants: bool = False
 rad: bool = False
 
 line = ''
 c_names = []
 c_vars = []
+
+filename: Path = list(dir.glob('*.1'))[0]
 
 with open(filename, 'r') as f:
     header: str = ''

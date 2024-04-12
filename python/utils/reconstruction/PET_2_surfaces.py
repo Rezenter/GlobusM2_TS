@@ -2,8 +2,16 @@ import phys_const
 import json
 import math
 
-shotn: int = 44043
-time_PET: float = 180
+#shotn: int = 44043
+#time_PET: float = 180
+#lcfm_lfs_r: float = 0.604
+#Rinv: float = 51.7
+
+shotn: int = 43922
+time_PET: float = 183
+lcfm_lfs_r: float = 0.591
+Rinv: float = 51.5
+
 upscale: int = 50
 
 
@@ -71,23 +79,44 @@ def find_surface(target_R: float, target_Z: float = 0):
     }
 
 lcfs = []
-lcfm_lfs_r: float = 0.605
 lcfs_found: bool = False
 while not lcfs_found:
     print('try Rlcfs=', lcfm_lfs_r)
     lcfs = find_surface(target_R=lcfm_lfs_r, target_Z=z[axis_z_ind])
 
-
-    #if limiter:
     limiter_hfs = 0.125
     limiter_lfs = 0.61
+    limiter_top = 0.49
+    limiter_bot = -limiter_top
+
+    # if limiter:
     for point in lcfs['points']:
         if not limiter_hfs < point[0] < limiter_lfs:
             lcfs_found = True
             print('limiter configuration: ', point[0], point[1])
             break
 
-    #if divertor
+    else:
+        # if divertor
+
+        proj: list[float] = []
+        check: bool = False
+        for point in lcfs['points']:
+            if point[1] not in proj:
+                proj.append(point[1])
+                if not limiter_bot < point[1] < limiter_top:
+                    check = True
+        if check:
+            proj.sort()
+            for i in range(len(proj)):
+                if proj[i] >= z[axis_z_ind]:
+                    lcfs_found = True
+                    print('divertor configuration')
+                    print('Warning! lower null only!')
+                    break
+                if abs(proj[i + 1] - proj[i]) > abs(z_up[0] - z_up[1])*1.1:
+                    #there is a gap between lower legs and lcfs
+                    break
 
     lcfm_lfs_r += 0.0001
 
@@ -98,8 +127,15 @@ with open('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\%s\\result.json' % shot
     ts_data = json.load(file)
     for poly in ts_data['config']['poly']:
         surf = find_surface(target_R=poly['R']*1e-3)
-        rho = math.sqrt((surf['flux'] - lcfs['flux'])/(axis_flux-lcfs['flux']))
+        rho = math.sqrt((surf['flux'] - axis_flux)/(lcfs['flux'] - axis_flux))
+
         print(poly['R'], surf['flux'], rho)
+
+
+surf = find_surface(target_R=0.515)
+rho = math.sqrt((surf['flux'] - axis_flux)/(lcfs['flux'] - axis_flux))
+print('Rinv = ', 0.515, surf['flux'], rho)
+
 
 print(axis_flux, lcfs['flux'])
 

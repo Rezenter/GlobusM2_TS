@@ -2,16 +2,15 @@ import msgpack
 from pathlib import Path
 import math
 
-shotn: int = 43502
+shotn: int = 44298
 
-DB_PATH: str = 'd:/data/db/'
+#DB_PATH: str = 'd:/data/db/'
+DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'
 PLASMA_FOLDER: str = 'plasma/'
 DEBUG_FOLDER: str = 'debug/'
 RAW_FOLDER: str = 'raw/'
 HEADER_FILE: str = 'header'
 FILE_EXT: str = 'json'
-OUT_FOLDER: str = 'local_db/raw/'
-
 
 shot_folder: Path = Path('%s%s%s%05d/' % (DB_PATH, PLASMA_FOLDER, RAW_FOLDER, shotn))
 
