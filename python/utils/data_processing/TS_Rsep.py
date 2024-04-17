@@ -1,6 +1,6 @@
 from pathlib import Path
 
-shotn: int = 41096
+shotn: int = 44435
 #shotn: int = 41095
 
 path: Path = Path('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\%05d\\' % shotn)
@@ -22,10 +22,14 @@ with open(path.joinpath('%05d_dynamics.csv' % shotn), 'r') as file:
 
 for filename in files:
     out: str = 'R, '
+    out_heap: str = 'shotn, time, R, R_sep, R-Rsep, %s, err\n' % filename
+    out_heap += '#, ms, mm, mm, mm, ??, ??\n'
     with open(path.joinpath('%05d%s' % (shotn, filename)), 'r') as file:
         header: list[str] = file.readline().split(', ')
-        if len(header) - 1 != len(times) * 2:
-            fuck
+        skip: int = 0
+        while(len(header) - 1 != (len(times) + skip) * 2):
+            #print(len(header) - 1, (len(times) + skip) * 2)
+            skip += 1
         units: str = 'mm, '
         units_old: list[str] = file.readline().split(', ')
         for event_ind in range(len(times)):
@@ -36,9 +40,15 @@ for filename in files:
             data: list[str] = line[:-1].split(', ')
             R = float(data[0])
             out += data[0] + ', '
+            if skip:
+                data = data[skip * 2:]
             for event_ind in range(len(times)):
                 out += '%.2f, %s, %s, ' % (R-R_sep[event_ind], data[1 + event_ind * 2], data[2 + event_ind * 2])
+                'shotn, time, R, R_sep, R-Rsep, %s, err'
+                out_heap += '%d, %.1f, %d, %d, %d, %s, %s\n' % (shotn, times[event_ind], R, R_sep[event_ind], R-R_sep[event_ind], data[1 + event_ind * 2], data[2 + event_ind * 2])
             out = out[:-2] + '\n'
     with open(path.joinpath('%05d_Rsep_%s' % (shotn, filename)), 'w') as file:
         file.write(out)
+    with open(path.joinpath('%05d_Rsep_heap_%s' % (shotn, filename)), 'w') as file:
+        file.write(out_heap)
 print('Code OK')
