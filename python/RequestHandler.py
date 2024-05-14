@@ -580,19 +580,24 @@ class Handler:
         starts = []
 
         for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
-            if self.raw_processor.version == 1:
+            if self.raw_processor.version <= 1:
                 adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
                 event.append(self.raw_processor.data[ch['adc']][int(req['event'])][adc_gr]['data'][adc_ch])
-            else:
+            elif self.raw_processor.version >= 3:
                 event.append(list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']]))
+            else:
+                event.append(self.raw_processor.data[ch['adc']][int(req['event'])]['ch'][ch['ch']])
             starts.append(self.raw_processor.processed[int(req['event'])]['laser']['boards'][ch['adc']]['sync_ind'])
 
         board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
-        if self.raw_processor.version == 1:
+        if self.raw_processor.version <= 1:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
             las = self.raw_processor.data[board_ind][int(req['event'])][adc_gr]['data'][adc_ch]
-        else:
+        elif self.raw_processor.version >= 3:
             las = (list([self.raw_processor.header['offset'] - 1250 + v * 2500 / 4096] for v in self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]))
+        else:
+            las = self.raw_processor.data[board_ind][int(req['event'])]['ch'][self.raw_processor.config['adc']['sync'][board_ind]['ch']]
+
         resp = {
             'data': event,
             'laser': las,
@@ -697,6 +702,7 @@ class Handler:
 
     def slow_status(self, req):
         self.slow = SlowADC('%s/%s/%s/' % (DB_PATH, PLASMA_SHOTS, SLOW_RAW_FOLDER))
+
         if not self.slow.ready or not self.slow.satus():
             print('slow connection error')
             self.state['slow'] = {
@@ -725,6 +731,7 @@ class Handler:
                 shotn = int(line)
 
         self.slow.arm(shotn=shotn)
+
         #print('OPHIR disabled!!!\n\n\n')
         self.ophir_arm(shotn=shotn)
 
@@ -737,6 +744,7 @@ class Handler:
 
     def slow_disarm(self, req):
         self.slow.disarm()
+
         #print('OPHIR disabled!!!\n\n\n')
         self.ophir_disarm()
         self.state['slow'] = {
@@ -1409,18 +1417,19 @@ class Handler:
                 }
 
             }
-            keys = copy.copy(list(to_pack.keys()))
-            for k in keys:
-                v = to_pack[k]
-                to_pack['%s v2' % k] = {
-                    'comment': v['comment'],
-                    'unit': v['unit'],
-                    'tMin': timestamps[0],
-                    'tMax': timestamps[-1],
-                    'offset': 0.0,
-                    'yRes': 0.0001*max(v['y']),
-                    'y': v['y']
-                }
+            if(len(timestamps) != 0):
+                keys = copy.copy(list(to_pack.keys()))
+                for k in keys:
+                    v = to_pack[k]
+                    to_pack['%s v2' % k] = {
+                        'comment': v['comment'],
+                        'unit': v['unit'],
+                        'tMin': timestamps[0],
+                        'tMax': timestamps[-1],
+                        'offset': 0.0,
+                        'yRes': 0.0001*max(v['y']),
+                        'y': v['y']
+                    }
 
         serialised = [{
             'x': [],

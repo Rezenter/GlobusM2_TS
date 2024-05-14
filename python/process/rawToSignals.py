@@ -146,30 +146,41 @@ class Integrator:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.PLASMA_FOLDER, self.RAW_FOLDER, self.shotn)
         else:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
-        for board_ind in range(len(self.config['adc']['sync'])):
-            extension = self.JSON_EXT
-            if self.version >= 2:
-                extension = self.BINARY_EXT
 
-            if not os.path.isfile('%s%d%s' % (shot_folder, board_ind, extension)):
-                print('Requested shot is missing requested board file %s.' % '%s%d%s' % (shot_folder, board_ind, extension))
-                return False
-            with open('%s/%d%s' % (shot_folder, board_ind, extension), 'rb') as board_file:
-                self.data.append([])
-                if self.version <= 1:
-                    for event in ijson.items(board_file, 'item', use_float=True):
-                        self.data[board_ind].append(event['groups'])
-                else:
-                    self.data[board_ind] = msgpack.unpackb(board_file.read())
-            if self.version >= 3:
-                self.header['triggerThreshold'] = 100
-            print('Board %d loaded.' % board_ind)
-        print('All data is loaded.')
+        self.boards = []
+        for poly in self.config['poly']:
+            for ch in poly['channels']:
+                if ch['adc'] not in self.boards:
+                    self.boards.append(ch['adc'])
+        self.boards.sort()
+
+        for board_ind in range(len(self.config['adc']['sync'])):
+            self.data.append([])
+            if board_ind in self.boards:
+                extension = self.JSON_EXT
+                if self.version >= 2:
+                    extension = self.BINARY_EXT
+
+                if not os.path.isfile('%s%d%s' % (shot_folder, board_ind, extension)):
+                    print('Requested shot is missing requested board file %s.' % '%s%d%s' % (shot_folder, board_ind, extension))
+                    return False
+                with open('%s/%d%s' % (shot_folder, board_ind, extension), 'rb') as board_file:
+
+                    if self.version <= 1:
+                        for event in ijson.items(board_file, 'item', use_float=True):
+                            self.data[board_ind].append(event['groups'])
+                    else:
+                        self.data[board_ind] = msgpack.unpackb(board_file.read())
+                if self.version >= 3:
+                    self.header['triggerThreshold'] = 100
+                print('Board %d loaded.' % board_ind)
         return self.check_raw_integrity()
 
     def check_raw_integrity(self):
-        self.laser_count = len(self.data[0])
+        self.laser_count = len(self.data[self.boards[0]])
         for board_ind in range(len(self.config['adc']['sync'])):
+            if board_ind not in self.boards:
+                continue
             if len(self.data[board_ind]) != self.laser_count:
                 print('Boards recorded different number of events! %d vs %d' %
                       (len(self.data[board_ind]), self.laser_count))
@@ -184,36 +195,36 @@ class Integrator:
     def process_shot(self):
         print('Processing shot...')
         if self.version <= 1:
-            combiscope_zero = self.data[0][0][0]['timestamp'] - self.config['adc']['first_shot']
+            combiscope_zero = self.data[self.boards[0]][0][0]['timestamp'] - self.config['adc']['first_shot']
         elif self.version >= 4:
-            combiscope_zero = self.data[0][0]['t']
+            combiscope_zero = self.data[self.boards[0]][0]['t']
         else:
-            combiscope_zero = self.data[0][0]['t'] - self.config['adc']['first_shot']
+            combiscope_zero = self.data[self.boards[0]][0]['t'] - self.config['adc']['first_shot']
         expect_sync = True
         for event_ind in range(self.laser_count):
 
             laser, error = self.process_laser_event(event_ind, expect_sync)
             if 'sync' in laser and laser['sync']:
                 if self.version <= 1:
-                    combiscope_zero = self.data[0][event_ind][1]['timestamp']
+                    combiscope_zero = self.data[self.boards[0]][event_ind][1]['timestamp']
                 else:
-                    combiscope_zero = self.data[0][event_ind]['t']
+                    combiscope_zero = self.data[self.boards[0]][event_ind]['t']
                 for correction_ind in range(event_ind):
                     if self.version <= 1:
-                        self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind][1]['timestamp'] - combiscope_zero
+                        self.processed[correction_ind]['timestamp'] = self.data[self.boards[0]][correction_ind][1]['timestamp'] - combiscope_zero
                     if self.version >= 4:
                         self.processed[correction_ind]['timestamp'] = combiscope_zero
                     else:
-                        self.processed[correction_ind]['timestamp'] = self.data[0][correction_ind]['t'] - combiscope_zero
+                        self.processed[correction_ind]['timestamp'] = self.data[self.boards[0]][correction_ind]['t'] - combiscope_zero
                 expect_sync = False
             if self.laser_count > 1:
-                #timestamp = self.data[0][event_ind][0]['timestamp'] - self.data[0][0][0]['timestamp'] + self.config['adc']['first_shot']
+                #timestamp = self.data[self.boards[0]][event_ind][0]['timestamp'] - self.data[self.boards[0]][0][0]['timestamp'] + self.config['adc']['first_shot']
                 if self.version <= 1:
-                    timestamp = self.data[0][event_ind][1]['timestamp'] - combiscope_zero
+                    timestamp = self.data[self.boards[0]][event_ind][1]['timestamp'] - combiscope_zero
                 elif self.version >= 4:
-                    timestamp = self.data[0][event_ind]['t']
+                    timestamp = self.data[self.boards[0]][event_ind]['t']
                 else:
-                    timestamp = self.data[0][event_ind]['t'] - combiscope_zero
+                    timestamp = self.data[self.boards[0]][event_ind]['t'] - combiscope_zero
             else:
                 timestamp = -999
             proc_event = {
@@ -290,6 +301,9 @@ class Integrator:
         board_count = 0
         sync_event = []
         for board_ind in range(len(self.config['adc']['sync'])):
+            if board_ind not in self.boards:
+                laser['boards'].append({})
+                continue
             # print('Board %d' % board_ind)
             if self.version <= 1:
                 adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
@@ -350,17 +364,17 @@ class Integrator:
             #laser['ave']['int_len'] += stop_ind
             board_count += 1
         sync = True
-        for board_ind in range(len(self.config['adc']['sync'])):
+        for i, board_ind in enumerate(self.boards):
             if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                 continue
-            if not sync_event[board_ind]:
+            if not sync_event[i]:
                 sync = False
         if expect_sync and sync:
             laser['sync'] = True
             print('Globus synchronization found.%d' % event_ind)
             return laser, error
 
-        if board_count < len(self.data):
+        if board_count < len(self.boards):
             #error = 'not all boards got laser signal'
             print('not all boards got laser signal, but commented for t15')
         else:
@@ -371,7 +385,7 @@ class Integrator:
             laser['ave']['int'] /= board_count
             #laser['ave']['int_len'] /= board_count
             laser['ave']['int_len'] = math.ceil(self.config['common']['integrationTime'] / self.time_step)
-            for board_ind in range(len(self.config['adc']['sync'])):
+            for board_ind in self.boards:
                 if 'captured_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['captured_bad']:
                     continue
                 if laser['boards'][board_ind]['pre_std'] > self.laser_prehistory_residual_pc:
@@ -379,7 +393,7 @@ class Integrator:
                 if math.fabs(laser['ave']['int'] - laser['boards'][board_ind]['int']) / \
                         laser['ave']['int'] > self.laser_integral_residual_pc:
                     print('\n')
-                    for board_ind in range(len(self.config['adc']['sync'])):
+                    for board_ind in self.boards:
                         print(board_ind, self.data[board_ind][event_ind]['t'], laser['ave']['int'], laser['boards'][board_ind]['int'])
                     if board_ind != 8:
                         '''
@@ -424,6 +438,7 @@ class Integrator:
             if integration_to > self.header['eventLength'] - self.right_limit:
                 error = 'right boundary'
             zero = statistics.fmean(signal[:integration_from])
+
             maximum = float('-inf')
             minimum = float('inf')
             for cell in signal:

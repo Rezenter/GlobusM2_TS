@@ -83,11 +83,13 @@ calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2023.01.16_raw_330Hz_1.6J_G2-10'
-abs_filename = '2023.10.12_raw'
+#abs_filename = '2023.10.12_raw'
+abs_filename = '2024.05.08_raw'
 nl_correction: float = 5.7 #5.8 #1.05e1
-use_first_shots: int = 100 # or -1
+#use_first_shots: int = 100 # or -1
+use_first_shots: int = -1 # or -1
+#use_first_shots: int = 500 # or -1
 TS_cross: float = 6.65e10-29
-
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
     abs_calibration = aux.json.load(file)
@@ -106,7 +108,9 @@ def process_point(point, stray=None):
         'temperature': abs_calibration['temperature'],
         'polarizator': False,
         'laser_energy': abs_calibration['laser_energy'],
-        'laser_shots': []
+        'laser_shots': [],
+        'ophir': [],
+        'use_first_shots': use_first_shots
     }
     if 'polar' in abs_calibration:
         result['polarizator'] = abs_calibration['polar']
@@ -158,6 +162,10 @@ def process_point(point, stray=None):
 
             if use_first_shots > 0:
                 integrator.processed = integrator.processed[:use_first_shots]
+
+            if len(integrator.processed) == 101:
+                print('\n\nWARNING!!! assuming first event is blank\n\n')
+                integrator.processed = integrator.processed[1:]
             for ind, event in enumerate(integrator.processed):
                 if event['error'] is not None:
                     print('%d event skipped!' % shotn)
@@ -166,6 +174,7 @@ def process_point(point, stray=None):
                 #laser += event['laser']['ave']['int']
 
                 laser += ophir[ind]
+                result['ophir'].append(ophir[ind])
                 las_count += 1
                 for poly_ind in event['poly']:
                     for ch_ind in range(len(integrator.config['poly'][int(poly_ind)]['channels'])):

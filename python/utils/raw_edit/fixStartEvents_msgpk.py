@@ -2,7 +2,7 @@ import msgpack
 from pathlib import Path
 import math
 
-shotn: int = 44298
+shotn: int = 44057
 
 DB_PATH: str = 'd:/data/db/'
 PLASMA_FOLDER: str = 'plasma/'
@@ -15,6 +15,7 @@ OUT_FOLDER: str = 'local_db/raw/'
 
 shot_folder: Path = Path('%s%s%s%05d/' % (DB_PATH, PLASMA_FOLDER, RAW_FOLDER, shotn))
 
+start_ind: int = 2
 
 print('loading raw shot...')
 data = []
@@ -28,28 +29,12 @@ for board_ind in range(8):
     path = Path(Path('%s%ssafe/%05d/%d.msgpk' % (DB_PATH, PLASMA_FOLDER, shotn, board_ind)))
     with path.open(mode='wb') as file:
         msgpack.dump(data[board_ind], file)
-    fixed_data.append([data[board_ind][0] for i in range(101)])
-
-
-for event in range(101):
-    for board_ind in range(8):
-        ev_ind = math.floor(data[board_ind][event]['t'] / 3.03)
-        print(board_ind, ev_ind, data[board_ind][event]['t'])
-        if ev_ind < 101:
-          fixed_data[board_ind][ev_ind] = data[board_ind][event]
-    print('\n')
-
-
-for event in range(101):
-    for board_ind in range(8):
-        print(board_ind, event, fixed_data[board_ind][event]['t'])
-    print('\n')
+    fixed_data.append([data[board_ind][i] for i in range(start_ind, 101)])
 
 
 
 for board_ind in range(8):
     path = Path(shot_folder.joinpath('%d.msgpk' % board_ind))
-    print(path)
     with path.open(mode='wb') as file:
         msgpack.dump(fixed_data[board_ind], file)
 

@@ -2306,7 +2306,7 @@
                             {
                                 x: (time_ind - this.m_current_event_raw.laser_start) * dt,
                                 y: this.m_current_event_raw.laser[time_ind] -
-                                    this.m_current_event_sig.laser.boards[0].zero_lvl
+                                    this.m_current_event_sig.laser.boards[this.m_currentShot.config.poly[poly_ind].channels[0].adc].zero_lvl
                             });
                     }
                     this.m_raw_chart.options.data.push({

@@ -2,13 +2,13 @@ import scipy.special as sci
 import auxiliary as aux
 
 # change only these lines!
-config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
-
 spectral_raw_name: str = '2023.10.06'
 WL_STEP: float = 0.05  # [nm]. integration step, 0.1
 T_LOW: float = 5.0  # [eV]
 T_HIGH: float = 5000  # [eV]
 T_MULT: float = 1.01  # default = 1.01
+
+config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
 
 class TS_spectrum:

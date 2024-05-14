@@ -3,7 +3,7 @@ from pathlib import Path
 import purge_calculations
 
 is_plasma: bool = True
-shotn: int = 43494
+shotn: int = 44057
 #shotn: int = 42516
 
 DB_PATH: str = 'd:/data/db/'
@@ -26,7 +26,7 @@ for board_ind in range(8):
     with path.open(mode='rb') as file:
         data = msgpack.unpackb(file.read())
         data[0]['t'] = 0
-        start: float = data[1]['t']
+        start: float = data[1]['t'] - 3.03
         for event_ind in range(1, len(data)):
             data[event_ind]['t'] -= start
     with path.open(mode='wb') as file:
