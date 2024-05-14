@@ -14,8 +14,12 @@ apd_path = 'apd/'
 csv_ext = '.csv'
 
 temperature = const.t_room  # [K] nitrogen in torus temperature
+temperature = 298  # [K] Scannell
+print('\n\n\nFUUUUUUUUUUUUUUU\n\n\n\n')
 #temperature = 273 + 200   # [K] heated nitrogen in torus temperature
 lambda_las = 1064.4e-9  # [m] laser wavelength
+lambda_las = 1064.0e-9  # [m] Scannell
+print('\n\n\nFUUUUUUUUUUUUUUU\n\n\n\n')
 #lambda_las = 1047.6e-9  # [m] laser wavelength
 
 csv_header = 2
@@ -138,7 +142,7 @@ def check():
         res = fj * sigma
         qe = get_linearization(wl * 1e9, quant_exit)
 
-        out_line = '%.2f %.2e %.2f %.2e ' % (wl*1e9, res, qe, res * qe)
+        out_line = '%.2f %.2e %.2e %.2f %.2e ' % (wl*1e9, sigma, res, qe, res * qe)
         for ch in range(5):
             trans = get_linearization(wl * 1e9, filters[ch + 1])
             for ch_prev in range(ch):
