@@ -45,12 +45,12 @@ class Filters:
             while wl < 1070:
                 line = '%.1f, ' % wl
                 for ch in range(5):
-                    line += '%.3e, ' % self.transmission(ch + 1, wl)
+                    line += '%.3e, ' % self.transmission_nm(ch + 1, wl)
                 file.write(line[:-2] + '\n')
                 wl += 0.1
         print('filters written to file')
 
-    def transmission(self, ch: int, wl: float) -> float:  # whole polychromator
+    def transmission_nm(self, ch: int, wl: float) -> float:  # whole polychromator
         if wl >= self.trans[ch - 1]['wl'][-1] or wl <= self.trans[ch - 1]['wl'][0]:
             return 0.0
         res: float = 1
@@ -64,6 +64,8 @@ class Filters:
             curr += 1
         return max(0.0, res * phys_const.interpolate_arr(self.trans[ch - 1]['wl'], self.trans[ch - 1]['t'], wl))
 
+    def transmission(self, ch: int, wl: float) -> float:
+        return self.transmission_nm(ch=ch, wl=wl*1e9)
 
 class APD:
     mult: float = 0.01 * phys_const.h * phys_const.c * 1e9 / phys_const.q_e
@@ -87,5 +89,8 @@ class APD:
     def qe(self, wl: float) -> float:
         return phys_const.interpolate_arr(self.apd['wl'], self.apd['qe'], wl)
 
-    def aw(self, wl: float) -> float:
+    def aw_nm(self, wl: float) -> float:
         return phys_const.interpolate_arr(self.apd['wl'], self.apd['aw'], wl)
+
+    def aw(self, wl: float) -> float:
+        return self.aw_nm(wl=wl * 1e9)

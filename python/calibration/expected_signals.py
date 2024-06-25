@@ -3,20 +3,22 @@ import auxiliary as aux
 
 # change only these lines!
 spectral_raw_name: str = '2023.10.06'
-WL_STEP: float = 0.05  # [nm]. integration step, 0.1
+#WL_STEP: float = 0.05  # [nm]. integration step, 0.1
+WL_STEP: float = 0.5*1e-9  # [m]. integration step, 0.1
 T_LOW: float = 5.0  # [eV]
 T_HIGH: float = 5000  # [eV]
-T_MULT: float = 1.01  # default = 1.01
+#T_MULT: float = 1.01  # default = 1.01
+T_MULT: float = 1.1  # default = 1.01
 
-config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
+#config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
 
 class TS_spectrum:
-    def __init__(self, theta_deg: float, model: str = 'Naito', lambda0: float = 1064.5):
+    def __init__(self, theta_deg: float, model: str = 'Naito', lambda0: float = 1064.5*1e-9):
         self.theta: float = aux.phys_const.deg_to_rad(theta_deg)
         self.sin_theta: float = aux.math.sin(self.theta)
         self.cos_theta: float = aux.math.cos(self.theta)
-        self.lambda_0: float = lambda0  # [nm], laser wavelength
+        self.lambda_0: float = lambda0  # [m], laser wavelength
         if model == 'Selden':
             self.model: int = 0
             self.alphaT: float = aux.phys_const.m_e * aux.phys_const.c**2 / (2 * aux.phys_const.q_e)
@@ -69,24 +71,24 @@ class TS_spectrum:
             print('T_e = %.0e' % te)
             total: float = 0.0
             curr_wl: float = self.lambda_0 - WL_STEP * 0.5
-            while curr_wl > 100:
+            while curr_wl > 100*1e-9:
                 sp_dens = self.scat_power_dens(temp=te, wl=curr_wl)
                 total += sp_dens
                 if sp_dens < 1e-10:
                     break
                 curr_wl -= WL_STEP
-            print('blue spectral dens integral = %.3f, stop wavelength = %.1f' % (total*WL_STEP, curr_wl))
+            print('blue spectral dens integral = %.3f, stop wavelength = %.4e' % (total*WL_STEP, curr_wl))
             curr_wl = self.lambda_0 + WL_STEP * 0.5
-            while curr_wl < 10000:
+            while curr_wl < 10000*1e-9:
                 sp_dens = self.scat_power_dens(temp=te, wl=curr_wl)
                 total += sp_dens
                 if sp_dens < 1e-10:
                     break
                 curr_wl += WL_STEP
             total *= WL_STEP
-            print('total spectral dens integral error = %.2e, stop wavelength = %.1f' % (abs(1 - total), curr_wl))
+            print('total spectral dens integral error = %.2e, stop wavelength = %.4e' % (abs(1 - total), curr_wl))
             if not 0.9 < total < 1.1:
-                print('Too high error in spectrum! T_e = %.0e, total spectral dens integral = %.3f' % (te, total))
+                print('Too high error in spectrum! T_e = %.0e, total spectral dens integral = %.3e' % (te, total))
                 fuck
                 return False
             print('_____________')
@@ -113,14 +115,14 @@ class LampCalibration:
             fuck
 
         self.lamp = {
-            'x': [],  # [nm] wavelength
-            'y': []
+            'x': [],  # [m] wavelength
+            'y': []   # [W / (m^2 * sr * m)]
         }
         with open('%s%s%s' % (aux.DB_PATH, aux.CALIBRATION_FOLDER, aux.LAMP), 'r') as file:
             for line in file:
                 splt = line.split()
-                self.lamp['x'].append(float(splt[0]) * 1e3)
-                self.lamp['y'].append(float(splt[1]))
+                self.lamp['x'].append(float(splt[0]) * 1e-6)  # [mkm] -> [m]
+                self.lamp['y'].append(float(splt[1]) * 1e6)   # [.../ mkm] -> [.../ m]
 
         for poly_ind_conf, poly_conf in enumerate(self.config['poly']):
             for poly_ind_cal_tmp, poly_cal in enumerate(self.calibration['poly']):
@@ -144,9 +146,9 @@ class LampCalibration:
             poly_conf['detector'] = aux.APD(poly_conf['detectors'])
             for ch_ind in range(len(poly_conf['channels'])):
                 integral: float = 0
-                wl: float = self.config['laser'][0]['wavelength']
+                wl: float = self.config['laser'][0]['wavelength'] * 1e-9
                 flag: bool = False
-                while wl > 300:
+                while wl > 700*1e-9:
                     transmission: float = poly_conf['filters'].transmission(ch=(ch_ind + 1), wl=wl)
                     if transmission < self.threshold or transmission > 10:
                         if flag:
@@ -158,7 +160,7 @@ class LampCalibration:
                         if transmission > 0.1:
                             flag = True
                     integral += aux.phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
-                                transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP / wl
+                                transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP
                     wl -= WL_STEP
 
                 poly_conf['channels'][ch_ind]['ae_tmp']: float = self.calibration['poly'][poly_conf['calibr_ind']]['amp'][ch_ind] / (poly_conf['channels'][ch_ind]['slow_gain'] * integral)
@@ -179,7 +181,7 @@ class ExpectedSignals:
             print('processing poly %d...' % (poly_ind_conf + 1))
 
             angle_deg: float = lamp_calibration.config['fibers'][poly_conf['fiber']]['scattering_angle_deg']
-            cross = TS_spectrum(theta_deg=angle_deg, model='Naito', lambda0=lamp_calibration.config['laser'][0]['wavelength'])
+            cross = TS_spectrum(theta_deg=angle_deg, model='Naito', lambda0=lamp_calibration.config['laser'][0]['wavelength'] * 1e-9)
 
             for ch in poly_conf['channels']:
                 ch['expected'] = []
@@ -187,9 +189,9 @@ class ExpectedSignals:
             for T in temp:
                 for ch_ind in range(len(poly_conf['channels'])):
                     integral: float = 0
-                    wl: float = lamp_calibration.config['laser'][0]['wavelength']
+                    wl: float = lamp_calibration.config['laser'][0]['wavelength'] * 1e-9
                     flag: bool = False
-                    while wl > 300:
+                    while wl > 300 * 1e-9:
                         transmission: float = poly_conf['filters'].transmission(ch=(ch_ind + 1), wl=wl)
                         if transmission < self.threshold or transmission > 10:
                             if flag:
@@ -209,7 +211,7 @@ class ExpectedSignals:
             result = {
                 'type': 'expected signals',
                 'type version': 2,
-                'calculated_for_config': config_name,
+                'calculated_for_config': lamp_calibration.calibration['config'],
                 'spectral_calibration': spectral_raw_name,
                 'wl_step': WL_STEP,
                 'Te_low': T_LOW,
@@ -229,7 +231,39 @@ class ExpectedSignals:
                     result['poly'][-1]['ae'].append(poly_conf['channels'][ch_ind]['ae'])
             aux.json.dump(result, file, indent=2)
 
+#test = TS_spectrum(theta_deg=90, model='Naito', lambda0=1064.5*1e-9)
+#for wl in range(700, 1064):
+#    print(wl, test.scat_power_dens(temp=100, wl=wl*1e-9))
+#fuck
+'''
+temp: list[float] = [T_LOW]
+while temp[-1] < T_HIGH:
+    temp.append(temp[-1] * T_MULT)
+cross = TS_spectrum(theta_deg=90, model='Naito', lambda0=1064.5*1e-9)
+filter = aux.Filters('GTS-core_poly1-10')
+apd = aux.APD('S11519-15')
+for T in temp:
+    integral: float = 0
+    wl: float = 1064.5 * 1e-9
+    flag: bool = False
+    while wl > 300 * 1e-9:
+        transmission: float = filter.transmission(ch=1, wl=wl)
+        if transmission < 5e-7 or transmission > 10:
+            if flag:
+                break
+            else:
+                wl -= WL_STEP
+                continue
+        else:
+            if transmission > 0.1:
+                flag = True
+        integral += cross.scat_power_dens(temp=T, wl=wl) * \
+                    transmission * apd.aw(wl=wl) * WL_STEP / wl
+        wl -= WL_STEP
 
+    print(T, integral * 1)
+fuck
+'''
 expected = ExpectedSignals(lamp_calibration=LampCalibration(spectral_name=spectral_raw_name))
 
 print('Code OK')

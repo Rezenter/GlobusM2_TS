@@ -3,6 +3,8 @@ import os
 import ijson
 import json
 import math
+
+import phys_const
 import phys_const as const
 import msgpack
 from pathlib import Path
@@ -95,6 +97,9 @@ class Processor:
             for k, v in obj:
                 self.absolute[k] = v
         self.absolute['modification'] = os.path.getmtime(absolute_full_name)
+        self.abs_version = 1
+        if 'version' in self.absolute:
+            self.abs_version = self.absolute['version']
 
         if self.is_plasma:
             self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
@@ -376,9 +381,16 @@ class Processor:
                     nf_sum += N_i[ch] * f[ch] / sigm2_i[ch]
                 fdf_sum = math.pow(fdf_sum, 2)
 
-                A = self.absolute['A'][poly] * self.cross_section
+
+                if self.abs_version >=2:
+                    A = self.absolute['A'][poly] * math.pow(phys_const.r_o, 2) * self.result['config']['laser'][0]['wavelength'] * 1e-9 / (phys_const.q_e * self.result['config']['preamp']['apdGain'])
+                    #print('E = ', E)
+                    #print('___________\n\n')
+                else:
+                    A = self.absolute['A'][poly] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
+
                 #if poly == 5 and event_ind == 60:
                 #    print('n_e %.1e, nf_sum %.1e, A %.1e, sigma_TS %.1e, E %.1e, f2_sum %.1e' % (n_e, nf_sum, self.absolute['A'][poly], self.cross_section, E, f2_sum))
 
