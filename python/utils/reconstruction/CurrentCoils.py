@@ -7,11 +7,8 @@ CCM_DB_NEW = '//172.16.12.127/Pub/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\
 
 theta_count = 180
 gamma_shift = 1
-#elong_0 = 1.5
 elong_0 = 1
-#shaf_shift = 3
 default_shaf_shift = 5.5
-#triang_mult = 1
 triang_mult = 0.5
 linear_count = 3
 

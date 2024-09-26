@@ -43,9 +43,9 @@ FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
 #CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
 CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
-CFM_DB = 'y:/!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
-CFM_DB_NEW = 'y:/!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
-PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
+CFM_DB = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
+CFM_DB_NEW = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
+PUB_PATH = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS/shots/'
 #TOKAMAK_LOG = 'tokamak_starts.csv'
 TOKAMAK_LOG = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\tokamak_starts.csv'
 

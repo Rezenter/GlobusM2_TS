@@ -40,7 +40,8 @@ for real_ind in range(len(z) - 1):
     for fake_ind in range(upscale):
         z_up.append(z[real_ind] + (z[real_ind + 1] - z[real_ind]) * fake_ind / upscale)
 
-flux_up: list[list[float]] = [[0] * (len(flux) - 1) * upscale for i in range((len(flux[0]) - 1) * upscale)]
+#flux_up: list[list[float]] = [[0] * (len(flux) - 1) * upscale for i in range((len(flux[0]) - 1) * upscale)]
+flux_up: list[list[float]] = [[0] * (len(flux[0]) - 1) * upscale for i in range((len(flux) - 1) * upscale)]
 
 axis_flux: float = -1e100
 axis_r_ind: int = 0
