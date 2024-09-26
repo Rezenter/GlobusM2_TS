@@ -1,7 +1,7 @@
 import msgpack
 from pathlib import Path
 
-for shotn in range(779, 795):
+for shotn in range(929, 930):
     print(shotn)
     path = Path('d:/data/db/debug/raw/%05d/0.msgpk' % shotn)
     with path.open(mode='rb') as file:

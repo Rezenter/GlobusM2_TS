@@ -97,10 +97,12 @@ calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2024.06.13_raw_DEBUG'
-abs_filename = '2024.05.06_raw'
+#abs_filename = '2024.05.06_raw'
 
 #abs_filename = '2023.10.12_raw'
-#abs_filename = '2024.05.08_raw'
+abs_filename = '2024.05.08_raw_corr'
+#abs_filename = '2024.05.03_raw_3'
+
 
 nl_correction: float = 1.22
 #nl_correction: float = 121.275

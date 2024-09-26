@@ -73,5 +73,22 @@ class SlowADC:
         return data[1:]
 
     def get_data(self, board: int):
+        print('%s/%s.slow' % (self.current_path, self.ADC_IP[board]))
         subprocess.run(["pscp", "-pw", self.secret, "-batch", '-C', '%s@%s:adc_data.slow' % (self.user, self.ADC_IP[board]), '%s/%s.slow' % (self.current_path, self.ADC_IP[board])])
         # to sht
+
+    def soft_arm(self, shotn: int):
+        self.current_path = Path('%s/sht%05d' % (self.DB, shotn))
+        self.current_path.mkdir(exist_ok=True)
+        for ip in self.ADC_IP:
+            sock = socket.socket()
+            sock.connect((ip, self.PORT))
+            #sock.send(b'\x02\x04\x00\x2c\x02') #запуск от soft, 10В диап
+            sock.send(b'\x02\x04\x01\x2c\x02') #запуск от soft, 5В диап
+            sock.close()
+    def soft_trig(self):
+        for ip in self.ADC_IP:
+            sock = socket.socket()
+            sock.connect((ip, self.PORT))
+            sock.send(b'\x04') #запуск от soft
+            sock.close()

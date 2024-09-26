@@ -2,3 +2,11 @@
 **/.idea/
 /.idea
 /.idea/
+/.idea/.gitignore
+/.idea/GTS-cpp.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
+**/.idea/*
+/.idea*
+/.idea/*

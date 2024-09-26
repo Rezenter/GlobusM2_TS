@@ -362,7 +362,9 @@ class Coolant:
         self.worker = None
         self.log = []
         self.log_size = math.ceil(60 * 15 / self.dt)
-        #self.connect()
+
+        #comment this line in real life
+        self.connect()
 
     def __connect(self):
         if self.client and self.client.is_open:

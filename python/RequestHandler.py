@@ -129,9 +129,9 @@ class Handler:
         self.slow = None
 
         print('connecting udp...')
-        self.tokamak = tokamak.Sync(self.diag_disarm)
-        print('connecting coolant...')
-        self.las_cool = laser1064.Coolant()
+        self.tokamak = tokamak.Sync(callback_start=self.diag_disarm, callback_countdown=self.auto_fire)
+        #print('connecting coolant...')
+        #self.las_cool = laser1064.Coolant()
         #print('connecting crate...')
         #self.crate = crate.Crate()
         print('DONE')
@@ -882,28 +882,40 @@ class Handler:
             self.ophir_disarm()
         return self.state['fast']
 
-    def las_connect(self, req):
-        self.state['las'] = self.las.connect()
-        self.state['las_cool'] = self.las_cool.connect()
+    def las_connect(self, req=None):
+        #url = "https://pelevin.gpt.dobro.ai/generate/"
+        url = "http://192.168.10.60:99/api"
+        data = {
+            "subsystem": 'laser330',
+            'reqtype': 'test'
+        }
+        response = requests.post(url, data=json.dumps(data)).json()
+        time.sleep(0.1)
+        print('c++: ', response)
+
+
+        self.state['las'] = {}#self.las.connect()
+
+        #self.state['las_cool'] = self.las_cool.connect()
         self.tokamak.connect()
         #print('OPHIR disabled!!!\n\n\n')
         self.ophir_connect(None)
         return self.state['las']
 
-    def las_status(self, req):
+    def las_status(self, req=None):
         self.state['las'] = self.las.status()
         #self.state['las']['ophir'] = self.ophir_status()
         return self.state['las']
 
-    def las_fire(self, req):
+    def las_fire(self, req=None):
         self.state['las'] = self.las.set_state_3()
         return self.state['las']
 
-    def las_idle(self, req):
+    def las_idle(self, req=None):
         self.state['las'] = self.las.set_state_1()
         return self.state['las']
 
-    def ophir_connect(self, req):
+    def ophir_connect(self, req=None):
         self.ophir.connect()
         return self.ophir_status()
 
@@ -923,7 +935,7 @@ class Handler:
         self.las_status({})
         self.state['las']['delays'] = self.las.get_energy()
         self.fast_status({})
-        self.state['coolant'] = self.las_cool.log
+        #self.state['coolant'] = self.las_cool.log
         self.state['tokamak'] = self.tokamak.log
         #self.state['crate'] = self.crate.log
 
@@ -967,7 +979,11 @@ class Handler:
         with open(TOKAMAK_LOG, 'a') as file:
             file.write('%s, %s, %d\n' % (shotn, timestamp, is_real))
 
+    def auto_fire(self):
+        print('Auto Fire!\n\n')
+        las = self.las_fire()
 
+        #self.arm_all(req={})
     def arm_all(self, req):
         shot_filename = SHOTN_FILE
         if not os.path.isfile(shot_filename):

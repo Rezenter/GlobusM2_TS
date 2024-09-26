@@ -6,7 +6,7 @@ import select
 
 
 class Sync:
-    def __init__(self, callback):
+    def __init__(self, callback_start, callback_countdown):
         self.ip = "192.168.10.41"
         self.port = 8888
 
@@ -15,7 +15,9 @@ class Sync:
         self.timeout = 0.5
         self.stop = False
         self.log = []
-        self.callback = callback
+        self.callback_start = callback_start
+        self.callback_countdown = callback_countdown
+
         self.connect()
 
     def connect(self):
@@ -53,10 +55,20 @@ class Sync:
                     t = time.time()
                     self.log.append({
                         'time_f': t,
-                        'time': time.localtime(t)
+                        'time': time.localtime(t),
+                        'event': 'start'
                     })
                     self.disp("TOKAMAK START ____________")
-                    self.callback()
+                    self.callback_start()
+                elif int.from_bytes(data, 'big') == 127:
+                        t = time.time()
+                        self.log.append({
+                            'time_f': t,
+                            'time': time.localtime(t),
+                            'event': 'countdown'
+                        })
+                        self.disp("TOKAMAK final countdown ____________")
+                        self.callback_countdown()
                 else:
                     self.disp("WTF")
             else:
