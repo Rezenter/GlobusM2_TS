@@ -97,7 +97,7 @@ calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 #abs_filename = '2024.05.06_raw'
-abs_filename = '2024.09.06_raw_1_2'
+abs_filename = '2024.09.06_raw_1_HFS'
 
 #abs_filename = '2023.10.12_raw'
 #abs_filename = '2024.05.08_raw'
@@ -257,7 +257,7 @@ def process_point(point, stray=None):
                 #j = 2
                 for line in lines:
                     #print('%?', line['wl'], filters.transmission(ch=ch_ind + 1, wl=line['wl']))
-                    total_sig += line['line'] * filters.transmission(ch=ch_ind + 1, wl=line['wl']) * detector.aw(wl=line['wl']) / line['wl']
+                    total_sig += line['line'] * filters.transmission(ch=ch_ind + 1, wl=line['wl']) * detector.aw(wl_m=line['wl']) / line['wl']
                     #if filters.transmission(ch=ch_ind + 1, wl=line['wl']) > 0:
                     #    print(line['line'], filters.transmission(ch=ch_ind + 1, wl=line['wl']), detector.aw(wl=line['wl']), detector.qe(wl=line['wl']*1e9), line['wl'])
                     if filters.transmission(ch=ch_ind + 1, wl=line['wl']) > 1:

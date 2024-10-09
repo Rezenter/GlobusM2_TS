@@ -68,12 +68,11 @@ class Filters:
         return self.transmission_nm(ch=ch, wl=wl*1e9)
 
 class APD:
-    mult: float = 0.01 * phys_const.h * phys_const.c * 1e9 / phys_const.q_e
+    mult: float = 0.01 * phys_const.h * phys_const.c / phys_const.q_e
 
     def __init__(self, apd_name: str):
         self.apd = {
                 'wl': [],
-                'qe': [],
                 'aw': []
             }
         with open('%s%s%s/aw.csv' % (DB_PATH, APD_FOLDER, apd_name), 'r') as filter_file:
@@ -84,13 +83,12 @@ class APD:
                 splitted = line.split(',')
                 self.apd['wl'].append(float(splitted[0]))
                 self.apd['aw'].append(float(splitted[1]))
-                self.apd['qe'].append(float(splitted[1]) * self.mult / self.apd['wl'][-1])
 
-    def qe(self, wl: float) -> float:
-        return phys_const.interpolate_arr(self.apd['wl'], self.apd['qe'], wl)
+    def qe(self, wl_m: float) -> float:
+        return self.aw(wl_m=wl_m) * self.mult / wl_m
 
-    def aw_nm(self, wl: float) -> float:
-        return phys_const.interpolate_arr(self.apd['wl'], self.apd['aw'], wl)
+    def aw_nm(self, wl_nm: float) -> float:
+        return phys_const.interpolate_arr(self.apd['wl'], self.apd['aw'], wl_nm)
 
-    def aw(self, wl: float) -> float:
-        return self.aw_nm(wl=wl * 1e9)
+    def aw(self, wl_m: float) -> float:
+        return self.aw_nm(wl_nm=wl_m * 1e9)

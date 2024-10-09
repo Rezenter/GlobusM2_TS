@@ -3,7 +3,7 @@ import auxiliary as aux
 
 # change only these lines!
 #spectral_raw_name: str = '2023.10.06'
-spectral_raw_name: str = '2024.09.04'
+spectral_raw_name: str = '2024.09.04_HFS'
 #WL_STEP: float = 0.05  # [nm]. integration step, 0.1
 WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
 T_LOW: float = 5.0  # [eV]
@@ -161,7 +161,7 @@ class LampCalibration:
                         if transmission > 0.1:
                             flag = True
                     integral += aux.phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
-                                transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP
+                                transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP
                     wl -= WL_STEP
 
                 poly_conf['channels'][ch_ind]['ae_tmp']: float = self.calibration['poly'][poly_conf['calibr_ind']]['amp'][ch_ind] / (poly_conf['channels'][ch_ind]['slow_gain'] * integral)
@@ -204,7 +204,7 @@ class ExpectedSignals:
                             if transmission > 0.1:
                                 flag = True
                         integral += cross.scat_power_dens(temp=T, wl=wl) * \
-                                    transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP / wl
+                                    transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP / wl
                         wl -= WL_STEP
                     poly_conf['channels'][ch_ind]['expected'].append(integral * poly_conf['channels'][ch_ind]['ae'])
 
@@ -236,14 +236,19 @@ class ExpectedSignals:
 #for wl in range(700, 1064):
 #    print(wl, test.scat_power_dens(temp=100, wl=wl*1e-9))
 #fuck
-'''
+
+
+theta = 129.24
+E_las = 2.6
 temp: list[float] = [T_LOW]
 while temp[-1] < T_HIGH:
     temp.append(temp[-1] * T_MULT)
-cross = TS_spectrum(theta_deg=90, model='Naito', lambda0=1064.5*1e-9)
+cross = TS_spectrum(theta_deg=theta, model='Naito', lambda0=1064.5*1e-9)
 filter = aux.Filters('GTS-core_poly1-10')
 apd = aux.APD('S11519-15')
-for T in temp:
+
+#for T in temp:
+for T in [711.4235]:
     integral: float = 0
     wl: float = 1064.5 * 1e-9
     flag: bool = False
@@ -259,12 +264,12 @@ for T in temp:
             if transmission > 0.1:
                 flag = True
         integral += cross.scat_power_dens(temp=T, wl=wl) * \
-                    transmission * apd.aw(wl=wl) * WL_STEP / wl
+                    transmission * apd.qe(wl_m=wl) * WL_STEP / wl
         wl -= WL_STEP
 
-    print(T, integral * 1)
-fuck
-'''
+    print(T, '%.2e' % integral, cross.scat_power_dens(temp=T, wl=1060e-9), filter.transmission(ch=1, wl=1060e-9), apd.qe(wl_m=1060e-9), WL_STEP)
+#fuck
+
 expected = ExpectedSignals(lamp_calibration=LampCalibration(spectral_name=spectral_raw_name))
 
 print('Code OK')
