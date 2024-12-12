@@ -2,7 +2,7 @@ import msgpack
 from pathlib import Path
 import math
 
-shotn: int = 44298
+shotn: int = 45297
 
 #DB_PATH: str = 'd:/data/db/'
 DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'

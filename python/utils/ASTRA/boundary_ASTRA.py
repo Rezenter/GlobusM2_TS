@@ -1,6 +1,6 @@
 import python.utils.reconstruction.CurrentCoils as ccm
 
-shotn: int = 41103
+shotn: int = 41112
 requested_time: float = 216  # ms
 requested_time *= 1e-3
 

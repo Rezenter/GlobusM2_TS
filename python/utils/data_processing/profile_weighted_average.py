@@ -4,7 +4,7 @@
 #req_file: str = 'NBI_profiles_4KTM'
 #req_file: str = 'OH_profiles_4KTM'
 
-req_file: str = 'ASTRA_NBI_low'
+req_file: str = '41112'
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
 
 request = []
@@ -16,7 +16,7 @@ with open('in/%s.csv' % req_file, 'r') as file:
     file.readline() # units
     for line in file:
         spl = line.split(',')
-        request.append((int(float(spl[shotn_col])), float(spl[time_col])*1000))
+        request.append((int(float(spl[shotn_col])), float(spl[time_col])))
 
 r = []
 te_out = []
