@@ -59,6 +59,8 @@
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                 <button class="btn btn-danger" id="laser_fire_button">Fire</button>
                 <button class="btn btn-success" id="laser_idle_button">Idle</button>
+                <p id="laser_delayMO">delayMO</p>
+                <p id="laser_delayAmp">delayAmp</p>
             </div>
         </div>
         <div id="coolant_chart" style="width:100%; height:400px;" class="context-target"></div>
@@ -376,12 +378,12 @@
                                 string = 'Warming-up... ' + resp.timeout.toFixed(0) + ' (s)';
                                 state.html(string);
                                 break;
-                            case 2.5:
+                            case 3:
                                 state.css('background-color','green');
                                 string = 'Ready. Time left ' + resp.timeout.toFixed(0) + ' (s)';
                                 state.html(string);
                                 break;
-                            case 3:
+                            case 4:
                                 state.css('background-color','red');
                                 string = 'Firing... Time left' + resp.timeout.toFixed(0) + ' (s)';
                                 state.html(string);
@@ -412,8 +414,18 @@
                             enable.css('background-color','yellow');
                             enable.html('Generation blocked.');
                         }
+                        $('#laser_delayMO').html(resp.delayMO);
+                        $('#laser_delayAmp').html(resp.delayAmp);
 
+                        if('coolant' in resp) {
+                            this.m_coolant_chart.options.data[0].dataPoints = [];
 
+                            resp.coolant.hist.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
+                                y: entry.temperature,
+                                x: entry.time_f - resp.coolant.hist[resp.coolant.hist.length - 1].time_f
+                            }));
+                            this.m_coolant_chart.render();
+                        }
                     }else{
                         console.log(resp)
                         conn.css('background-color','red');
@@ -536,9 +548,9 @@
                     console.log('diagStatus new', resp);
                     this.m_coolant_chart.options.data[0].dataPoints = [];
 
-                    resp.coolant.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
+                    resp.coolant.hist.forEach(entry => this.m_coolant_chart.options.data[0].dataPoints.push({
                         y: entry.temperature,
-                        x: entry.time_f - resp.coolant[resp.coolant.length - 1].time_f
+                        x: entry.time_f - resp.coolant.hist[resp.coolant.hist.length - 1].time_f
                     }));
                     this.m_coolant_chart.render();
                 }.bind(this)

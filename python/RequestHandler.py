@@ -17,7 +17,10 @@ import shutil
 import python.process.rawToSignals as raw_proc
 import python.process.signalsToResult as fine_proc
 import python.subsyst.fastADC as caen
-import python.subsyst.laser1064 as laser1064
+
+#import python.subsyst.laser1064 as laser1064
+import python.subsyst.laser1064_cpp as laser1064
+
 import python.subsyst.db as db
 import python.subsyst.tokamak as tokamak
 import python.subsyst.ophir as ophirSubs
@@ -49,8 +52,9 @@ PUB_PATH = 'Y:/!!!TS_RESULTS/shots/'
 #TOKAMAK_LOG = 'tokamak_starts.csv'
 TOKAMAK_LOG = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\tokamak_starts.csv'
 
-SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24 = Globus3
+#SHOTN_FILE = 'Z:/SHOTN.TXT'  # 192.168.101.24 = Globus3
 #SHOTN_FILE = 'W:/SHOTN.TXT'  # 172.16.12.127/Data
+SHOTN_FILE = '\\\\172.16.12.70\\shared\\SHOTN.txt'  # 172.16.12.70\shared\
 
 SHT_PATH = 'Z:/'
 
@@ -768,6 +772,7 @@ class Handler:
                 }
             else:
                 shotn = 0
+                print('access shotn status()')
                 with open(SHOTN_FILE, 'r') as shotn_file:
                     line = shotn_file.readline()
                     shotn = int(line)
@@ -883,27 +888,19 @@ class Handler:
         return self.state['fast']
 
     def las_connect(self, req=None):
-        #url = "https://pelevin.gpt.dobro.ai/generate/"
-        url = "http://192.168.10.60:99/api"
-        data = {
-            "subsystem": 'laser330',
-            'reqtype': 'test'
-        }
-        response = requests.post(url, data=json.dumps(data)).json()
-        time.sleep(0.1)
-        print('c++: ', response)
+        self.state['las'] = self.las.connect()
 
 
-        self.state['las'] = {}#self.las.connect()
-
-        #self.state['las_cool'] = self.las_cool.connect()
         self.tokamak.connect()
         #print('OPHIR disabled!!!\n\n\n')
         self.ophir_connect(None)
+
+        #self.state['las_cool'] = self.las_cool.connect()
         return self.state['las']
 
     def las_status(self, req=None):
         self.state['las'] = self.las.status()
+
         #self.state['las']['ophir'] = self.ophir_status()
         return self.state['las']
 
@@ -935,7 +932,7 @@ class Handler:
         self.las_status({})
         self.state['las']['delays'] = self.las.get_energy()
         self.fast_status({})
-        #self.state['coolant'] = self.las_cool.log
+        #self.state['coolant'] = self.las_cool.log()
         self.state['tokamak'] = self.tokamak.log
         #self.state['crate'] = self.crate.log
 
@@ -980,8 +977,10 @@ class Handler:
             file.write('%s, %s, %d\n' % (shotn, timestamp, is_real))
 
     def auto_fire(self):
+        #print('Auto Fire! (does nothing)\n\n')
+        #pass
         print('Auto Fire!\n\n')
-        las = self.las_fire()
+        #las = self.las_fire()
 
         #self.arm_all(req={})
     def arm_all(self, req):

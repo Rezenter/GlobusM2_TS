@@ -2,7 +2,8 @@ import scipy.special as sci
 import auxiliary as aux
 
 # change only these lines!
-spectral_raw_name: str = '2023.10.06'
+#spectral_raw_name: str = '2023.10.06'
+spectral_raw_name: str = '2024.09.04'
 #WL_STEP: float = 0.05  # [nm]. integration step, 0.1
 WL_STEP: float = 0.5*1e-9  # [m]. integration step, 0.1
 T_LOW: float = 5.0  # [eV]

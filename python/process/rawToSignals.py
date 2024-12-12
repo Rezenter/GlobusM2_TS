@@ -472,6 +472,7 @@ class Integrator:
             pre_std = statistics.stdev(signal[:integration_from], zero)
             #err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
             err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['fast_gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+
             res['ch'].append({
                 'from': integration_from,
                 'to': integration_to,
@@ -485,4 +486,32 @@ class Integrator:
                 'error': error
 
             })
+        '''if event_ind == 44 and poly['fiber'] == '11':
+            debug = {
+                'poly': poly,
+                'res': res,
+                'ch': []
+            }
+
+            for ch_ind in range(len(poly['channels'])):
+                error = None
+                sp_ch = poly['channels'][ch_ind]
+                board_ind = sp_ch['adc']
+
+                if 'skip' in sp_ch and sp_ch['skip']:
+                    res['ch'].append({
+                        'error': 'skip'
+                    })
+                    continue
+                adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
+                if self.version <= 1:
+                    signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
+                elif self.version >= 3:
+                    signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in
+                              self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
+                else:
+                    signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]
+                debug['ch'].append(signal)
+                with open('debug.json', 'w') as f:
+                    json.dump(debug, f, indent=2)'''
         return res

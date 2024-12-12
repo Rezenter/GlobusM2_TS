@@ -3,8 +3,8 @@ import json
 import struct
 import math
 
-filename: str = '2023.10.06'
-config_filename: str = '2023.10.12'
+filename: str = '2024.09.04_HFS'
+config_filename: str = '2024.08.30_G2-10_HFS'
 
 path_conf: Path = Path('\\\\172.16.12.130\\d\\data\\db\\config\\%s.json' % config_filename)
 path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)

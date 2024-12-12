@@ -234,13 +234,13 @@ class ControlUnit:
             timeout = 10 - curr_time + self.lastTime
             if timeout < 0:
                 timeout += 60  # warm-up finished
-                self.state = 2.5
+                self.state = 3
             if timeout < 0:
                 self.set_state_1()
             # self.disp('Холостой ход. (Накачка и ЗГ рассогласованы)')
         else:
             timeout = 10 + 60 - time.time() + self.lastTime
-            self.state = 3
+            self.state = 4
             if timeout < 0:
                 self.set_state_1()
             # self.disp('Генерация. (Накачка и ЗГ согласованы)')

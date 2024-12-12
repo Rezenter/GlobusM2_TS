@@ -1,9 +1,9 @@
 import msgpack
 from pathlib import Path
 
-shotn: int = 926
-board: int = 7
-event: int = 50
+shotn: int = 45511
+board: int = 2
+event: int = 60
 
 DB_PATH = 'd:/data/db/plasma/raw'
 filename: Path = Path('%s/%05d/%d.msgpk' % (DB_PATH, shotn, board))

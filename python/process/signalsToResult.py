@@ -117,9 +117,9 @@ class Processor:
             for poly in res['config']['poly']:
                 poly['R'] = res['config']['fibers'][poly['fiber']]['R']
                 poly['l05'] = res['config']['fibers'][poly['fiber']]['poloidal_length'] * 0.5
-                if res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket']]['image_h'] == 'ceramooptec_half':
+                if res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket'] - 1]['image_h'] == 'ceramooptec_half':
                     poly['l05'] *= 0.5
-                poly['h'] = res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket']]['image_h']
+                poly['h'] = res['config']['sockets'][res['config']['fibers'][poly['fiber']]['lens_socket'] - 1]['image_h']
         return res
 
     def get_data(self):
