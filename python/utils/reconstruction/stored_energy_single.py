@@ -52,7 +52,7 @@ profile = [
         'ne': 1e19
     }
 ]  # start
-profile = [
+'''profile = [
     {
         'r/a': 0.0,
         'Te': 907,
@@ -102,10 +102,11 @@ profile = [
         'Te': 60,
         'ne': 1e19
     }
-]  # end
+]  # end'''
 shotn = 39627
-requested_time = 194.7 * 0.001  # start
-requested_time = 203.8 * 0.001  # stop
+requested_time = 197.8 * 0.001  # start
+#requested_time = 194.7 * 0.001  # start
+#requested_time = 203.8 * 0.001  # stop
 
 theta_step = 0.2 * math.pi / 180  # rad
 ra_step = 0.01  # cm
@@ -192,7 +193,7 @@ integral = 0
 area_int = 0
 volume_int = 0
 ra = ra_center
-r, z, r0, z0 = ccm_data.get_surface(t_ind, ra=ra, theta_step=theta_step)
+r, z = ccm_data.get_surface(t_ind, ra=ra, theta_count=int(360/theta_step))
 inner_data = {
     'r': r,
     'z': z,
@@ -217,7 +218,7 @@ origin_area = [
 ]
 while inner_data['ra'] + ra_step < 1:
     outer_ra = inner_data['ra'] + ra_step
-    r, z, r0, z0 = ccm_data.get_surface(t_ind, ra=outer_ra, theta_step=theta_step)
+    r, z = ccm_data.get_surface(t_ind, ra=outer_ra, theta_count=int(360/theta_step))
     outer_data = {
         'r': r,
         'z': z,

@@ -5,11 +5,11 @@ import auxiliary as aux
 #spectral_raw_name: str = '2023.10.06'
 spectral_raw_name: str = '2024.09.04'
 #WL_STEP: float = 0.05  # [nm]. integration step, 0.1
-WL_STEP: float = 0.5*1e-9  # [m]. integration step, 0.1
+WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
 T_LOW: float = 5.0  # [eV]
 T_HIGH: float = 5000  # [eV]
 #T_MULT: float = 1.01  # default = 1.01
-T_MULT: float = 1.1  # default = 1.01
+T_MULT: float = 1.005  # default = 1.01
 
 #config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
@@ -161,7 +161,7 @@ class LampCalibration:
                         if transmission > 0.1:
                             flag = True
                     integral += aux.phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
-                                transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP
+                                transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP
                     wl -= WL_STEP
 
                 poly_conf['channels'][ch_ind]['ae_tmp']: float = self.calibration['poly'][poly_conf['calibr_ind']]['amp'][ch_ind] / (poly_conf['channels'][ch_ind]['slow_gain'] * integral)
@@ -204,7 +204,7 @@ class ExpectedSignals:
                             if transmission > 0.1:
                                 flag = True
                         integral += cross.scat_power_dens(temp=T, wl=wl) * \
-                                    transmission * poly_conf['detector'].aw(wl=wl) * WL_STEP / wl
+                                    transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP / wl
                         wl -= WL_STEP
                     poly_conf['channels'][ch_ind]['expected'].append(integral * poly_conf['channels'][ch_ind]['ae'])
 
@@ -259,7 +259,7 @@ for T in temp:
             if transmission > 0.1:
                 flag = True
         integral += cross.scat_power_dens(temp=T, wl=wl) * \
-                    transmission * apd.aw(wl=wl) * WL_STEP / wl
+                    transmission * apd.qe(wl_m=wl) * WL_STEP / wl
         wl -= WL_STEP
 
     print(T, integral * 1)

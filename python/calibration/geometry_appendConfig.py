@@ -1,3 +1,5 @@
+# read R from config_name.json, calculate scattering angle and append to the config_name.json
+
 import json
 import math
 import phys_const  # at least v1.1
@@ -9,7 +11,8 @@ center_to_laser: float = 169.6  # normal length from the tokamak center to the p
 normal_delta: float = 184.3  # distance between the normals
 
 # change only this line!
-config_name: str = '2023.10.12'
+#config_name: str = '2023.10.12'
+config_name: str = '2024.08.30_G2-10'
 # change only this line!
 
 with open('%s%s.json' % (DB_PATH, config_name), 'r') as file:

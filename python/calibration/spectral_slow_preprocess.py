@@ -8,6 +8,7 @@ config_filename: str = '2024.08.30_G2-10_HFS'
 
 path_conf: Path = Path('\\\\172.16.12.130\\d\\data\\db\\config\\%s.json' % config_filename)
 path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
+#path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\' % filename)
 path_out: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s.json' % filename)
 chMap = [0, 2, 4, 6, 10, 8, 14, 12, 1, 3, 5, 7, 11, 9, 15, 13]
 
@@ -15,16 +16,35 @@ chMap = [0, 2, 4, 6, 10, 8, 14, 12, 1, 3, 5, 7, 11, 9, 15, 13]
 def read_raw(config):
     data = []
     for slow_board in config['slow']:
-        data_raw = None
-        with open(path_in.joinpath('%s\\%s.slow' % (poly['fiber'], slow_board['ip'])), 'rb') as file:
-            data_raw = file.read()
-        point_count = int(len(data_raw) / (16 * 2))  # ch count = 16, sizeof(short) = 2
-        #print(point_count, len(data))
-        board = [[] for ch in range(16)]
-        for ch_ind in range(16):
-            for i in range(1, point_count): # skip first as it is sometimes corrupted
-                board[ch_ind].append(struct.unpack_from('<h', buffer=data_raw, offset=16 * i * 2 + 2 * chMap[ch_ind])[0])
-        data.append(board)
+        p: Path = path_in.joinpath('%s\\%s.slow' % (poly['fiber'], slow_board['ip']))
+        if p.is_file():
+            with open(path_in.joinpath('%s\\%s.slow' % (poly['fiber'], slow_board['ip'])), 'rb') as file:
+                data_raw = file.read()
+                point_count = int(len(data_raw) / (16 * 2))  # ch count = 16, sizeof(short) = 2
+                # print(point_count, len(data))
+                board = [[] for ch in range(16)]
+                for ch_ind in range(16):
+                    for i in range(1, point_count):  # skip first as it is sometimes corrupted
+                        board[ch_ind].append(
+                            struct.unpack_from('<h', buffer=data_raw, offset=16 * i * 2 + 2 * chMap[ch_ind])[0])
+                data.append(board)
+        else:
+            data.append([[] for ch in range(16)])
+            for dir in path_in.joinpath('%s\\' % poly['fiber']).glob('*'):
+                p: Path = path_in.joinpath('%s\\%s.slow' % (dir, slow_board['ip']))
+                if p.is_file() and p.stat().st_size > 10:
+                    with open(p, 'rb') as file:
+                        data_raw = file.read()
+                        point_count = int(len(data_raw) / (16 * 2))  # ch count = 16, sizeof(short) = 2
+                        # print(point_count, len(data))
+
+                        for ch_ind in range(16):
+                            for i in range(1, point_count):  # skip first as it is sometimes corrupted
+                                data[-1][ch_ind].append(struct.unpack_from('<h', buffer=data_raw, offset=16 * i * 2 + 2 * chMap[ch_ind])[0])
+                    #print(len(data[-1][ch_ind]))
+                    #break #debug
+                else:
+                    print('bad luck')
     return data
 
 
