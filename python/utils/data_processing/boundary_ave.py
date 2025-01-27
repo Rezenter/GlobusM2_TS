@@ -3,7 +3,7 @@ sys.path.append('../python')
 from python.utils.reconstruction import CurrentCoils
 
 shotn: int = 43498
-times: list[float] = [165]
+times: list[float] = [165, 170, 175, 180]
 
 cfm = CurrentCoils.CCM(shotn=shotn)
 

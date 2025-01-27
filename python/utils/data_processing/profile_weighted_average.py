@@ -4,7 +4,7 @@
 #req_file: str = 'NBI_profiles_4KTM'
 #req_file: str = 'OH_profiles_4KTM'
 
-req_file: str = '41112'
+req_file: str = 'Ip300_Bt07_250-400'
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
 
 request = []
@@ -16,7 +16,7 @@ with open('in/%s.csv' % req_file, 'r') as file:
     file.readline() # units
     for line in file:
         spl = line.split(',')
-        request.append((int(float(spl[shotn_col])), float(spl[time_col])))
+        request.append((int(float(spl[shotn_col])), float(spl[time_col])*1e3))
 
 r = []
 te_out = []
@@ -81,8 +81,8 @@ with open('out/%s_T(R).csv' % req_file, 'w') as file:
     line = 'R, '
     for col in te_out:
         line += '%.5d_%.1f, err, ' % (col[0])
-    line += 'ave, err\n'
-    file.write(line)
+
+    file.write(line[:-2] + '\n')
 
     for i in range(len(r)):
         line = '%d, ' % r[i]
@@ -94,14 +94,14 @@ with open('out/%s_T(R).csv' % req_file, 'w') as file:
 
             line += '%s, %s, ' % col[1 + i]
 
-        file.write(line)
+        file.write(line[: -2] + '\n')
 
 with open('out/%s_n(R).csv' % req_file, 'w') as file:
     line = 'R, '
     for col in ne_out:
         line += '%.5d_%.1f, err, ' % col[0]
-    line += 'ave, err\n'
-    file.write(line)
+
+    file.write(line[:-2] + '\n')
 
     for i in range(len(r)):
         line = '%d, ' % r[i]
@@ -115,7 +115,7 @@ with open('out/%s_n(R).csv' % req_file, 'w') as file:
             #weight = float(col[1 + i][1]) ** -2
 
 
-        file.write(line)
+        file.write(line[:-2] + '\n')
 
 for r in te_dict:
     r_te = te_dict[r]

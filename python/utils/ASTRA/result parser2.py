@@ -43,7 +43,10 @@ with open(filename, 'r') as f:
             isTime = False
             #print([i.strip() for i in line.strip().split()[1:]])
             #consts.extend([float(i.strip()) for i in line.strip().split()[1:]])
-            line = line.replace('- ', ' -')
+
+            while line.find('- ') >= 0:
+                line = line.replace('- ', ' -')
+
             for val in [i.strip() for i in line.strip().split()[1:]]:
                 if val.find('>') >= 0 or val.find('<') >= 0:
                     consts.append('--')
@@ -66,7 +69,8 @@ with open(filename, 'r') as f:
         if rad_count == 1:
             #rads.append([float(i.strip()) for i in line.strip().split()])
             curr = []
-            line = line.replace('- ', ' -')
+            while line.find('- ') >= 0:
+                line = line.replace('- ', ' -')
             for val in [i.strip() for i in line.strip().split()]:
                 if val.find('>') >= 0 or val.find('<') >= 0:
                     curr.append('--')
@@ -80,7 +84,8 @@ with open(filename, 'r') as f:
             #rads[count] = [float(i.strip()) for i in line.strip().split()[1:]]
             curr = []
             curr = []
-            line = line.replace('- ', ' -')
+            while line.find('- ') >= 0:
+                line = line.replace('- ', ' -')
             for val in [i.strip() for i in line.strip().split()[1:]]:
                 if val.find('>') >= 0 or val.find('<') >= 0:
                     curr.append('--')
