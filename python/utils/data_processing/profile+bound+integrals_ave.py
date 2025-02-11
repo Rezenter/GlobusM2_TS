@@ -6,9 +6,9 @@ from python.utils.reconstruction import stored_energy
 import math
 
 
-req_file: str = 'Ip300_Bt07_250-400'
-use_boundaty_shotn: int = 44273
-use_boundaty_time: float = 167.3
+req_file: str = 'NBI_300kA_08T_nl54'
+use_boundaty_shotn: int = 45556
+use_boundaty_time: float = 197.6
 
 
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
@@ -37,7 +37,7 @@ with open('in/%s.csv' % req_file, 'r') as file:
         #res['request'].append((int(float(spl[shotn_col])), float(spl[time_col])*1e3))
         res['request'].append({
             'shotn': int(spl[shotn_col]),
-            'time': float(spl[time_col])*1e3
+            'time': float(spl[time_col])
         })
 
 r = []
