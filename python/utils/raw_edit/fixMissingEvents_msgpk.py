@@ -4,6 +4,7 @@ import math
 
 shotn: int = 45689
 
+
 #DB_PATH: str = 'd:/data/db/'
 DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'
 PLASMA_FOLDER: str = 'plasma/'
@@ -33,15 +34,15 @@ for board_ind in range(8):
 for event in range(101):
     for board_ind in range(8):
         ev_ind = math.floor(data[board_ind][event]['t'] / 3.03)
-        print(board_ind, ev_ind, data[board_ind][event]['t'])
+        #print(board_ind, ev_ind, data[board_ind][event]['t'])
         if ev_ind < 101:
           fixed_data[board_ind][ev_ind] = data[board_ind][event]
-    print('\n')
+    #print('\n')
 
 
 for event in range(101):
     for board_ind in range(8):
-        print(board_ind, event, fixed_data[board_ind][event]['t'])
+        print(board_ind, event, data[board_ind][event]['t'], math.floor(data[board_ind][event]['t'] / 3.03), fixed_data[board_ind][event]['t'])
     print('\n')
 
 

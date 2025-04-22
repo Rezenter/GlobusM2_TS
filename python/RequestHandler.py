@@ -1484,38 +1484,39 @@ class Handler:
                                 serialised_no_gaps[poly_ind]['n'].append(serialised_no_gaps[poly_ind]['n'][-1])
 
         for poly_ind in range(len(serialised)):
-            to_pack['Te R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+            if len(serialised[poly_ind]['x']) > 0:
+                to_pack['Te R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                        'comment': 'локальная температура электронов',
+                        'unit': 'Te(eV)',
+                        'x': serialised[poly_ind]['x'],
+                        'y': serialised[poly_ind]['t'],
+                        'err': serialised[poly_ind]['te']
+                    }
+                to_pack['ne R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                    'comment': 'm^-3, локальная концентрация электронов',
+                    'unit': 'ne(m^-3)',
+                    'x': serialised[poly_ind]['x'],
+                    'y': serialised[poly_ind]['n'],
+                    'err': serialised[poly_ind]['ne']
+                }
+                to_pack['Te R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
                     'comment': 'локальная температура электронов',
                     'unit': 'Te(eV)',
-                    'x': serialised[poly_ind]['x'],
-                    'y': serialised[poly_ind]['t'],
-                    'err': serialised[poly_ind]['te']
+                    'tMin': serialised_no_gaps[poly_ind]['x'][0],
+                    'tMax': serialised_no_gaps[poly_ind]['x'][-1],
+                    'offset': 0.0,
+                    'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['t']),
+                    'y': serialised_no_gaps[poly_ind]['t']
                 }
-            to_pack['ne R%d' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
-                'comment': 'm^-3, локальная концентрация электронов',
-                'unit': 'ne(m^-3)',
-                'x': serialised[poly_ind]['x'],
-                'y': serialised[poly_ind]['n'],
-                'err': serialised[poly_ind]['ne']
-            }
-            to_pack['Te R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
-                'comment': 'локальная температура электронов',
-                'unit': 'Te(eV)',
-                'tMin': serialised_no_gaps[poly_ind]['x'][0],
-                'tMax': serialised_no_gaps[poly_ind]['x'][-1],
-                'offset': 0.0,
-                'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['t']),
-                'y': serialised_no_gaps[poly_ind]['t']
-            }
-            to_pack['ne R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
-                'comment': 'm^-3, локальная концентрация электронов',
-                'unit': 'ne(m^-3)',
-                'tMin': serialised_no_gaps[poly_ind]['x'][0],
-                'tMax': serialised_no_gaps[poly_ind]['x'][-1],
-                'offset': 0.0,
-                'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['n']),
-                'y': serialised_no_gaps[poly_ind]['n']
-            }
+                to_pack['ne R%d v2' % (shot['config']['poly'][poly_ind]['R'] / 10)] = {
+                    'comment': 'm^-3, локальная концентрация электронов',
+                    'unit': 'ne(m^-3)',
+                    'tMin': serialised_no_gaps[poly_ind]['x'][0],
+                    'tMax': serialised_no_gaps[poly_ind]['x'][-1],
+                    'offset': 0.0,
+                    'yRes': 0.0001 * max(serialised_no_gaps[poly_ind]['n']),
+                    'y': serialised_no_gaps[poly_ind]['n']
+                }
 
 
 
