@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import statistics
+import msgpack
 
 '''shots = [
 44168,
@@ -34,9 +35,12 @@ import statistics
 saw_delay = 1e-4 # s
 
 index = None
-path: Path = Path('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\index.json')
-with open(path, 'r') as file:
-    index = json.load(file)
+path: Path = Path('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\index.msgpk')
+with open(path, 'rb') as file:
+    index = msgpack.unpackb(file.read(), strict_map_key=False)
+
+#with open(path, 'r') as file:
+#    index = json.load(file)
 
 res = []
 
@@ -68,9 +72,9 @@ with open('out/normalised.csv', 'w') as out_file:
         if not path.exists():
             continue
         res = None
-        if 'T_flattop_stop' not in index['%d' % shotn] or 'T_flattop_start' not in index['%d' % shotn]:
+        if 'T_flattop_stop' not in index[shotn] or 'T_flattop_start' not in index[shotn]:
             continue
-        if index['%d' % shotn]['T_flattop_stop'] - index['%d' % shotn]['T_flattop_start'] < 0.01:
+        if index[shotn]['T_flattop_stop'] - index[shotn]['T_flattop_start'] < 0.01:
             continue
         with open(path, 'r') as file:
             res = json.load(file)
@@ -79,15 +83,15 @@ with open('out/normalised.csv', 'w') as out_file:
             if 'T_e' not in res['events'][ev['event_index']]:
                 continue
             res_ev = res['events'][ev['event_index']]['T_e']
-            if 'TS' not in index['%d' % shotn]:
+            if 'TS' not in index[shotn]:
                 continue
-            if ev['event_index'] > len(index['%d' % shotn]['TS']['time']) - 1:
+            if ev['event_index'] > len(index[shotn]['TS']['time']) - 1:
                 continue
-            if index['%d' % shotn]['T_flattop_stop'] < index['%d' % shotn]['TS']['time'][ev['event_index'] - 1]:
+            if index[shotn]['T_flattop_stop'] < index[shotn]['TS']['time'][ev['event_index'] - 1]:
                 continue
-            if index['%d' % shotn]['T_flattop_start'] > index['%d' % shotn]['TS']['time'][ev['event_index'] - 1]:
+            if index[shotn]['T_flattop_start'] > index[shotn]['TS']['time'][ev['event_index'] - 1]:
                 continue
-            if 0.140 >= index['%d' % shotn]['TS']['time'][ev['event_index'] - 1]:
+            if 0.140 >= index[shotn]['TS']['time'][ev['event_index'] - 1]:
                 continue
             if 'data' not in ev:
                 continue
@@ -98,8 +102,8 @@ with open('out/normalised.csv', 'w') as out_file:
             if ev['data']['surfaces'][0]['r_max'] >= 60.8:
                 continue
             skip: bool = False
-            for saw in index['%d' % shotn]['SXR']['time']:
-                if index['%d' % shotn]['TS']['time'][ev['event_index'] - 1] - saw_delay <= saw['time'] <= index['%d' % shotn]['TS']['time'][ev['event_index'] - 1] + saw_delay:
+            for saw in index[shotn]['SXR']['time']:
+                if index[shotn]['TS']['time'][ev['event_index'] - 1] - saw_delay <= saw['time'] <= index[shotn]['TS']['time'][ev['event_index'] - 1] + saw_delay:
                     #print('too close', shotn, saw['time'])
                     skip = True
                     break
@@ -107,8 +111,8 @@ with open('out/normalised.csv', 'w') as out_file:
                 continue
 
             before_saw = 999
-            for i in range(len(index['%d' % shotn]['SXR']['time'])):
-                if index['%d' % shotn]['TS']['time'][ev['event_index'] - 1] + saw_delay <= index['%d' % shotn]['SXR']['time'][i]['time']:
+            for i in range(len(index[shotn]['SXR']['time'])):
+                if index[shotn]['TS']['time'][ev['event_index'] - 1] + saw_delay <= index[shotn]['SXR']['time'][i]['time']:
                     before_saw = i + 1
                     break
             else:
@@ -131,28 +135,28 @@ with open('out/normalised.csv', 'w') as out_file:
                     continue
                 nbi1 = 0
                 nbi2 = 0
-                if 'I_max' in index['%d' % shotn]['NBI1'] and 'U' in index['%d' % shotn]['NBI1']:
-                    nbi1 = max(index['%d' % shotn]['NBI1']['I_max'] * index['%d' % shotn]['NBI1']['U'] * 1e-3, 0)
+                if 'I_max' in index[shotn]['NBI1'] and 'U' in index[shotn]['NBI1']:
+                    nbi1 = max(index[shotn]['NBI1']['I_max'] * index[shotn]['NBI1']['U'] * 1e-3, 0)
 
-                if 'I_max' in index['%d' % shotn]['NBI2'] and 'U_max' in index['%d' % shotn]['NBI2']:
-                    nbi2 = max(index['%d' % shotn]['NBI2']['I_max'] * index['%d' % shotn]['NBI2']['U_max'], 0)
+                if 'I_max' in index[shotn]['NBI2'] and 'U_max' in index[shotn]['NBI2']:
+                    nbi2 = max(index[shotn]['NBI2']['I_max'] * index[shotn]['NBI2']['U_max'], 0)
 
 
                 entry = {
                     'shotn': shotn,
-                    'time': index['%d' % shotn]['TS']['time'][ev['event_index'] - 1]*1000,
+                    'time': index[shotn]['TS']['time'][ev['event_index'] - 1]*1000,
                     'R-R_lcfs': res['config']['poly'][poly_ind]['R']*0.1 - ev['data']['surfaces'][0]['r_max'],
                     'T_e/<Te>': res_ev[poly_ind]['T'] / ev['data']['t_vol'],
                     'n_e/<ne>': res_ev[poly_ind]['n'] / ev['data']['n_vol'],
-                    'I_p': index['%d' % shotn]['Ip'],
-                    'B_T': index['%d' % shotn]['Bt'],
+                    'I_p': index[shotn]['Ip'],
+                    'B_T': index[shotn]['Bt'],
                     'Volume': ev['data']['vol'],
                     'W_e': ev['data']['vol_w']*1e-3,
                     'l42': ev['data']['nl_profile'][0]['z'] - ev['data']['nl_profile'][-1]['z'],
                     '<n>l': ev['data']['nl']*1e-19,
                     'elong': (ev['data']['surfaces'][0]['z_max']-ev['data']['surfaces'][0]['z_min'])/(ev['data']['surfaces'][0]['r_max'] - ev['data']['surfaces'][0]['r_min']),
                     'before sawtooth #': before_saw,
-                    'Upl*Ipl': max(index['%d' % shotn]['TS']['Upl'][ev['event_index'] - 1] * index['%d' % shotn]['Ip'], 0),
+                    'Upl*Ipl': max(index[shotn]['TS']['Upl'][ev['event_index'] - 1] * index[shotn]['Ip'], 0),
                     'NBI1': nbi1,
                     'NBI2': nbi2,
                     '<Te>': ev['data']['t_vol'],
