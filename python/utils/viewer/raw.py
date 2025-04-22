@@ -35,8 +35,8 @@ def plot(poly_ind, event_ind, xlim, ylim):
     for ch_ind in range(len(integrator.config['poly'][poly_ind]['channels'])):
         sp_ch = integrator.config['poly'][poly_ind]['channels'][ch_ind]
         board_ind = sp_ch['adc']
-        if 'captured_bad' in integrator.data[board_ind][event_ind] and \
-                integrator.data[board_ind][event_ind]['captured_bad']:
+        if 'captured_bad' in integrator.cfm_data[board_ind][event_ind] and \
+                integrator.cfm_data[board_ind][event_ind]['captured_bad']:
             continue
         # if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
         #    continue
@@ -46,7 +46,7 @@ def plot(poly_ind, event_ind, xlim, ylim):
         #adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
         #signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
 
-        signal = integrator.data[board_ind][event_ind]['ch'][sp_ch['ch']]
+        signal = integrator.cfm_data[board_ind][event_ind]['ch'][sp_ch['ch']]
 
         start = integrator.processed[event_ind]['laser']['boards'][board_ind]['sync_ind']
         x = [(cell_ind - start) * integrator.time_step for cell_ind in range(len(signal))]
@@ -95,14 +95,14 @@ def csv(poly_ind, event_ind):
 
     sp_ch = integrator.config['poly'][poly_ind]['channels'][0]
     board_ind = sp_ch['adc']
-    laser = integrator.data[board_ind][event_ind]['ch'][integrator.config['adc']['sync'][board_ind]['ch']]
+    laser = integrator.cfm_data[board_ind][event_ind]['ch'][integrator.config['adc']['sync'][board_ind]['ch']]
     dumping.append(laser)
 
     for ch_ind in range(len(integrator.config['poly'][poly_ind]['channels'])):
         sp_ch = integrator.config['poly'][poly_ind]['channels'][ch_ind]
         board_ind = sp_ch['adc']
-        if 'captured_bad' in integrator.data[board_ind][event_ind] and \
-                integrator.data[board_ind][event_ind]['captured_bad']:
+        if 'captured_bad' in integrator.cfm_data[board_ind][event_ind] and \
+                integrator.cfm_data[board_ind][event_ind]['captured_bad']:
             continue
         # if 'processed_bad' in laser['boards'][board_ind] and laser['boards'][board_ind]['processed_bad']:
         #    continue
@@ -111,7 +111,7 @@ def csv(poly_ind, event_ind):
 
         # adc_gr, adc_ch = integrator.ch_to_gr(sp_ch['ch'])
         # signal = integrator.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-        signal = integrator.data[board_ind][event_ind]['ch'][sp_ch['ch']]
+        signal = integrator.cfm_data[board_ind][event_ind]['ch'][sp_ch['ch']]
         dumping.append(signal)
         del signal
 

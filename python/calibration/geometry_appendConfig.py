@@ -12,7 +12,8 @@ normal_delta: float = 184.3  # distance between the normals
 
 # change only this line!
 #config_name: str = '2023.10.12'
-config_name: str = '2024.08.30_G2-10'
+#config_name: str = '2024.08.30_G2-10'
+config_name: str = '2024.08.30_G2-10_HFS_noP3c3'
 # change only this line!
 
 with open('%s%s.json' % (DB_PATH, config_name), 'r') as file:
@@ -30,6 +31,20 @@ for fiber_key in config['fibers']:
     fiber['poloidal_angle_deg']: float = phys_const.rad_to_deg(math.asin(center_to_laser / fiber['R']))
     fiber['poloidal_length']: float = config['sockets'][socket_ind]['scattering_l'] * \
                                       math.cos(phys_const.deg_to_rad(fiber['poloidal_angle_deg']))
+    fiber['LOS_to_center']: float = fiber['R'] * math.sin(phys_const.deg_to_rad(fiber['scattering_angle_deg']) - math.asin(center_to_laser / fiber['R']))
+    fiber['LOS']: list = []
+    for poly in config['poly']:
+        if config['fibers'][poly['fiber']]['R'] < fiber['LOS_to_center']:
+            continue
+        fiber['LOS'].append({
+            'poly_ind': poly['ind'],
+            'L': -math.sqrt(math.pow(config['fibers'][poly['fiber']]['R'], 2) - math.pow(fiber['LOS_to_center'], 2))
+        })
+        fiber['LOS'].append({
+            'poly_ind': poly['ind'],
+            'L': -fiber['LOS'][-1]['L']
+        })
+    fiber['LOS'].sort(key=lambda entry: entry['L'])
 
 with open('%s%s.json' % (DB_PATH, config_name), 'w') as file:
     json.dump(config, file, indent=2)

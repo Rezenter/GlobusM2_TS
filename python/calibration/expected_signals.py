@@ -2,14 +2,14 @@ import scipy.special as sci
 import auxiliary as aux
 
 # change only these lines!
-#spectral_raw_name: str = '2023.10.06'
-spectral_raw_name: str = '2024.09.04'
-#WL_STEP: float = 0.05  # [nm]. integration step, 0.1
-WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
-T_LOW: float = 5.0  # [eV]
-T_HIGH: float = 5000  # [eV]
-#T_MULT: float = 1.01  # default = 1.01
-T_MULT: float = 1.005  # default = 1.01
+spectral_raw_name: str = '2023.10.06'
+#spectral_raw_name: str = '2024.09.04'
+WL_STEP: float = 0.01e-9  # [nm]. integration step, 0.1
+#WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
+T_LOW: float = 1000  # [eV]
+T_HIGH: float = 2000  # [eV]
+T_MULT: float = 100.01  # default = 1.01
+#T_MULT: float = 1.005  # default = 1.01
 
 #config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
@@ -83,13 +83,13 @@ class TS_spectrum:
             while curr_wl < 10000*1e-9:
                 sp_dens = self.scat_power_dens(temp=te, wl=curr_wl)
                 total += sp_dens
-                if sp_dens < 1e-10:
+                if sp_dens < 1e-11:
                     break
                 curr_wl += WL_STEP
             total *= WL_STEP
-            print('total spectral dens integral error = %.2e, stop wavelength = %.4e' % (abs(1 - total), curr_wl))
-            if not 0.9 < total < 1.1:
-                print('Too high error in spectrum! T_e = %.0e, total spectral dens integral = %.3e' % (te, total))
+            print('total spectral dens integral error = %.2e, stop wavelength = %.4e' % (total - 1, curr_wl))
+            if not 0.99 < total < 1.07:
+                print('Too high error in spectrum! T_e = %.0e, total spectral dens integral = %.3e' % (te, total-1))
                 fuck
                 return False
             print('_____________')
@@ -187,6 +187,20 @@ class ExpectedSignals:
             for ch in poly_conf['channels']:
                 ch['expected'] = []
 
+            '''
+            if poly_ind_conf == 4:
+                wl: float = lamp_calibration.config['laser'][0]['wavelength'] * 1e-9
+                while wl > 700 * 1e-9:
+                    line = '%.1f ' % (wl*1e9)
+                    for ch_ind in range(len(poly_conf['channels'])):
+                        transmission: float = poly_conf['filters'].transmission(ch=(ch_ind + 1), wl=wl)
+                        line += '%.3e ' % (transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP * poly_conf['channels'][ch_ind]['ae'] / wl)
+                    print(line)
+                    wl -= WL_STEP
+                fuck
+            else:
+                continue
+            '''
             for T in temp:
                 for ch_ind in range(len(poly_conf['channels'])):
                     integral: float = 0

@@ -384,9 +384,6 @@ class Processor:
 
                 if self.abs_version >=2:
                     A = self.absolute['A'][poly] * math.pow(phys_const.r_o, 2) * self.result['config']['laser'][0]['wavelength'] * 1e-9 / (phys_const.q_e * self.result['config']['preamp']['apdGain'])
-
-                    #if(poly==4):
-                    #    print(A)
                     #print('E = ', E)
                     #print('___________\n\n')
                 else:
