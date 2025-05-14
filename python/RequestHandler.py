@@ -707,7 +707,7 @@ class Handler:
     def slow_status(self, req):
         self.slow = SlowADC('%s/%s/%s/' % (DB_PATH, PLASMA_SHOTS, SLOW_RAW_FOLDER))
 
-        if not self.slow.ready or not self.slow.satus():
+        if not self.slow.ready or not self.slow.status():
             print('slow connection error')
             self.state['slow'] = {
                 'ok': False,
