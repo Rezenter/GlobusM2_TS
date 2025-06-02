@@ -4,7 +4,7 @@
 #req_file: str = 'NBI_profiles_4KTM'
 #req_file: str = 'OH_profiles_4KTM'
 
-req_file: str = 'NBI_3'
+req_file: str = '44744CXRS'
 db: str = ('\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\')
 
 request = []
