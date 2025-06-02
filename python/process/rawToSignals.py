@@ -43,6 +43,7 @@ class Integrator:
     right_limit = 20  # ind
 
     def __init__(self, db_path, shotn, is_plasma, config_name):
+        print('raw init ', shotn)
         self.shotn = shotn
         self.is_plasma = is_plasma
         self.config_name = config_name
@@ -54,16 +55,18 @@ class Integrator:
         if not os.path.isdir('%s%s' % (self.db_path, self.CONFIG_FOLDER)):
             self.error = 'Configuration path not found.'
             return
-        config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.JSON_EXT)
+
+        config_full_name = '%s%s%s%s' % (self.db_path, 'config_cpp/', self.config_name, self.JSON_EXT)
         if not os.path.isfile(config_full_name):
-            self.error = 'Configuration file not found. %s' % config_full_name
-            return
+            config_full_name = '%s%s%s%s' % (self.db_path, self.CONFIG_FOLDER, self.config_name, self.JSON_EXT)
+            if not os.path.isfile(config_full_name):
+                self.error = 'Configuration file not found. %s' % config_full_name
+                return
         self.config = {}
         with open(config_full_name, 'r') as config_file:
             obj = ijson.kvitems(config_file, '', use_float=True)
             for k, v in obj:
                 self.config[k] = v
-
         self.header = {}
         self.version = 1
         self.data = []
@@ -75,9 +78,11 @@ class Integrator:
             self.prefix = '%s%s' % (self.db_path, self.PLASMA_FOLDER)
         else:
             self.prefix = '%s%s' % (self.db_path, self.DEBUG_FOLDER)
+        print('load raw')
         if not self.load():
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             fuck
+        print('raw proc OK?')
 
     def __enter__(self):
         return self
@@ -139,7 +144,11 @@ class Integrator:
     def load_raw(self):
         self.loaded = False
         self.data = []
-        freq = float(self.header['frequency'])  # GS/s
+
+        if self.version >= 6:
+            freq = float(self.header['config']['fast adc']['frequency GHz'])
+        else:
+            freq = float(self.header['frequency'])  # GS/s
         self.time_step = 1 / freq  # nanoseconds
         print('loading raw shot...')
         if self.is_plasma:
@@ -148,13 +157,39 @@ class Integrator:
             shot_folder = '%s%s%s%05d/' % (self.db_path, self.DEBUG_FOLDER, self.RAW_FOLDER, self.shotn)
 
         self.boards = []
-        for poly in self.config['poly']:
-            for ch in poly['channels']:
-                if ch['adc'] not in self.boards:
-                    self.boards.append(ch['adc'])
+        if self.version < 6:
+            for board_ind in range(len(self.header['boards'])):
+                self.header['boards'][board_ind]['laser_ch'] = self.config['adc']['sync'][board_ind]['ch']
+                self.header['boards'][board_ind]['prehistorySep'] = self.config['adc']['prehistorySep']
+                self.header['boards'][board_ind]['offset'] = self.header['offset']
+            for poly in self.config['poly']:
+                for ch in poly['channels']:
+                    if ch['adc'] not in self.boards:
+                        self.boards.append(ch['adc'])
+        else:
+            board_ind = 0
+            for link in self.config['fast adc']['links']:
+                for board in link:
+                    if self.header['boards'][board_ind]['ser'] != board['serial']:
+                        print(board_ind, self.header['boards'][board_ind]['ser'], board['serial'])
+                        fuck
+
+                    self.header['boards'][board_ind]['laser_ch'] = board['laser_ch']
+                    self.header['boards'][board_ind]['prehistorySep'] = board['prehistorySep']
+                    self.header['boards'][board_ind]['offset'] = board['vertical offset']
+                    self.header['triggerThreshold'] = 100
+
+                    board_ind += 1
+                    pass
+            for poly in self.config['poly']:
+                for ch in poly['channels']:
+                    for gain in ch['fast']:
+                        if gain['adc'] not in self.boards:
+                            self.boards.append(gain['adc'])
         self.boards.sort()
 
-        for board_ind in range(len(self.config['adc']['sync'])):
+        #for board_ind in range(len(self.config['adc']['sync'])):
+        for board_ind in range(len(self.header['boards'])):
             self.data.append([])
             if board_ind in self.boards:
                 extension = self.JSON_EXT
@@ -178,7 +213,8 @@ class Integrator:
 
     def check_raw_integrity(self):
         self.laser_count = len(self.data[self.boards[0]])
-        for board_ind in range(len(self.config['adc']['sync'])):
+        #for board_ind in range(len(self.config['adc']['sync'])):
+        for board_ind in range(len(self.header['boards'])):
             if board_ind not in self.boards:
                 continue
             if len(self.data[board_ind]) != self.laser_count:
@@ -196,7 +232,7 @@ class Integrator:
         print('Processing shot...')
         if self.version <= 1:
             combiscope_zero = self.data[self.boards[0]][0][0]['timestamp'] - self.config['adc']['first_shot']
-        elif self.version >= 4:
+        elif 4 <= self.version:
             combiscope_zero = self.data[self.boards[0]][0]['t']
         else:
             combiscope_zero = self.data[self.boards[0]][0]['t'] - self.config['adc']['first_shot']
@@ -227,8 +263,13 @@ class Integrator:
                     timestamp = self.data[self.boards[0]][event_ind]['t'] - combiscope_zero
             else:
                 timestamp = -999
+
+            if self.version < 6:
+                dummy = self.config['adc']['first_shot'] + (event_ind - 1) * 3.03030303
+            else:
+                dummy = self.config['fast adc']['first_shot'] + (event_ind - 1) * 3.03030303
             proc_event = {
-                'timestamp_dummy': self.config['adc']['first_shot'] + (event_ind - 1) * 3.03030303,
+                'timestamp_dummy': dummy,
                 'timestamp': timestamp,
                 'laser': laser,
                 'poly': {},
@@ -236,7 +277,11 @@ class Integrator:
             }
             if error is None:
                 for poly in self.config['poly']:
-                    proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
+                    if self.version < 6:
+                        proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
+                    else:
+                        proc_event['poly'][('%d' % len(proc_event['poly']))] = self.process_poly_event(event_ind, poly, laser)
+                        #proc_event['poly'][('%d' % poly['serial'])] = self.process_poly_event(event_ind, poly, laser)
             self.processed.append(proc_event)
 
         self.save_processed()
@@ -300,16 +345,19 @@ class Integrator:
         }
         board_count = 0
         sync_event = []
-        for board_ind in range(len(self.config['adc']['sync'])):
+
+        #for board_ind in range(len(self.config['adc']['sync'])):
+        for board_ind in range(len(self.header['boards'])):
             if board_ind not in self.boards:
                 laser['boards'].append({})
                 continue
             # print('Board %d' % board_ind)
+
             if self.version <= 1:
                 adc_gr, adc_ch = self.ch_to_gr(self.config['adc']['sync'][board_ind]['ch'])
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-            elif self.version >= 4:
-                signal = [self.header['offset'] - 1250 + v * 2500/4096 for v in self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]]
+            elif 4 <= self.version:
+                signal = [self.header['boards'][board_ind]['offset'] - 1250 + v * 2500/4096 for v in self.data[board_ind][event_ind]['ch'][self.header['boards'][board_ind]['laser_ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][self.config['adc']['sync'][board_ind]['ch']]
             maximum = float('-inf')
@@ -328,12 +376,12 @@ class Integrator:
                 continue
             else:
                 sync_event.append(False)
-            integration_limit = math.floor(front_ind) - self.config['adc']['prehistorySep']
+            integration_limit = math.floor(front_ind) - self.header['boards'][board_ind]['prehistorySep']
             if integration_limit < self.left_limit:
                 error = 'Sync left'
             zero = statistics.fmean(signal[:integration_limit])
-            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline or \
-                    maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
+            if minimum - self.offscale_threshold < self.header['boards'][board_ind]['offset'] - self.adc_baseline or \
+                    maximum + self.offscale_threshold > self.header['boards'][board_ind]['offset'] + self.adc_baseline:
                 #print(minimum, maximum, self.offscale_threshold, self.header['offset'], self.adc_baseline)
                 error = 'sync offscale'
 
@@ -415,7 +463,12 @@ class Integrator:
         }
         for ch_ind in range(len(poly['channels'])):
             error = None
-            sp_ch = poly['channels'][ch_ind]
+
+            if self.version >= 6:
+                sp_ch = poly['channels'][ch_ind]['fast'][0]
+            else:
+                sp_ch = poly['channels'][ch_ind]
+
             board_ind = sp_ch['adc']
 
             if 'skip' in sp_ch and sp_ch['skip']:
@@ -427,7 +480,7 @@ class Integrator:
             if self.version <= 1:
                 signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
             elif self.version >= 3:
-                signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
+                signal = [self.header['boards'][board_ind]['offset'] - 1250 + v * 2500 / 4096 for v in self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
             else:
                 signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]
             integration_from = math.floor(laser['boards'][board_ind]['sync_ind'] +
@@ -435,8 +488,13 @@ class Integrator:
             integration_to = integration_from + math.ceil(self.config['common']['integrationTime'] / self.time_step)
             if integration_from < self.left_limit:
                 error = 'left boundary'
-            if integration_to > self.header['eventLength'] - self.right_limit:
-                error = 'right boundary'
+            if self.version < 6:
+                if integration_to > self.header['eventLength'] - self.right_limit:
+                    error = 'right boundary'
+            else:
+                if integration_to > 1024 - self.right_limit:
+                    print('warning')
+                    error = 'right boundary'
             zero = statistics.fmean(signal[:integration_from])
 
             maximum = float('-inf')
@@ -444,9 +502,9 @@ class Integrator:
             for cell in signal:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
-            if minimum - self.offscale_threshold < self.header['offset'] - self.adc_baseline:
+            if minimum - self.offscale_threshold < self.header['boards'][board_ind]['offset'] - self.adc_baseline:
                 error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
-            elif maximum + self.offscale_threshold > self.header['offset'] + self.adc_baseline:
+            elif maximum + self.offscale_threshold > self.header['boards'][board_ind]['offset'] + self.adc_baseline:
                 error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
 
             integral = 0
@@ -456,22 +514,34 @@ class Integrator:
             else:
                 print(error)
 
-            if 'matchingFastGain' not in self.config['preamp']:
-                matching_gain = 1
-                print('WARNING! forgotten preamp gain')
-                #fuck
+            if self.version < 6:
+                if 'matchingFastGain' not in self.config['preamp']:
+                    matching_gain = 1
+                    print('WARNING! forgotten preamp gain')
+                    #fuck
+                else:
+                    matching_gain = self.config['preamp']['matchingFastGain']
+                photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
+                                                           phys_const.q_e *
+                                                           self.config['preamp']['feedbackResistance'] *
+                                                           sp_ch['fast_gain'] *
+                                                           matching_gain)
+                if self.config['preamp']['voltageDivider']:
+                    photoelectrons *= 2
+                pre_std = statistics.stdev(signal[:integration_from], zero)
+                err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['fast_gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+
             else:
-                matching_gain = self.config['preamp']['matchingFastGain']
-            photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp']['apdGain'] *
-                                                       phys_const.q_e *
-                                                       self.config['preamp']['feedbackResistance'] *
-                                                       sp_ch['fast_gain'] *
-                                                       matching_gain)
-            if self.config['preamp']['voltageDivider']:
-                photoelectrons *= 2
-            pre_std = statistics.stdev(signal[:integration_from], zero)
-            #err2 = math.pow(pre_std, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
-            err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['fast_gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+                matching_gain = self.config['preamp'][poly['channels'][ch_ind]['preamp']]['matchingFastGain']
+                photoelectrons = integral * 1e-3 * 1e-9 / (self.config['preamp'][poly['channels'][ch_ind]['preamp']]['apdGain'] *
+                                                           phys_const.q_e *
+                                                           self.config['preamp'][poly['channels'][ch_ind]['preamp']]['feedbackResistance'] *
+                                                           sp_ch['gain'] *
+                                                           matching_gain)
+                if self.config['preamp'][poly['channels'][ch_ind]['preamp']]['voltageDivider']:
+                    photoelectrons *= 2
+                pre_std = statistics.stdev(signal[:integration_from], zero)
+                err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
 
             res['ch'].append({
                 'from': integration_from,
@@ -486,32 +556,5 @@ class Integrator:
                 'error': error
 
             })
-        '''if event_ind == 44 and poly['fiber'] == '11':
-            debug = {
-                'poly': poly,
-                'res': res,
-                'ch': []
-            }
 
-            for ch_ind in range(len(poly['channels'])):
-                error = None
-                sp_ch = poly['channels'][ch_ind]
-                board_ind = sp_ch['adc']
-
-                if 'skip' in sp_ch and sp_ch['skip']:
-                    res['ch'].append({
-                        'error': 'skip'
-                    })
-                    continue
-                adc_gr, adc_ch = self.ch_to_gr(sp_ch['ch'])
-                if self.version <= 1:
-                    signal = self.data[board_ind][event_ind][adc_gr]['data'][adc_ch]
-                elif self.version >= 3:
-                    signal = [self.header['offset'] - 1250 + v * 2500 / 4096 for v in
-                              self.data[board_ind][event_ind]['ch'][sp_ch['ch']]]
-                else:
-                    signal = self.data[board_ind][event_ind]['ch'][sp_ch['ch']]
-                debug['ch'].append(signal)
-                with open('debug.json', 'w') as f:
-                    json.dump(debug, f, indent=2)'''
         return res

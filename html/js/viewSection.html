@@ -1597,13 +1597,27 @@
 
         this.Request = function (req, callback) {
             req.subsystem = 'view';
-            $.post('/api', JSON.stringify(req), function(resp){
+
+            $.ajax({
+              type:    "POST",
+              url:     '/api',
+              data:    JSON.stringify(req),
+              success: function(resp){
                 if(!resp['ok']){
                     alert(resp['description']);
                 }else {
                     callback(resp);
                 }
-            }, 'json');
+              },
+              error:   function(jqXHR, textStatus, errorThrown) {
+                    alert("Error, status = " + textStatus + ", " +
+                          "error thrown: " + errorThrown
+            );
+  }
+});
+
+
+
         };
 
         this.Refresh = function() {
@@ -2256,6 +2270,7 @@
         this.update_raw_chart = function(poly_ind, shotn){
             this.m_raw_chart.options.data = [];
             this.m_current_event_raw = {};
+
             this.Request(
                 {
                     reqtype: 'get_event_raw',
@@ -2267,13 +2282,14 @@
                 , function (resp) {
                     Object.assign(this.m_current_event_raw, resp);
                     //console.log(this.m_current_event_raw);
-                    let dt = 1 / parseFloat(this.m_currentShot.header.frequency)
+
+                    let dt = 1 / 3.2;
                     this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
-                    this.m_raw_chart.options.axisX.maximum = (this.m_currentShot.header.eventLength -
+                    this.m_raw_chart.options.axisX.maximum = (1024 -
                         this.m_current_event_raw.starts[0]) * dt;
                     for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
                         let data = [];
-                        for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
+                        for(let time_ind = 0; time_ind < 1024; time_ind++){
                             if(this.m_current_event_sig.poly[poly_ind]['ch'][ch].error !== 'skip') {
                                 data.push(
                                     {
@@ -2301,12 +2317,12 @@
                         });
                     }
                     let data = [];
-                    for(let time_ind = 0; time_ind < this.m_currentShot.header.eventLength; time_ind++){
+                    for(let time_ind = 0; time_ind < 1024; time_ind++){
                         data.push(
                             {
                                 x: (time_ind - this.m_current_event_raw.laser_start) * dt,
                                 y: this.m_current_event_raw.laser[time_ind] -
-                                    this.m_current_event_sig.laser.boards[this.m_currentShot.config.poly[poly_ind].channels[0].adc].zero_lvl
+                                    this.m_current_event_sig.laser.boards[this.m_currentShot.config.poly[poly_ind].channels[0].fast[0].adc].zero_lvl
                             });
                     }
                     this.m_raw_chart.options.data.push({
@@ -2319,6 +2335,7 @@
                         visible: this.m_current_channels[6]
                     });
                     this.m_raw_chart.render();
+                    //console.log(this.m_raw_chart);
                 }.bind(this)
             );
         };

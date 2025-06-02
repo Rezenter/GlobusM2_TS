@@ -29,10 +29,14 @@ def interpolate(x1, x, x2, y1, y2):
 def filter(res):
     #if res['Terr'] / res['T'] > 0.3:
     if res['Terr'] / res['T'] > 0.8:
-        res['error'] = 'high Te error'
+        #res['error'] = 'high Te error'
+        print('Warning, Teerr filter disabled')
+
     #elif res['n_err'] / res['n'] > 0.1:
     elif res['n_err'] / res['n'] > 0.4:
-        res['error'] = 'high ne error'
+        #res['error'] = 'high ne error'
+        print('Warning, nerr filter disabled')
+
     #elif res['chi2'] > 20:
     elif res['chi2'] > 40:
         res['error'] = 'high chi'
@@ -202,8 +206,11 @@ class Processor:
 
         if 'type version' in self.result['config'] and self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
             path: Path = Path('%s%s%05d.msgpk' % (self.prefix, self.OPHIR_FOLDER, self.shotn))
+            if self.result['config']['type version'] >= 6:
+                path = Path('%sraw/%05d/ophir.msgpk' % (self.prefix, self.shotn))
             if not path.is_file():
                 print('Ophir file is requested but not found')
+                print(path)
                 fuck
             with open(path, 'rb') as file:
                 self.energy = [1e-33]
@@ -260,7 +267,10 @@ class Processor:
             if 'type version' not in self.result['config'] or self.result['config']['type version'] == 1:
                 energy = self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
             elif self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
-                energy = self.energy[event_ind]
+                if event_ind < len(self.energy):
+                    energy = self.energy[event_ind]
+                else:
+                    energy = 999
             else:
                 energy = self.result['config']['laser'][0]['E']
 
@@ -291,6 +301,10 @@ class Processor:
         #E *= self.absolute['E_mult']
 
         for ch_ind in range(len(self.expected['poly'][poly]['expected'])):
+            if len(event['ch']) <= ch_ind:
+                event['ch'].append({
+                    'error': 'not recorded'
+                })
             if event['ch'][ch_ind]['error'] is None:
                 channels.append(ch_ind)
             else:
