@@ -1,7 +1,11 @@
 import socket
 import subprocess
 from pathlib import Path
+import time
+import os
 
+fiber = '3_fixed'
+repeat = 20
 
 class SlowADC:
     PORT = 3425
@@ -12,6 +16,9 @@ class SlowADC:
               '192.168.10.51',
               '192.168.10.52',
               '192.168.10.53']
+
+    fingerprint = 'ecdsa-sha2-nistp256 256 SHA256:dwbpGGyAksQiqqLe0QwW4CTuT9HRlZgkm2NCKdWKwYA'
+
 
     def __init__(self, path: str):
         self.DB = path
@@ -75,7 +82,7 @@ class SlowADC:
 
     def get_data(self, board: int):
         print('%s/%s.slow' % (self.current_path, self.ADC_IP[board]))
-        subprocess.run(["pscp", "-pw", self.secret, "-batch", '-C', '%s@%s:adc_data.slow' % (self.user, self.ADC_IP[board]), '%s/%s.slow' % (self.current_path, self.ADC_IP[board])])
+        subprocess.run(["pscp", "-pw", self.secret, "-hostkey", self.fingerprint, "-batch", '-C', '%s@%s:adc_data.slow' % (self.user, self.ADC_IP[board]), '%s/%s.slow' % (self.current_path, self.ADC_IP[board])])
         # to sht
 
     def soft_arm(self, shotn: int):
@@ -94,3 +101,17 @@ class SlowADC:
             sock.connect((ip, self.PORT))
             sock.send(b'\x04') #запуск от soft
             sock.close()
+
+
+os.mkdir('slow\\%s' % fiber)
+adc = SlowADC('slow\\%s' % fiber)
+time.sleep(2)
+
+for shotn in range(repeat):
+    adc.soft_arm(shotn=shotn)
+    time.sleep(2)
+    adc.soft_trig()
+    time.sleep(2)
+    adc.disarm()
+
+print('final')
