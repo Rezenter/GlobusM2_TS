@@ -38,10 +38,18 @@ FILE_EXT = 'json'
 GUI_CONFIG = 'config/'
 #CFM_ADDR = 'http://172.16.12.87:8050/_dash-update-component'
 CFM_ADDR = 'http://172.16.12.150:8050/_dash-update-component'
-CFM_DB = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/old_mcc/'  # y = \\172.16.12.127
-CFM_DB_NEW = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'  # y = \\172.16.12.127
+CFM_DB = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/old_mcc/'
+CFM_DB_NEW = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD/V3_zad7_mcc/'
 PUB_PATH = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS/shots/'
 
+pub_path: str = '\\\\172.16.12.127\\Pub\\!!!TS_RESULTS\\shots\\'
+#sht_path = '\\\\172.16.12.127\\Data\\'
+sht_path = '\\\\172.16.12.28\\Data\\'
+prog_path = '\\\\172.16.12.28\\progdata\\'
+cfm_path = '\\\\172.16.12.127\\Pub\\!!!CURRENT_COIL_METHOD\\V3_zad7_mcc\\mcc0d_'
+Tukhmeneva_path = '\\\\172.16.12.127\\Pub\\!!!SHT Tuxmeneva\\'
+diamagnetic_path = '\\\\172.16.12.127\\Pub\\!diamagnetic_data\\sht\\'
+nl_path = '\\\\172.16.12.47\\dens\\base\\'
 
 SHT_PATH = 'Z:/'
 
@@ -512,9 +520,9 @@ class Handler:
                 'ok': False,
                 'description': '"shot" field is missing from request'
             }
-        if 'poly' not in req:
+        if 'serial' not in req:
             resp['ok'] = False
-            resp['description'] = '"poly" field is missing from request.'
+            resp['description'] = '"serial" field is missing from request.'
             return resp
         if 'version' not in req['shot']:
             if self.fine_processor is None or self.fine_processor.shotn != int(req['shot']['shotn']):
@@ -557,10 +565,11 @@ class Handler:
         event = []
         starts = []
 
-        for ch in self.raw_processor.config['poly'][int(req['poly'])]['channels']:
+        poly_ind = self.fine_processor.get_data()['config']['serial2ind']['%d' % req['serial']]
+
+        for ch in self.raw_processor.config['poly'][poly_ind]['channels']:
             if self.raw_processor.version >= 6:
                 ch = ch['fast'][0]
-
 
             if self.raw_processor.version <= 1:
                 adc_gr, adc_ch = self.raw_processor.ch_to_gr(ch['ch'])
@@ -577,9 +586,9 @@ class Handler:
 
 
         if self.raw_processor.version >= 6:
-            board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['fast'][0]['adc']
+            board_ind = self.raw_processor.config['poly'][poly_ind]['channels'][0]['fast'][0]['adc']
         else:
-            board_ind = self.raw_processor.config['poly'][int(req['poly'])]['channels'][0]['adc']
+            board_ind = self.raw_processor.config['poly'][poly_ind]['channels'][0]['adc']
 
         if self.raw_processor.version <= 1:
             adc_gr, adc_ch = self.raw_processor.ch_to_gr(self.raw_processor.config['adc']['sync'][board_ind]['ch'])
@@ -689,6 +698,7 @@ class Handler:
             resp['ok'] = False
             resp['description'] = '"name" field is missing from request.'
             return resp
+        self.sht = sht.sht(shotn)
         resp['signal'] = self.sht.get_sig(req['name'])
         resp['ok'] = True
         return resp
@@ -925,11 +935,30 @@ class Handler:
                         n_c.append(event['data']['surfaces'][-1]['ne'])
                         n_c_err.append(event['data']['surfaces'][-1]['ne_err'])
 
-                        if len(event['data']['surfaces']) >= 4:
-                            t_max_meas.append((event['data']['surfaces'][-2]['Te'] / (event['data']['surfaces'][-2]['Te_err']**2) + event['data']['surfaces'][-3]['Te'] / (event['data']['surfaces'][-3]['Te_err']**2)) / (event['data']['surfaces'][-2]['Te_err']**-2 + event['data']['surfaces'][-3]['Te_err']**-2))
-                            t_max_meas_err.append(max(event['data']['surfaces'][-2]['Te_err'], event['data']['surfaces'][-3]['Te_err']))
-                            n_max_meas.append((event['data']['surfaces'][-2]['ne'] / (event['data']['surfaces'][-2]['ne_err']**2) + event['data']['surfaces'][-3]['ne'] / (event['data']['surfaces'][-3]['ne_err']**2)) / (event['data']['surfaces'][-2]['ne_err']**-2 + event['data']['surfaces'][-3]['ne_err']**-2))
-                            n_max_meas_err.append(max(event['data']['surfaces'][-2]['ne_err'], event['data']['surfaces'][-3]['ne_err']))
+                        if len(event['data']['surfaces']) >= 2:
+                            t_max_meas.append((event['data']['surfaces'][-2]['Te'] / (
+                                        event['data']['surfaces'][-2]['Te_err'] ** 2)) / (
+                                                          event['data']['surfaces'][-2]['Te_err'] ** -2))
+                            t_max_meas_err.append(event['data']['surfaces'][-2]['Te_err'])
+                            n_max_meas.append((event['data']['surfaces'][-2]['ne'] / (
+                                        event['data']['surfaces'][-2]['ne_err'] ** 2)) / (
+                                                          event['data']['surfaces'][-2]['ne_err'] ** -2))
+                            n_max_meas_err.append(event['data']['surfaces'][-2]['ne_err'])
+                        elif len(event['data']['surfaces']) >= 6:
+                            t_max_meas.append((event['data']['surfaces'][-2]['Te'] / (
+                                        event['data']['surfaces'][-2]['Te_err'] ** 2) + event['data']['surfaces'][-3][
+                                                   'Te'] / (event['data']['surfaces'][-3]['Te_err'] ** 2)) / (
+                                                          event['data']['surfaces'][-2]['Te_err'] ** -2 +
+                                                          event['data']['surfaces'][-3]['Te_err'] ** -2))
+                            t_max_meas_err.append(
+                                max(event['data']['surfaces'][-2]['Te_err'], event['data']['surfaces'][-3]['Te_err']))
+                            n_max_meas.append((event['data']['surfaces'][-2]['ne'] / (
+                                        event['data']['surfaces'][-2]['ne_err'] ** 2) + event['data']['surfaces'][-3][
+                                                   'ne'] / (event['data']['surfaces'][-3]['ne_err'] ** 2)) / (
+                                                          event['data']['surfaces'][-2]['ne_err'] ** -2 +
+                                                          event['data']['surfaces'][-3]['ne_err'] ** -2))
+                            n_max_meas_err.append(
+                                max(event['data']['surfaces'][-2]['ne_err'], event['data']['surfaces'][-3]['ne_err']))
                         else:
                             t_max_meas.append(0)
                             t_max_meas_err.append(1e100)
@@ -1135,7 +1164,8 @@ class Handler:
             if 'timestamp' in shot['events'][event_ind]:
                 if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
                     for poly_ind in range(len(shot['events'][event_ind]['T_e'])):
-                        poly = shot['events'][event_ind]['T_e'][poly_ind]
+                        ser = '%d' % shot['config']['poly'][poly_ind]['serial']
+                        poly = shot['events'][event_ind]['T_e'][ser]
                         if poly['error'] is None and not ('hidden' in poly and poly['hidden']):
                             serialised[poly_ind]['x'].append(shot['events'][event_ind]['timestamp'] * 1e-3)
                             serialised[poly_ind]['t'].append(poly['T'])
@@ -1216,7 +1246,8 @@ class Handler:
             if 'timestamp' in shot['events'][event_ind]:
                 if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
                     line = '%.1f, ' % shot['events'][event_ind]['timestamp']
-                    for poly in shot['events'][event_ind]['T_e']:
+                    for poly_conf in shot['config']['poly']:
+                        poly = shot['events'][event_ind]['T_e']['%d' % poly_conf['serial']]
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '--, --, '
                         else:
@@ -1234,14 +1265,16 @@ class Handler:
         temp_prof += units[:-2] + '\n'
         for poly_ind in range(len(shot['config']['poly'])):
             line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            ser = '%d' % shot['config']['poly'][poly_ind]['serial']
             for event in shot['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
-                        if event['T_e'][poly_ind]['error'] is not None or \
-                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                        if event['T_e'][ser]['error'] is not None or \
+                                ('hidden' in event['T_e'][ser] and event['T_e'][ser]['hidden']):
                             line += '--, --, '
                         else:
-                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+                            line += '%.1f, %.1f, ' % (event['T_e'][ser]['T'],
+                                                      event['T_e'][ser]['Terr'])
             temp_prof += line[:-2] + '\n'
 
         dens_evo = ''
@@ -1257,7 +1290,8 @@ class Handler:
             if 'timestamp' in shot['events'][event_ind]:
                 if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
                     line = '%.1f, ' % shot['events'][event_ind]['timestamp']
-                    for poly in shot['events'][event_ind]['T_e']:
+                    for poly_conf in shot['config']['poly']:
+                        poly = shot['events'][event_ind]['T_e']['%d' % poly_conf['serial']]
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '--, --, '
                         else:
@@ -1276,15 +1310,16 @@ class Handler:
         dens_prof += units[:-2] + '\n'
         for poly_ind in range(len(shot['config']['poly'])):
             line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            ser = '%d' % shot['config']['poly'][poly_ind]['serial']
             for event in shot['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
-                        if event['T_e'][poly_ind]['error'] is not None or \
-                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                        if event['T_e'][ser]['error'] is not None or \
+                                ('hidden' in event['T_e'][ser] and event['T_e'][ser]['hidden']):
                             line += '--, --, '
                         else:
-                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'],
-                                                      event['T_e'][poly_ind]['n_err'])
+                            line += '%.2e, %.2e, ' % (event['T_e'][ser]['n'],
+                                                      event['T_e'][ser]['n_err'])
             dens_prof += line[:-2] + '\n'
 
         press_prof = ''
@@ -1299,15 +1334,16 @@ class Handler:
         press_prof += units[:-2] + '\n'
         for poly_ind in range(len(shot['config']['poly'])):
             line = '%.1f, ' % shot['config']['poly'][poly_ind]['R']
+            ser = '%d' % shot['config']['poly'][poly_ind]['serial']
             for event in shot['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
-                        if event['T_e'][poly_ind]['error'] is not None or \
-                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                        if event['T_e'][ser]['error'] is not None or \
+                                ('hidden' in event['T_e'][ser] and event['T_e'][ser]['hidden']):
                             line += '--, --, '
                         else:
-                            p: float = event['T_e'][poly_ind]['T'] * event['T_e'][poly_ind]['n'] * phys_const.q_e
-                            line += '%.2e, %.2e, ' % (p, p * (event['T_e'][poly_ind]['n_err']/event['T_e'][poly_ind]['n'] + event['T_e'][poly_ind]['Terr']/event['T_e'][poly_ind]['T']))
+                            p: float = event['T_e'][ser]['T'] * event['T_e'][ser]['n'] * phys_const.q_e
+                            line += '%.2e, %.2e, ' % (p, p * (event['T_e'][ser]['n_err']/event['T_e'][ser]['n'] + event['T_e'][ser]['Terr']/event['T_e'][ser]['T']))
             press_prof += line[:-2] + '\n'
 
         dynamics = self.dump_dynamics(shot, aux_data, x_from, x_to)
@@ -1331,7 +1367,8 @@ class Handler:
             if 'timestamp' in shot['events'][event_ind]:
                 if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
                     line = '%.4f, ' % (shot['events'][event_ind]['timestamp'] * 1e-3)
-                    for poly in shot['events'][event_ind]['T_e']:
+                    for poly_conf in shot['config']['poly']:
+                        poly = shot['events'][event_ind]['T_e']['%d' % poly_conf['serial']]
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '1, 1, '
                         else:
@@ -1345,15 +1382,16 @@ class Handler:
                     names += '%.4fs, %.4fs, ' % (event['timestamp'] * 1e-3, event['timestamp'] * 1e-3)
         temp_prof += names[:-2] + '\n'
         for poly_ind in range(len(shot['config']['poly'])):
+            ser = '%d' % shot['config']['poly'][poly_ind]['serial']
             line = '%.4f, ' % (shot['config']['poly'][poly_ind]['R'] * 1e-3)
             for event in shot['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
-                        if event['T_e'][poly_ind]['error'] is not None or \
-                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                        if event['T_e'][ser]['error'] is not None or \
+                                ('hidden' in event['T_e'][ser] and event['T_e'][ser]['hidden']):
                             line += '1, 1, '
                         else:
-                            line += '%.1f, %.1f, ' % (event['T_e'][poly_ind]['T'], event['T_e'][poly_ind]['Terr'])
+                            line += '%.1f, %.1f, ' % (event['T_e'][ser]['T'], event['T_e'][ser]['Terr'])
             temp_prof += line[:-2] + '\n'
 
         dens_evo = ''
@@ -1365,7 +1403,8 @@ class Handler:
             if 'timestamp' in shot['events'][event_ind]:
                 if x_from <= shot['events'][event_ind]['timestamp'] <= x_to:
                     line = '%.4f, ' % (shot['events'][event_ind]['timestamp'] * 1e-3)
-                    for poly in shot['events'][event_ind]['T_e']:
+                    for poly_conf in shot['config']['poly']:
+                        poly = shot['events'][event_ind]['T_e']['%d' % poly_conf['serial']]
                         if poly['error'] is not None or ('hidden' in poly and poly['hidden']):
                             line += '1, 1, '
                         else:
@@ -1381,15 +1420,16 @@ class Handler:
         dens_prof += names[:-2] + '\n'
         for poly_ind in range(len(shot['config']['poly'])):
             line = '%.4f, ' % (shot['config']['poly'][poly_ind]['R'] * 1e-3)
+            ser = '%d' % shot['config']['poly'][poly_ind]['serial']
             for event in shot['events']:
                 if 'timestamp' in event:
                     if x_from <= event['timestamp'] <= x_to:
-                        if event['T_e'][poly_ind]['error'] is not None or \
-                                ('hidden' in event['T_e'][poly_ind] and event['T_e'][poly_ind]['hidden']):
+                        if event['T_e'][ser]['error'] is not None or \
+                                ('hidden' in event['T_e'][ser] and event['T_e'][ser]['hidden']):
                             line += '1, 1, '
                         else:
-                            line += '%.2e, %.2e, ' % (event['T_e'][poly_ind]['n'] * 1e-6,
-                                                      event['T_e'][poly_ind]['n_err'] * 1e-6)
+                            line += '%.2e, %.2e, ' % (event['T_e'][ser]['n'] * 1e-6,
+                                                      event['T_e'][ser]['n_err'] * 1e-6)
             dens_prof += line[:-2] + '\n'
 
         return {
@@ -1399,6 +1439,35 @@ class Handler:
             'nt': dens_evo,
             'nR': dens_prof
         }
+
+    def merge(self, shot):
+        folder: Path = Path('%s%s/' % (pub_path, shot))
+        if folder.is_dir():
+
+            merge: list[str] = []
+
+            merge.append('%ssht%s.SHT' % (sht_path, shot))
+            merge.append('%smhd%s.SHT' % (sht_path, shot))
+            merge.append('%ssxr%s.SHT' % (sht_path, shot))
+            merge.append('%ssht%s.SHT' % (prog_path, shot))
+            merge.append('%s%s\\TS_%s.SHT' % (pub_path, shot, shot))
+            merge.append('%s%s.SHT' % (cfm_path, shot))
+            merge.append('%sSPC%s_1.SHT' % (Tukhmeneva_path, shot))
+            merge.append('%s%s_2.SHT' % (Tukhmeneva_path, shot))
+            merge.append('%s%s_3.SHT' % (Tukhmeneva_path, shot))
+            merge.append('%s%s.SHT' % (diamagnetic_path, shot))
+            merge.append('%sPS%s.SHT' % (nl_path, shot))
+            # eqdsk
+
+            final = []
+            for p in merge:
+                if Path(p).is_file():
+                    final.append(p)
+                else:
+                    print(p, 'file not found for merge')
+
+            shtRipper.ripper.merge('%s%s' % (pub_path, shot), 'all_%s.SHT' % shot, final)
+
     def publish(self, req, result):
         path = Path('%s%s/' % (PUB_PATH, result['shotn']))
         if not path.is_dir():
@@ -1461,4 +1530,7 @@ class Handler:
                 shutil.copy2(src=filename, dst=path.parent)
             with open('%s%s/default.txt' % (PUB_PATH, result['shotn']), 'w') as out_file:
                 out_file.write('%d' % result['version'])
+
+        self.merge(result['shotn'])
+
         print('Published OK')

@@ -19,11 +19,18 @@ class StoredCalculator:
             return
         self.ts_data = ts_data
         self.polys = []
+        self.version = ts_data['config']['type version']
         for poly in ts_data['config']['poly']:
-            self.polys.append({
-                'ind': poly['ind'],
-                'R': poly['R'] * 0.1
-            })
+            if self.version < 6:
+                self.polys.append({
+                    'ind': poly['ind'],
+                    'R': poly['R'] * 0.1
+                })
+            else:
+                self.polys.append({
+                    'ser': poly['serial'],
+                    'R': poly['R'] * 0.1
+                })
 
     def get_profile(self, surfaces, coordinate, is_vertical=True):
         profile = []
@@ -285,16 +292,20 @@ class StoredCalculator:
                     continue
                 #print('Process event laser shot %d = %.1fs' % (event_ind, event['timestamp']))
                 for poly in self.polys:
-                    if event['T_e'][poly['ind']]['error']:
+                    if self.version < 6:
+                        key = poly['ind']
+                    else:
+                        key = '%d' % poly['ser']
+                    if event['T_e'][key]['error']:
                         poly['skip'] = True
                         poly['Te'] = None
                         poly['ne'] = None
                         continue
                     poly['skip'] = False
-                    poly['Te'] = event['T_e'][poly['ind']]['T']
-                    poly['ne'] = event['T_e'][poly['ind']]['n']
-                    poly['Te_err'] = event['T_e'][poly['ind']]['Terr']
-                    poly['ne_err'] = event['T_e'][poly['ind']]['n_err']
+                    poly['Te'] = event['T_e'][key]['T']
+                    poly['ne'] = event['T_e'][key]['n']
+                    poly['Te_err'] = event['T_e'][key]['Terr']
+                    poly['ne_err'] = event['T_e'][key]['n_err']
                 #print('calc dynamics', event['timestamp'])
                 data = copy.deepcopy(self.calc_laser_shot(event['timestamp'] * 0.001, nl_r))
                 if 'error' in data:

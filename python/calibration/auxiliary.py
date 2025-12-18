@@ -5,13 +5,15 @@ import phys_const  # at least v1.3
 from datetime import date
 import statistics
 
-DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'
+#DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\'
+DB_PATH: str = 'd:\\data\\db\\'
 FIBER_FOLDER: str = 'fibers/calculated/'
 FILTER_FOLDER = 'filters/'
 APD_FOLDER = 'apd/'
 JSON: str = '.json'
 CSV: str = '.csv'
 CONFIG_FOLDER: str = 'config/'
+CONFIG_CPP_FOLDER: str = 'config_cpp/'
 CALIBRATION_FOLDER: str = 'calibration/'
 SPECTRAL_FOLDER: str = 'spectral/'
 LAMP: str = 'lamp/Lab_spectrum.txt'

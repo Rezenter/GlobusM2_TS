@@ -278,9 +278,9 @@ class Integrator:
             if error is None:
                 for poly in self.config['poly']:
                     if self.version < 6:
-                        proc_event['poly'][('%d' % poly['ind'])] = self.process_poly_event(event_ind, poly, laser)
+                        proc_event['poly'][poly['serial']] = self.process_poly_event(event_ind, poly, laser)
                     else:
-                        proc_event['poly'][('%d' % len(proc_event['poly']))] = self.process_poly_event(event_ind, poly, laser)
+                        proc_event['poly'][poly['serial']] = self.process_poly_event(event_ind, poly, laser)
                         #proc_event['poly'][('%d' % poly['serial'])] = self.process_poly_event(event_ind, poly, laser)
             self.processed.append(proc_event)
 
@@ -503,9 +503,11 @@ class Integrator:
                 maximum = max(maximum, cell)
                 minimum = min(minimum, cell)
             if minimum - self.offscale_threshold < self.header['boards'][board_ind]['offset'] - self.adc_baseline:
-                error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
+                #error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
+                error = 'minimum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, 99, ch_ind + 1)
             elif maximum + self.offscale_threshold > self.header['boards'][board_ind]['offset'] + self.adc_baseline:
-                error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
+                #error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, poly['ind'], ch_ind + 1)
+                error = 'maximum %.1f, index = %d, poly = %d, ch = %d' % (minimum, event_ind, 99, ch_ind + 1)
 
             integral = 0
             if error is None:
@@ -538,10 +540,11 @@ class Integrator:
                                                            self.config['preamp'][poly['channels'][ch_ind]['preamp']]['feedbackResistance'] *
                                                            sp_ch['gain'] *
                                                            matching_gain)
+                pre_std = statistics.stdev(signal[:integration_from], zero) * 1e-1 * 10 / sp_ch['gain']
                 if self.config['preamp'][poly['channels'][ch_ind]['preamp']]['voltageDivider']:
                     photoelectrons *= 2
-                pre_std = statistics.stdev(signal[:integration_from], zero)
-                err2 = math.pow(pre_std * matching_gain * 4 / sp_ch['gain'], 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+                    pre_std *= 2
+                err2 = math.pow(pre_std*2, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
 
             res['ch'].append({
                 'from': integration_from,

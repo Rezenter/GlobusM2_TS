@@ -1,12 +1,12 @@
 import msgpack
 from pathlib import Path
 
-shotn: int = 940
-board: int = 7
+shotn: int = 46339
+board: int = 0
 event: int = 60
 
-DB_PATH = '\\\\172.16.12.130\\d/data/db/plasma/raw'
-DB_PATH = 'd:/data/db/debug/raw'
+DB_PATH = 'd:/data/db/plasma/raw'
+#DB_PATH = 'd:/data/db/debug/raw'
 filename: Path = Path('%s/%05d/%d.msgpk' % (DB_PATH, shotn, board))
 
 with open(filename, 'rb') as file:

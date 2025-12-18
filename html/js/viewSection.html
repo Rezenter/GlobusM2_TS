@@ -1086,14 +1086,15 @@
                 shared: true,
                 contentFormatter: function(){
                     let poly_ind = this.selectors.polyInputs.val();
-                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T.toFixed(1) +
-                        '±' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].Terr.toFixed(1) + 'eV</p>' +
-                        '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].chi2.toFixed(3) + '</p>';
-                    for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                    let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
+                    let text = '<p>T = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].T.toFixed(1) +
+                        '±' + this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].Terr.toFixed(1) + 'eV</p>' +
+                        '<p>𝜒<sup>2</sup> = ' + this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].chi2.toFixed(3) + '</p>';
+                    for(let ch = 0; ch < this.m_expected.poly[ser].expected.length; ch++){
                         text += '<p style="color:' + this.palette[ch] + ';">' +
                             'ch ' + (ch + 1) + ', S = ' +
-                            ((this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el - this.m_currentShot.config.poly[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) +
-                            '±' + (this.m_current_event_sig.poly[poly_ind].ch[ch].err / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult).toFixed(3) + ' a.u.</p>'
+                            ((this.m_current_event_sig.poly[ser].ch[ch].ph_el - this.m_currentShot.config.poly[poly_ind].stray[ch]) / this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].mult).toFixed(3) +
+                            '±' + (this.m_current_event_sig.poly[ser].ch[ch].err / this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].mult).toFixed(3) + ' a.u.</p>'
                     }
                     return text;
                 }.bind(this),
@@ -1103,16 +1104,17 @@
                 itemmouseover: function(e) {
                     if(e.dataSeries.visible) {
                         let poly_ind = this.selectors.polyInputs.val();
+                        let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
                         // fuck up
-                        let dt = 1 / parseFloat(this.m_currentShot.header.frequency);
+                        let dt = 1 / parseFloat(this.m_currentShot.header.config['fast adc']['frequency GHz']);
 
                         let series_index = 0;
                         let ch = 0;
-                        for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                        for(;ch < this.m_expected.poly[ser].expected.length; ch++){
                             if(series_index === e.dataSeriesIndex){
                                 break;
                             }
-                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                            if(this.m_current_event_sig.poly[ser].ch[ch].error !== null) {
                                 series_index += 1;
                             }else{
                                 series_index += 3;
@@ -1123,8 +1125,8 @@
 
                         this.m_raw_chart.options.data[ch].lineThickness = this.m_defaults.line_thickness_high;
                         this.m_raw_chart.options.axisX.stripLines = [{
-                            startValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].from - this.m_current_event_raw.starts[ch]) * dt,
-                            endValue: (this.m_current_event_sig.poly[poly_ind].ch[ch].to - this.m_current_event_raw.starts[ch]) * dt,
+                            startValue: (this.m_current_event_sig.poly[ser].ch[ch].from - this.m_current_event_raw.starts[ch]) * dt,
+                            endValue: (this.m_current_event_sig.poly[ser].ch[ch].to - this.m_current_event_raw.starts[ch]) * dt,
                             color: this.palette[ch],
                             opacity: .2
                         }];
@@ -1135,13 +1137,14 @@
                 itemmouseout: function(e) {
                     if(e.dataSeries.visible) {
                         let poly_ind = this.selectors.polyInputs.val();
+                        let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
                         let series_index = 0;
                         let ch = 0;
-                        for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                        for(;ch < this.m_expected.poly[ser].expected.length; ch++){
                             if(series_index === e.dataSeriesIndex){
                                 break;
                             }
-                            if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                            if(this.m_current_event_sig.poly[ser].ch[ch].error !== null) {
                                 series_index += 1;
                             }else{
                                 series_index += 3;
@@ -1158,13 +1161,14 @@
                 itemclick: function (e) {
                     e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
                     let poly_ind = this.selectors.polyInputs.val();
+                    let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
                     let series_index = 0;
                     let ch = 0;
-                    for(;ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                    for(;ch < this.m_expected.poly[ser].expected.length; ch++){
                         if(series_index === e.dataSeriesIndex){
                             break;
                         }
-                        if(this.m_current_event_sig.poly[poly_ind].ch[ch].error !== null) {
+                        if(this.m_current_event_sig.poly[ser].ch[ch].error !== null) {
                             series_index += 1;
                         }else{
                             series_index += 3;
@@ -1172,7 +1176,7 @@
                     }
                     this.m_current_channels[ch] = e.dataSeries.visible;
                     this.m_fitting_chart.options.data[e.dataSeriesIndex].visible = e.dataSeries.visible;
-                    if(this.m_current_event_sig.poly[poly_ind].ch[ch].error === null) {
+                    if(this.m_current_event_sig.poly[ser].ch[ch].error === null) {
                         this.m_fitting_chart.options.data[e.dataSeriesIndex + 1].visible = e.dataSeries.visible;
                         this.m_fitting_chart.options.data[e.dataSeriesIndex + 2].visible = e.dataSeries.visible;
                     }
@@ -1223,19 +1227,20 @@
                 shared: true,
                 contentFormatter: function(e){
                     let poly_ind = this.selectors.polyInputs.val();
+                    let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
                     let text = '<p>t = ' + e.entries[0].dataPoint.x.toFixed(1) + 'ns; cell = ' + e.entries[0].index + '</p>';
                     let ch = 0;
                     for(; ch < this.m_current_event_raw.data.length; ch++){
                         if(this.m_current_channels[ch]) {
                             text += '<p style="color:' + this.palette[ch] + ';">' +
                                 'ch ' + (ch + 1) + ', ';
-                            if ('pre_std' in this.m_current_event_sig.poly[poly_ind].ch[ch]) {
-                                text += 'std = ' + this.m_current_event_sig.poly[poly_ind].ch[ch].pre_std.toFixed(1) + ' mV' +
+                            if ('pre_std' in this.m_current_event_sig.poly[ser].ch[ch]) {
+                                text += 'std = ' + this.m_current_event_sig.poly[ser].ch[ch].pre_std.toFixed(1) + ' mV' +
                                     '<p style="color:' + this.palette[ch] + ';">' +
-                                    'int. = ' + this.m_current_event_sig.poly[poly_ind].ch[ch].int.toFixed(1) + ' mV*ns</p>' +
+                                    'int. = ' + this.m_current_event_sig.poly[ser].ch[ch].int.toFixed(1) + ' mV*ns</p>' +
                                     '<p style="color:' + this.palette[ch] + ';">S = ' +
-                                    this.m_current_event_sig.poly[poly_ind].ch[ch].ph_el.toFixed(1) + '±' +
-                                    this.m_current_event_sig.poly[poly_ind].ch[ch].err.toFixed(1) + ' ph.el.</p>';
+                                    this.m_current_event_sig.poly[ser].ch[ch].ph_el.toFixed(1) + '±' +
+                                    this.m_current_event_sig.poly[ser].ch[ch].err.toFixed(1) + ' ph.el.</p>';
                             }
                             text += '</p>';
                         }
@@ -1809,7 +1814,6 @@
                         dataPoints: []
                     }
                 );
-
                 for(let poly_ind = 0; poly_ind < this.m_currentShot.config.poly.length; poly_ind++) {
                     this.MainChartsSetPoint(event_ind, poly_ind);
                 }
@@ -1963,9 +1967,9 @@
             for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
                 if (this.m_currentShot.events[event_ind].error === null) {
                     for(let poly_ind = 0; poly_ind < this.m_currentShot.events[event_ind]['T_e'].length; poly_ind++){
-                        if(this.m_currentShot.events[event_ind].T_e[poly_ind].error === null){
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n *= mult;
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n_err *= mult;
+                        if(this.m_currentShot.events[event_ind].T_e[ser].error === null){
+                            this.m_currentShot.events[event_ind].T_e[ser].n *= mult;
+                            this.m_currentShot.events[event_ind].T_e[ser].n_err *= mult;
                         }
                     }
                 }
@@ -1987,6 +1991,8 @@
                 this.m_currentShot.shotn + this.m_defaults.n_prof_title;
             this.m_nl_evo_chart.options.title.text = 'Globus-M2 #' +
                 this.m_currentShot.shotn + this.m_defaults.nl_evo_title;
+
+            this.m_currentShot.config.poly.sort((a,b) => a.R - b.R);
 
             this.selectors.polyInputs.attr('max', this.m_currentShot.config.poly.length - 1);
             $('#time_input').attr('max', this.m_currentShot.config.poly.length - 1);
@@ -2022,9 +2028,10 @@
         this.MainChartsSetPoint = function(event_ind, poly_ind){
             let exists = (this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.length > event_ind) ? 1 : 0;
             //let mult = this.selectors.abs_mult.val();
+            let ser = this.m_currentShot.config.poly[poly_ind].serial;
             if(this.m_currentShot.events[event_ind].error !== null ||
-                    this.m_currentShot.events[event_ind].T_e[poly_ind].error !== null ||
-                    this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+                    this.m_currentShot.events[event_ind].T_e[ser].error !== null ||
+                    this.m_currentShot.events[event_ind].T_e[ser].hidden){
                 this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
@@ -2082,14 +2089,14 @@
                 this.m_T_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                        y: this.m_currentShot.events[event_ind].T_e[ser].T
                     }
                 );
                 this.m_T_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                        y: [this.m_currentShot.events[event_ind].T_e[ser].T - this.m_currentShot.events[event_ind].T_e[ser].Terr,
+                            this.m_currentShot.events[event_ind].T_e[ser].T + this.m_currentShot.events[event_ind].T_e[ser].Terr]
                     }
                 );
 
@@ -2097,47 +2104,47 @@
                 this.m_n_evo_chart.options.data[poly_ind * 2].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
+                        //y: this.m_currentShot.events[event_ind].T_e[ser].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[ser].n
                     }
                 );
                 this.m_n_evo_chart.options.data[poly_ind * 2 + 1].dataPoints.splice(event_ind, exists,
                     {
                         x: this.m_currentShot.events[event_ind].timestamp,
-                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
-                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[ser].n - this.m_currentShot.events[event_ind].T_e[ser].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[ser].n + this.m_currentShot.events[event_ind].T_e[ser].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[ser].n - this.m_currentShot.events[event_ind].T_e[ser].n_err,
+                            this.m_currentShot.events[event_ind].T_e[ser].n + this.m_currentShot.events[event_ind].T_e[ser].n_err]
                     }
                 );
 
                 this.m_T_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].T
+                        y: this.m_currentShot.events[event_ind].T_e[ser].T
                     }
                 );
                 this.m_T_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].T - this.m_currentShot.events[event_ind].T_e[poly_ind].Terr,
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].T + this.m_currentShot.events[event_ind].T_e[poly_ind].Terr]
+                        y: [this.m_currentShot.events[event_ind].T_e[ser].T - this.m_currentShot.events[event_ind].T_e[ser].Terr,
+                            this.m_currentShot.events[event_ind].T_e[ser].T + this.m_currentShot.events[event_ind].T_e[ser].Terr]
                     }
                 );
                 this.m_n_profile_data[event_ind * 2].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        //y: this.m_currentShot.events[event_ind].T_e[poly_ind].n * mult
-                        y: this.m_currentShot.events[event_ind].T_e[poly_ind].n
+                        //y: this.m_currentShot.events[event_ind].T_e[ser].n * mult
+                        y: this.m_currentShot.events[event_ind].T_e[ser].n
                     }
                 );
                 this.m_n_profile_data[event_ind * 2 + 1].dataPoints.splice(poly_ind, exists,
                     {
                         x: this.m_currentShot.config.poly[poly_ind].R * 0.1,
-                        //y: [(this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult,
-                        //    (this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err) * mult]
-                        y: [this.m_currentShot.events[event_ind].T_e[poly_ind].n - this.m_currentShot.events[event_ind].T_e[poly_ind].n_err,
-                            this.m_currentShot.events[event_ind].T_e[poly_ind].n + this.m_currentShot.events[event_ind].T_e[poly_ind].n_err]
+                        //y: [(this.m_currentShot.events[event_ind].T_e[ser].n - this.m_currentShot.events[event_ind].T_e[ser].n_err) * mult,
+                        //    (this.m_currentShot.events[event_ind].T_e[ser].n + this.m_currentShot.events[event_ind].T_e[ser].n_err) * mult]
+                        y: [this.m_currentShot.events[event_ind].T_e[ser].n - this.m_currentShot.events[event_ind].T_e[ser].n_err,
+                            this.m_currentShot.events[event_ind].T_e[ser].n + this.m_currentShot.events[event_ind].T_e[ser].n_err]
                     }
                 );
             }
@@ -2171,9 +2178,9 @@
 
         this.draw_popup = function(){
             let poly_ind = this.selectors.polyInputs.val();
-
-            //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind]);
-            if(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden){
+            let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
+            //console.log(this.m_currentShot.events[this.m_selected_event_ind].T_e[ser]);
+            if(this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].hidden){
                 this.selectors.isShowSingleEvent.prop('checked', false);
                 //console.log('unchecked');
             }else{
@@ -2206,13 +2213,14 @@
                 , function (resp) {
                     Object.assign(this.m_current_event_sig, resp);
                     //console.log(this.m_current_event_sig);
-                    for(let ch = 0; ch < this.m_expected.poly[poly_ind].expected.length; ch++){
+                    let ser = this.m_currentShot.config.poly[poly_ind].serial;
+                    for(let ch = 0; ch < this.m_expected.poly[ser].expected.length; ch++){
                         let data = [];
                         for(let temp_ind = 0; temp_ind < this.m_expected.T_arr.length; temp_ind++){
                             data.push(
                                 {
                                     x: this.m_expected.T_arr[temp_ind],
-                                    y: this.m_expected.poly[poly_ind].expected[ch][temp_ind]
+                                    y: this.m_expected.poly[ser].expected[ch][temp_ind]
                                 });
                         }
                         this.m_fitting_chart.options.data.push({
@@ -2224,8 +2232,8 @@
                             name: 'ch ' + (ch + 1),
                             dataPoints: data
                         });
-                        if(resp.poly[poly_ind].ch[ch].error === null) {
-                            let signal = resp.poly[poly_ind].ch[ch].ph_el;
+                        if(resp.poly[ser].ch[ch].error === null) {
+                            let signal = resp.poly[ser].ch[ch].ph_el;
                             if(this.m_currentShot.config.poly[poly_ind].stray[ch] > 100){
                                 signal -= this.m_currentShot.config.poly[poly_ind].stray[ch];
                             }
@@ -2236,8 +2244,8 @@
                                 showInLegend: false,
                                 name: 'measured ' + (ch + 1),
                                 dataPoints: [{
-                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
-                                    y: signal / this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].T,
+                                    y: signal / this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].mult
                                 }]
                             });
                             this.m_fitting_chart.options.data.push({
@@ -2247,12 +2255,12 @@
                                 showInLegend: false,
                                 name: 'measured ' + (ch + 1),
                                 dataPoints: [{
-                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T,
+                                    x: this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].T,
                                     y: [
-                                        (signal - resp.poly[poly_ind].ch[ch].err) /
-                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult,
-                                        (signal + resp.poly[poly_ind].ch[ch].err) /
-                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].mult
+                                        (signal - resp.poly[ser].ch[ch].err) /
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].mult,
+                                        (signal + resp.poly[ser].ch[ch].err) /
+                                        this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].mult
                                     ]
                                 }]
                             });
@@ -2260,7 +2268,7 @@
                     }
                     this.m_fitting_chart.options.axisX.minimum = 0;
                     this.m_fitting_chart.options.axisX.maximum =
-                        Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].T * 2,
+                        Math.min(this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].T * 2,
                             this.m_expected.T_arr[this.m_expected.T_arr.length - 1]);
                     this.m_fitting_chart.render();
                 }.bind(this)
@@ -2277,7 +2285,7 @@
                     event: this.m_selected_event_ind,
                     is_plasma: true,
                     shot: Object.assign({}, this.m_currentShot, {events: undefined}),
-                    poly: poly_ind
+                    serial: this.m_currentShot.config.poly[poly_ind].serial
                 }
                 , function (resp) {
                     Object.assign(this.m_current_event_raw, resp);
@@ -2287,15 +2295,17 @@
                     this.m_raw_chart.options.axisX.minimum = - this.m_current_event_raw.starts[0] * dt;
                     this.m_raw_chart.options.axisX.maximum = (1024 -
                         this.m_current_event_raw.starts[0]) * dt;
+
+                    let ser = this.m_currentShot.config.poly[poly_ind].serial;
                     for(let ch = 0; ch < this.m_current_event_raw.data.length; ch++){
                         let data = [];
                         for(let time_ind = 0; time_ind < 1024; time_ind++){
-                            if(this.m_current_event_sig.poly[poly_ind]['ch'][ch].error !== 'skip') {
+                            if(this.m_current_event_sig.poly[ser]['ch'][ch].error !== 'skip') {
                                 data.push(
                                     {
                                         x: (time_ind - this.m_current_event_raw.starts[ch]) * dt,
                                         y: this.m_current_event_raw.data[ch][time_ind] -
-                                            this.m_current_event_sig.poly[poly_ind].ch[ch].zero_lvl
+                                            this.m_current_event_sig.poly[ser].ch[ch].zero_lvl
                                     });
                             }else{
                                 data.push(
@@ -2342,11 +2352,12 @@
 
         this.ToggleShow = function(){
             let poly_ind = this.selectors.polyInputs.val();
+            let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
             if(this.selectors.isShowSingleEvent[0].checked){
                 //console.log('display', poly_ind, this.m_selected_event_ind);
-                delete this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden;
+                delete this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].hidden;
             }else{
-                this.m_currentShot.events[this.m_selected_event_ind].T_e[poly_ind].hidden = true;
+                this.m_currentShot.events[this.m_selected_event_ind].T_e[ser].hidden = true;
                 //console.log('hide', poly_ind, this.m_selected_event_ind);
             }
             this.MainChartsSetPoint(this.m_selected_event_ind, poly_ind);
@@ -2509,10 +2520,11 @@
             let end_ind = null;
             let pointCount = 0;
             let poly_ind = this.selectors.polyInputs.val();
+            let ser = this.m_currentShot.config.poly[this.selectors.polyInputs.val()].serial;
             for(let event_ind = 0; event_ind < this.m_currentShot.events.length; event_ind++) {
                 if(this.m_currentShot.events[event_ind].error === null &&
-                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
-                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden &&
+                    this.m_currentShot.events[event_ind].T_e[ser].error === null &&
+                    !this.m_currentShot.events[event_ind].T_e[ser].hidden &&
                     this.m_currentShot.events[event_ind].timestamp >= this.m_timestamp_chart.navigator.slider.get("minimum") &&
                     this.m_currentShot.events[event_ind].timestamp <= this.m_timestamp_chart.navigator.slider.get("maximum")){
                     if(!start_ind){
@@ -2528,10 +2540,10 @@
             let offscale = 0;
             for(let event_ind = start_ind; event_ind <= end_ind; event_ind++){
                 if(this.m_currentShot.events[event_ind].error === null &&
-                    this.m_currentShot.events[event_ind].T_e[poly_ind].error === null &&
-                    !this.m_currentShot.events[event_ind].T_e[poly_ind].hidden){
+                    this.m_currentShot.events[event_ind].T_e[ser].error === null &&
+                    !this.m_currentShot.events[event_ind].T_e[ser].hidden){
 
-                    let bin_ind = Math.floor(this.m_currentShot.events[event_ind].T_e[poly_ind].chi2 / width);
+                    let bin_ind = Math.floor(this.m_currentShot.events[event_ind].T_e[ser].chi2 / width);
                     if(bin_ind < binCount){
                         bins[bin_ind]++;
                     }else{
@@ -3128,10 +3140,12 @@
             let signals = [
                 'nl 42 cm (1.5мм) 64pi',
                 'Nl_42_УПЧ',
-                'NL_42_No_Filtr'
+                'NL_42_No_Filtr',
+                'NL_42_УЛЧ'
             ];
             let y_mult = [
                 1e18,
+                1e4,
                 1e4,
                 1e4
             ];

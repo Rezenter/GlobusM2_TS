@@ -4,7 +4,8 @@ import json
 import math
 import phys_const  # at least v1.1
 
-DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\config\\'
+#DB_PATH: str = '\\\\172.16.12.130\\d\\data\\db\\config\\'
+DB_PATH: str = 'd:\\data\\db\\config_cpp\\'
 
 aperture_to_laser: float = 681.3  # mm. normal length from lens to the probing chord
 center_to_laser: float = 169.6  # normal length from the tokamak center to the probing chord
@@ -13,7 +14,7 @@ normal_delta: float = 184.3  # distance between the normals
 # change only this line!
 #config_name: str = '2023.10.12'
 #config_name: str = '2024.08.30_G2-10'
-config_name: str = '2024.08.30_G2-10_HFS_noP3c3'
+config_name: str = '2025.06.02'
 # change only this line!
 
 with open('%s%s.json' % (DB_PATH, config_name), 'r') as file:
@@ -37,11 +38,13 @@ for fiber_key in config['fibers']:
         if config['fibers'][poly['fiber']]['R'] < fiber['LOS_to_center']:
             continue
         fiber['LOS'].append({
-            'poly_ind': poly['ind'],
+            #'poly_ind': poly['ind'],
+            'poly_serial': poly['serial'],
             'L': -math.sqrt(math.pow(config['fibers'][poly['fiber']]['R'], 2) - math.pow(fiber['LOS_to_center'], 2))
         })
         fiber['LOS'].append({
-            'poly_ind': poly['ind'],
+            #'poly_ind': poly['ind'],
+            'poly_serial': poly['serial'],
             'L': -fiber['LOS'][-1]['L']
         })
     fiber['LOS'].sort(key=lambda entry: entry['L'])

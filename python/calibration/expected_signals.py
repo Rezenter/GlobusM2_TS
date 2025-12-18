@@ -1,14 +1,15 @@
 import scipy.special as sci
 import auxiliary as aux
+from pathlib import Path
 
 # change only these lines!
-spectral_raw_name: str = '2023.10.06'
+spectral_raw_name: str = '2025.05.14'
 #spectral_raw_name: str = '2024.09.04'
 WL_STEP: float = 0.01e-9  # [nm]. integration step, 0.1
 #WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
-T_LOW: float = 1000  # [eV]
-T_HIGH: float = 2000  # [eV]
-T_MULT: float = 100.01  # default = 1.01
+T_LOW: float = 5  # [eV]
+T_HIGH: float = 2500  # [eV]
+T_MULT: float = 1.001  # default = 1.005
 #T_MULT: float = 1.005  # default = 1.01
 
 #config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
@@ -106,7 +107,11 @@ class LampCalibration:
                 fuck
             else:
                 if self.calibration['version'] >= 3:
-                    with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, self.calibration['config'], aux.JSON), 'r') as file:
+                    p: Path = Path('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, self.calibration['config'], aux.JSON))
+                    if not p.is_file():
+                        p = Path('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_CPP_FOLDER, self.calibration['config'], aux.JSON))
+
+                    with open(p, 'r') as file:
                         self.config = aux.json.load(file)
                 else:
                     with open('%s%s%s%s' % (aux.DB_PATH, aux.CONFIG_FOLDER, config_name, aux.JSON), 'r') as file:
@@ -127,9 +132,10 @@ class LampCalibration:
 
         for poly_ind_conf, poly_conf in enumerate(self.config['poly']):
             for poly_ind_cal_tmp, poly_cal in enumerate(self.calibration['poly']):
-                if poly_cal['ind'] == poly_conf['ind'] and poly_cal['fiber'] == poly_conf['fiber']:
+                #if poly_cal['ind'] == poly_conf['ind'] and poly_cal['fiber'] == poly_conf['fiber']:
+                if poly_cal['serial'] == poly_conf['serial'] and poly_cal['fiber'] == poly_conf['fiber']:
                     if len(poly_cal['amp']) != len(poly_conf['channels']):
-                        print('Calibration and config files are incompatible. ch count are different for %d' % poly_conf['ind'])
+                        print('Calibration and config files are incompatible. ch count are different for %d' % poly_conf['serial'])
                         fuck
                     poly_conf['calibr_ind'] = poly_ind_cal_tmp
                     break
@@ -144,11 +150,12 @@ class LampCalibration:
     def __calc_ae(self):
         for poly_ind_conf, poly_conf in enumerate(self.config['poly']):
             poly_conf['filters'] = aux.Filters(poly_conf['filter_set'])
-            poly_conf['detector'] = aux.APD(poly_conf['detectors'])
+
             for ch_ind in range(len(poly_conf['channels'])):
                 integral: float = 0
                 wl: float = self.config['laser'][0]['wavelength'] * 1e-9
                 flag: bool = False
+                aw = aux.APD(poly_conf['channels'][ch_ind]["detector"])
                 while wl > 700*1e-9:
                     transmission: float = poly_conf['filters'].transmission(ch=(ch_ind + 1), wl=wl)
                     if transmission < self.threshold or transmission > 10:
@@ -160,11 +167,12 @@ class LampCalibration:
                     else:
                         if transmission > 0.1:
                             flag = True
+
                     integral += aux.phys_const.interpolate_arr(x_arr=self.lamp['x'], y_arr=self.lamp['y'], x_tgt=wl) * \
-                                transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP
+                                transmission * aw.aw(wl_m=wl) * WL_STEP
                     wl -= WL_STEP
 
-                poly_conf['channels'][ch_ind]['ae_tmp']: float = self.calibration['poly'][poly_conf['calibr_ind']]['amp'][ch_ind] / (poly_conf['channels'][ch_ind]['slow_gain'] * integral)
+                poly_conf['channels'][ch_ind]['ae_tmp']: float = self.calibration['poly'][poly_conf['calibr_ind']]['amp'][ch_ind] / (poly_conf['channels'][ch_ind]['slow']['gain'] * integral)
                 print('p %d, ch %d' % (poly_ind_conf + 1, ch_ind + 1))
             for ch in poly_conf['channels']:
                 ch['ae'] = ch['ae_tmp'] / poly_conf['channels'][0]['ae_tmp']
@@ -206,6 +214,7 @@ class ExpectedSignals:
                     integral: float = 0
                     wl: float = lamp_calibration.config['laser'][0]['wavelength'] * 1e-9
                     flag: bool = False
+                    aw = aux.APD(poly_conf['channels'][ch_ind]["detector"])
                     while wl > 300 * 1e-9:
                         transmission: float = poly_conf['filters'].transmission(ch=(ch_ind + 1), wl=wl)
                         if transmission < self.threshold or transmission > 10:
@@ -218,7 +227,7 @@ class ExpectedSignals:
                             if transmission > 0.1:
                                 flag = True
                         integral += cross.scat_power_dens(temp=T, wl=wl) * \
-                                    transmission * poly_conf['detector'].aw(wl_m=wl) * WL_STEP / wl
+                                    transmission * aw.aw(wl_m=wl) * WL_STEP / wl
                         wl -= WL_STEP
                     poly_conf['channels'][ch_ind]['expected'].append(integral * poly_conf['channels'][ch_ind]['ae'])
 
@@ -233,17 +242,23 @@ class ExpectedSignals:
                 'Te_high': T_HIGH,
                 'Te_mult': T_MULT,
                 'T_arr': temp,
-                'poly': []
+                'poly': {}
             }
             for poly_ind_conf, poly_conf in enumerate(lamp_calibration.config['poly']):
+                '''
                 result['poly'].append({
                     'ind': poly_conf['ind'],
                     'expected': [],
                     'ae': []
-                })
+                })'''
+                result['poly'][poly_conf['serial']] = {
+                    'fiber': poly_conf['fiber'],
+                    'expected': [],
+                    'ae': []
+                }
                 for ch_ind in range(len(poly_conf['channels'])):
-                    result['poly'][-1]['expected'].append(poly_conf['channels'][ch_ind]['expected'])
-                    result['poly'][-1]['ae'].append(poly_conf['channels'][ch_ind]['ae'])
+                    result['poly'][poly_conf['serial']]['expected'].append(poly_conf['channels'][ch_ind]['expected'])
+                    result['poly'][poly_conf['serial']]['ae'].append(poly_conf['channels'][ch_ind]['ae'])
             aux.json.dump(result, file, indent=2)
 
 #test = TS_spectrum(theta_deg=90, model='Naito', lambda0=1064.5*1e-9)

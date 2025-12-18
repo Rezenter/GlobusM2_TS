@@ -14,7 +14,8 @@ class sht:
             self.data = shtRipper.ripper.read('%ssht%d.SHT' % (location, shotn), [
                     'nl 42 cm (1.5мм) 64pi',
                     'Nl_42_УПЧ',
-                    'NL_42_No_Filtr'
+                    'NL_42_No_Filtr',
+                    'NL_42_УЛЧ'
                 ])
             break
         else:

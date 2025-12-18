@@ -254,7 +254,8 @@ class CCM:
             poly = polys[poly_ind]
             if poly['skip']:
                 continue
-            if poly['R'] >= center_r:
+            poly['isLFS'] = (poly['R'] >= center_r)
+            if poly['isLFS']:
                 if params['eq_lfs_R'] >= poly['R']:
                     lfs_poly.append(poly)
             else:
@@ -276,6 +277,9 @@ class CCM:
         last_a = 1
         for poly in hfs_poly:
             #print('hfs', poly['R'])
+
+            last_a = 1
+
             last_a, poly['r'], poly['z'] = self.guess_a(poly['R'], t_ind, last_a, center_r, lfs=False)
             poly['a'] = last_a
             #print('guessed')

@@ -3,19 +3,22 @@ import json
 import struct
 import math
 
-filename: str = '2024.09.04_HFS'
-config_filename: str = '2024.08.30_G2-10_HFS'
+filename: str = '2025.05.14'
+config_filename: str = '2025.06.02_corrSlow'
 
-path_conf: Path = Path('\\\\172.16.12.130\\d\\data\\db\\config\\%s.json' % config_filename)
-path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
-#path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\' % filename)
-path_out: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s.json' % filename)
+#path_conf: Path = Path('\\\\172.16.12.130\\d\\data\\db\\config\\%s.json' % config_filename)
+#path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
+#path_out: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s.json' % filename)
+
+path_conf: Path = Path('d:\\data\\db\\config_cpp\\%s.json' % config_filename)
+path_in: Path = Path('d:\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
+path_out: Path = Path('d:\\data\\db\\calibration\\spectral\\%s.json' % filename)
 chMap = [0, 2, 4, 6, 10, 8, 14, 12, 1, 3, 5, 7, 11, 9, 15, 13]
 
 
 def read_raw(config):
     data = []
-    for slow_board in config['slow']:
+    for slow_board in config['slow adc']["boards"]:
         p: Path = path_in.joinpath('%s\\%s.slow' % (poly['fiber'], slow_board['ip']))
         if p.is_file():
             with open(path_in.joinpath('%s\\%s.slow' % (poly['fiber'], slow_board['ip'])), 'rb') as file:
@@ -32,7 +35,8 @@ def read_raw(config):
             data.append([[] for ch in range(16)])
             for dir in path_in.joinpath('%s\\' % poly['fiber']).glob('*'):
                 p: Path = path_in.joinpath('%s\\%s.slow' % (dir, slow_board['ip']))
-                if p.is_file() and p.stat().st_size > 10:
+                #if p.is_file() and p.stat().st_size > 10:
+                if p.is_file():
                     with open(p, 'rb') as file:
                         data_raw = file.read()
                         point_count = int(len(data_raw) / (16 * 2))  # ch count = 16, sizeof(short) = 2
@@ -44,6 +48,7 @@ def read_raw(config):
                     #print(len(data[-1][ch_ind]))
                     #break #debug
                 else:
+                    print(p, p.is_file(), p.stat().st_size)
                     print('bad luck')
     return data
 
@@ -139,27 +144,36 @@ for poly in config['poly']:
 
     data = read_raw(config)
 
-
+    '''
     res_poly = {
         'ind': poly['ind'],
         'fiber': poly['fiber'],
         'min': [],
         'max': [],
         'amp': []
+    }'''
+    res_poly = {
+        'serial': poly['serial'],
+        'fiber': poly['fiber'],
+        'min': [],
+        'max': [],
+        'amp': []
     }
 
-    with open('debug/ind_%d_raw.csv' % poly['ind'], 'w') as file:
+    with open('debug/serial_%d_raw.csv' % poly['serial'], 'w') as file:
         for i in range(len(data[0][0])):
             line: str = ''
             for ch_ind in range(len(poly['channels'])):
                 ch = poly['channels'][ch_ind]
-                line += '%d, ' % (data[ch['slow_adc']][ch['slow_adc_ch']][i])
+                #line += '%d, ' % (data[ch['slow_adc']][ch['slow_adc_ch']][i])
+                line += '%d, ' % (data[ch['slow']['adc']][ch['slow']['ch']][i])
             file.write(line[:-2] + '\n')
     debug_data = []
     for ch_ind in range(len(poly['channels'])):
         ch = poly['channels'][ch_ind]
 
-        histogram_raw = count_elements(data[ch['slow_adc']][ch['slow_adc_ch']])
+        #histogram_raw = count_elements(data[ch['slow_adc']][ch['slow_adc_ch']])
+        histogram_raw = count_elements(data[ch['slow']['adc']][ch['slow']['ch']])
         left = scan_distribution(histogram_raw[:math.floor(len(histogram_raw) / 2)].copy())
         right = scan_distribution(histogram_raw[math.floor(len(histogram_raw) / 2):].copy())
 

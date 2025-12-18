@@ -29,13 +29,13 @@ def interpolate(x1, x, x2, y1, y2):
 def filter(res):
     #if res['Terr'] / res['T'] > 0.3:
     if res['Terr'] / res['T'] > 0.8:
-        #res['error'] = 'high Te error'
-        print('Warning, Teerr filter disabled')
+        res['error'] = 'high Te error'
+        #print('Warning, Teerr filter disabled')
 
     #elif res['n_err'] / res['n'] > 0.1:
     elif res['n_err'] / res['n'] > 0.4:
-        #res['error'] = 'high ne error'
-        print('Warning, nerr filter disabled')
+        res['error'] = 'high ne error'
+        #print('Warning, nerr filter disabled')
 
     #elif res['chi2'] > 20:
     elif res['chi2'] > 40:
@@ -209,23 +209,37 @@ class Processor:
             if self.result['config']['type version'] >= 6:
                 path = Path('%sraw/%05d/ophir.msgpk' % (self.prefix, self.shotn))
             if not path.is_file():
-                print('Ophir file is requested but not found')
-                print(path)
-                fuck
-            with open(path, 'rb') as file:
-                self.energy = [1e-33]
-                data = msgpack.unpackb(file.read())
-                for event in data:
-                    self.energy.append(event[1] * self.absolute['J_from_ophir'])
+                if ('diag' in self.signal['common']['header']) and ('laser' in self.signal['common']['header']['diag']) and ('delayAmp' in self.signal['common']['header']['diag']['laser']) and ('delayMO' in self.signal['common']['header']['diag']['laser']):
+                    self.energy = [1e-33]
+                    e = 1e-33
+                    for entry in self.result['config']['laser'][0]['ETable']:
+                        if entry['tauPSU'] == self.signal['common']['header']['diag']['laser']['delayAmp'] and self.signal['common']['header']['diag']['laser']['delayMO'] == self.result['config']['laser'][0]['tauMO']:
+                            e = entry['E']
+                            break
+                    else:
+                        print('laser energy not found in the table')
+                        fuck
+                    for event in range(self.result['config']['laser'][0]['pulse_count']):
+                        self.energy.append(e)
+                else:
+                    print('Ophir file is requested but not found')
+                    print(path)
+                    fuck
+            else:
+                with open(path, 'rb') as file:
+                    self.energy = [1e-33]
+                    data = msgpack.unpackb(file.read())
+                    for event in data:
+                        self.energy.append(event[1] * self.absolute['J_from_ophir'])
 
         print('Processing shot...')
 
-        stray = [
-            [0.0 for ch in range(6)] for poly in range(len(self.result['config']['poly']))
-        ]
-        count = [
-            [0 for ch in range(6)] for poly in range(len(self.result['config']['poly']))
-        ]
+        stray = {}
+        count = {}
+        for poly in self.result['config']['poly']:
+            stray['%d' % poly['serial']] = [0.0 for ch in range(6)]
+            count['%d' % poly['serial']] = [0.0 for ch in range(6)]
+
         if len(self.signal['data']) == 0:
             print('No events!')
             return
@@ -239,19 +253,23 @@ class Processor:
                     break
                 event = self.signal['data'][event_index]
                 if event['error'] is None:
-                    for poly_ind in range(len(event['poly'])):
-                        for ch_ind in range(len(event['poly']['%d' % poly_ind]['ch'])):
-                            if event['poly']['%d' % poly_ind]['ch'][ch_ind]['error'] is not None:
+                    for serial in event['poly']:
+                        for ch_ind in range(len(event['poly'][serial]['ch'])):
+                            if event['poly'][serial]['ch'][ch_ind]['error'] is not None:
                                 continue
 
-                            count[poly_ind][ch_ind] += 1
-                            stray[poly_ind][ch_ind] += event['poly']['%d' % poly_ind]['ch'][ch_ind]['ph_el']
+                            count[serial][ch_ind] += 1
+                            stray[serial][ch_ind] += event['poly'][serial]['ch'][ch_ind]['ph_el']
 
-        for poly_ind in range(len(stray)):
-            for ch_ind in range(len(stray[poly_ind])):
-                if count[poly_ind][ch_ind] > 0:
-                    stray[poly_ind][ch_ind] /= count[poly_ind][ch_ind]
-            self.result['config']['poly'][poly_ind]['stray'] = stray[poly_ind]
+        self.result['config']['serial2ind'] = {}
+        for poly_ind in range(len(self.result['config']['poly'])):
+            poly = self.result['config']['poly'][poly_ind]
+            serial = '%d' % poly['serial']
+            self.result['config']['serial2ind'][serial] = poly_ind
+            for ch_ind in range(len(stray[serial])):
+                if count[serial][ch_ind] > 0:
+                    stray[serial][ch_ind] /= count[serial][ch_ind]
+            poly['stray'] = stray[serial]
 
         for event_ind in range(len(self.signal['data'])):
             error = None
@@ -263,7 +281,7 @@ class Processor:
                 continue
 
 
-            poly = []
+            poly = {}
             if 'type version' not in self.result['config'] or self.result['config']['type version'] == 1:
                 energy = self.signal['data'][event_ind]['laser']['ave']['int'] * self.absolute['J_from_int']
             elif self.result['config']['type version'] >= 4 and self.result['config']['laser'][0]['ophir']:
@@ -274,10 +292,10 @@ class Processor:
             else:
                 energy = self.result['config']['laser'][0]['E']
 
-            for poly_ind in range(len(self.signal['data'][event_ind]['poly'])):
-                temp = self.calc_temp(self.signal['data'][event_ind]['poly']['%d' % poly_ind], poly_ind,
-                                      stray[poly_ind], energy, event_ind)
-                poly.append(temp)
+            for serial in self.signal['data'][event_ind]['poly']:
+                temp = self.calc_temp(self.signal['data'][event_ind]['poly'][serial], serial,
+                                      stray[serial], energy, event_ind)
+                poly[serial] = temp
             proc_event = {
                 'timestamp': self.signal['data'][event_ind]['timestamp'],
                 'energy': energy,
@@ -295,12 +313,12 @@ class Processor:
             json.dump(self.result, out_file, indent=1)
         #self.to_csv()
 
-    def calc_temp(self, event, poly, stray, E, event_ind):
+    def calc_temp(self, event, serial, stray, E, event_ind):
         channels = []
 
         #E *= self.absolute['E_mult']
 
-        for ch_ind in range(len(self.expected['poly'][poly]['expected'])):
+        for ch_ind in range(len(self.expected['poly'][serial]['expected'])):
             if len(event['ch']) <= ch_ind:
                 event['ch'].append({
                     'error': 'not recorded'
@@ -323,7 +341,7 @@ class Processor:
                 sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
             min_index = -1
             for i in range(len(self.expected['T_arr'])):
-                f_i = [self.expected['poly'][poly]['expected'][ch][i] for ch in channels]
+                f_i = [self.expected['poly'][serial]['expected'][ch][i] for ch in channels]
                 current_chi = calc_chi2(N_i, sigm2_i, f_i)
                 if current_chi < chi2:
                     min_index = i
@@ -335,13 +353,13 @@ class Processor:
             else:
                 left = {
                     't': self.expected['T_arr'][min_index - 1],
-                    'f': [self.expected['poly'][poly]['expected'][ch][min_index - 1] for ch in channels]
+                    'f': [self.expected['poly'][serial]['expected'][ch][min_index - 1] for ch in channels]
                 }
                 left['chi'] = calc_chi2(N_i, sigm2_i, left['f'])
 
                 right = {
                     't': self.expected['T_arr'][min_index + 1],
-                    'f': [self.expected['poly'][poly]['expected'][ch][min_index + 1] for ch in channels]
+                    'f': [self.expected['poly'][serial]['expected'][ch][min_index + 1] for ch in channels]
                 }
                 right['chi'] = calc_chi2(N_i, sigm2_i, right['f'])
 
@@ -397,11 +415,11 @@ class Processor:
 
 
                 if self.abs_version >=2:
-                    A = self.absolute['A'][poly] * math.pow(phys_const.r_o, 2) * self.result['config']['laser'][0]['wavelength'] * 1e-9 / (phys_const.q_e * self.result['config']['preamp']['apdGain'])
+                    A = self.absolute['A'][serial] * math.pow(phys_const.r_o, 2) * self.result['config']['laser'][0]['wavelength'] * 1e-9 / (phys_const.q_e * self.result['config']['preamp'][self.result['config']['poly'][self.result['config']['serial2ind'][serial]]['channels'][0]['preamp']]['apdGain'])
                     #print('E = ', E)
                     #print('___________\n\n')
                 else:
-                    A = self.absolute['A'][poly] * self.cross_section
+                    A = self.absolute['A'][serial] * self.cross_section
 
                 n_e = nf_sum / (A * E * f2_sum)
 
@@ -427,9 +445,11 @@ class Processor:
                     'error': None
                 })
 
-                if res['error'] == 'high chi':
-                    print('Warning, chi2 filter disabled, but triggered for event %d, poly = %d' % (event_ind, poly))
+                if False and res['error'] == 'high chi':
+                    #print('Warning, chi2 filter disabled, but triggered for event %d, poly = %d' % (event_ind, poly))
+                    print('Warning, chi2 filter disabled, but triggered for event %d, poly = %s' % (event_ind, serial))
                     res['error'] = None
+
         else:
             print('Less than 2 signals!')
             res = {
