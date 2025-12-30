@@ -1462,6 +1462,7 @@ class Handler:
             final = []
             for p in merge:
                 if Path(p).is_file():
+                    
                     final.append(p)
                 else:
                     print(p, 'file not found for merge')

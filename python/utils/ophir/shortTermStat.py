@@ -1,14 +1,22 @@
 import msgpack
 from pathlib import Path
+import json
 
 dir_new: Path = Path('d:\\data\\db\\plasma\\raw\\')
 dir_old: Path = Path('\\\\192.168.10.41\\d\\data\\db\\plasma\\ophir\\')
 
-start: int = 45714
-stop: int = 45717
+start: int = 46620
+stop: int = 46719
 
 for shot in range(start, stop):
     if  shot > 46155:
+        path = dir_new.joinpath('%05d\\header.json' % (shot))
+        if not path.is_file():
+            continue
+        with open(path, 'r') as file:
+            header = json.load(file)
+            if header['diag']['laser']['delayAmp'] != 314 or header['diag']['laser']['delayMO'] != 174:
+                continue
         path = dir_new.joinpath('%05d\\ophir.msgpk' % (shot))
     else:
         path = dir_old.joinpath('%05d.msgpk' % (shot))
