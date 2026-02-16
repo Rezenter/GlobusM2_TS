@@ -540,11 +540,21 @@ class Integrator:
                                                            self.config['preamp'][poly['channels'][ch_ind]['preamp']]['feedbackResistance'] *
                                                            sp_ch['gain'] *
                                                            matching_gain)
-                pre_std = statistics.stdev(signal[:integration_from], zero) * 1e-1 * 10 / sp_ch['gain']
+                #pre_std = statistics.stdev(signal[:integration_from], zero) * 1e-1 * 10 / sp_ch['gain']
+
+                if sp_ch['gain'] > 5:
+                    pre_std = statistics.stdev(signal[:integration_from], zero) * 0.5 * 10 / (sp_ch['gain'] * matching_gain)
+                else:
+                    pre_std = statistics.stdev(signal[:integration_from], zero) * 0.5 * 10 / (sp_ch['gain'] * matching_gain)
                 if self.config['preamp'][poly['channels'][ch_ind]['preamp']]['voltageDivider']:
                     photoelectrons *= 2
                     pre_std *= 2
-                err2 = math.pow(pre_std*2, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+                #err2 = math.pow(pre_std*2, 2) * 6715 * 0.0625 - 1.14e4 * 0.0625
+                err2 = math.pow(pre_std, 2) * 6715  - 1.14e4*0.5
+                #err2 [mv2 * tact2]
+
+                err2 *= math.pow(0.001*0.2E-9/(0.5*100*10*10000*1.6E-19), 2)
+                #err2 [ph.el.2]
 
             res['ch'].append({
                 'from': integration_from,

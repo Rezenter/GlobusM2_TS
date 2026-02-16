@@ -340,12 +340,23 @@ class Processor:
                     N_i[-1] -= stray[ch]
                 sigm2_i.append(math.pow(event['ch'][ch]['err'], 2))
             min_index = -1
+
+            #chis = []
+
             for i in range(len(self.expected['T_arr'])):
                 f_i = [self.expected['poly'][serial]['expected'][ch][i] for ch in channels]
                 current_chi = calc_chi2(N_i, sigm2_i, f_i)
                 if current_chi < chi2:
                     min_index = i
                     chi2 = current_chi
+                #chis.append(current_chi)
+            '''
+            if self.expected['T_arr'][min_index] > 800:
+                with open('chis.json', 'w') as file:
+                    json.dump(chis, file)
+                fuck
+            '''
+
             if min_index >= len(self.expected['T_arr']) - 2 or min_index == 0:
                 res = {
                     'error': 'minimized on edge'

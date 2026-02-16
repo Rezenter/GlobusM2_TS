@@ -3,14 +3,16 @@ import auxiliary as aux
 from pathlib import Path
 
 # change only these lines!
-spectral_raw_name: str = '2025.05.14'
+spectral_raw_name: str = '2025.05.14_masked'
 #spectral_raw_name: str = '2024.09.04'
 WL_STEP: float = 0.01e-9  # [nm]. integration step, 0.1
-#WL_STEP: float = 0.05*1e-9  # [m]. integration step, 0.1
+#WL_STEP: float = 0.1*1e-9  # [m]. integration step, 0.1
 T_LOW: float = 5  # [eV]
 T_HIGH: float = 2500  # [eV]
 T_MULT: float = 1.001  # default = 1.005
-#T_MULT: float = 1.005  # default = 1.01
+#T_MULT: float = 1.05  # default = 1.01
+
+LOW_SP_DENS: float = 1e-11 # default = 1e-10
 
 #config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
@@ -73,20 +75,24 @@ class TS_spectrum:
             print('T_e = %.0e' % te)
             total: float = 0.0
             curr_wl: float = self.lambda_0 - WL_STEP * 0.5
-            while curr_wl > 100*1e-9:
+            while curr_wl > 50*1e-9:
                 sp_dens = self.scat_power_dens(temp=te, wl=curr_wl)
                 total += sp_dens
-                if sp_dens < 1e-10:
+                if sp_dens < LOW_SP_DENS:
                     break
                 curr_wl -= WL_STEP
+            else:
+                fuck
             print('blue spectral dens integral = %.3f, stop wavelength = %.4e' % (total*WL_STEP, curr_wl))
             curr_wl = self.lambda_0 + WL_STEP * 0.5
-            while curr_wl < 10000*1e-9:
+            while curr_wl < 100000*1e-9:
                 sp_dens = self.scat_power_dens(temp=te, wl=curr_wl)
                 total += sp_dens
-                if sp_dens < 1e-11:
+                if sp_dens < LOW_SP_DENS*0.1:
                     break
                 curr_wl += WL_STEP
+            else:
+                fuck
             total *= WL_STEP
             print('total spectral dens integral error = %.2e, stop wavelength = %.4e' % (total - 1, curr_wl))
             if not 0.99 < total < 1.07:
@@ -241,6 +247,7 @@ class ExpectedSignals:
                 'Te_low': T_LOW,
                 'Te_high': T_HIGH,
                 'Te_mult': T_MULT,
+                'low_dens': LOW_SP_DENS,
                 'T_arr': temp,
                 'poly': {}
             }

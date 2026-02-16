@@ -14,7 +14,8 @@ normal_delta: float = 184.3  # distance between the normals
 # change only this line!
 #config_name: str = '2023.10.12'
 #config_name: str = '2024.08.30_G2-10'
-config_name: str = '2025.06.02'
+#config_name: str = '2025.06.02'
+config_name: str = '2026.01.15_CTS_mask'
 # change only this line!
 
 with open('%s%s.json' % (DB_PATH, config_name), 'r') as file:
