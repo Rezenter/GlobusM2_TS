@@ -14,8 +14,8 @@ from pathlib import Path
 import shutil
 
 
-import python.process.rawToSignals as raw_proc
-import python.process.signalsToResult as fine_proc
+import python.process.rawToSignals_old as raw_proc
+import python.process.signalsToResult_old as fine_proc
 import python.subsyst.fastADC as caen
 
 #import python.subsyst.laser1064 as laser1064
@@ -31,7 +31,7 @@ import python.utils.sht.sht_viewer as sht
 from python.subsyst.slowADC import SlowADC
 from python.utils.raw_edit import purge_calculations
 
-DB_PATH = 'd:/data/db/'
+DB_PATH = 'd:/data/db_old/'
 PLASMA_SHOTS = 'plasma/'
 DEBUG_SHOTS = 'debug/'
 CONFIG = 'config/'
@@ -132,8 +132,10 @@ class Handler:
         self.state = {}
         self.slow = None
 
-        print('connecting udp...')
-        self.tokamak = tokamak.Sync(callback_start=self.diag_disarm, callback_countdown=self.auto_fire)
+        #print('connecting udp...')
+        #self.tokamak = tokamak.Sync(callback_start=self.diag_disarm, callback_countdown=self.auto_fire)
+
+
         #print('connecting coolant...')
         #self.las_cool = laser1064.Coolant()
         #print('connecting crate...')

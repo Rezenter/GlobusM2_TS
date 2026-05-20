@@ -3,16 +3,17 @@ import auxiliary as aux
 from pathlib import Path
 
 # change only these lines!
-spectral_raw_name: str = '2025.05.14_masked'
+spectral_raw_name: str = '2026.04.01'
 #spectral_raw_name: str = '2024.09.04'
-WL_STEP: float = 0.01e-9  # [nm]. integration step, 0.1
-#WL_STEP: float = 0.1*1e-9  # [m]. integration step, 0.1
+WL_STEP: float = 0.01e-9  # [nm]. integration step, 0.01
+#WL_STEP: float = 0.5*1e-9  # [m]. debug
 T_LOW: float = 5  # [eV]
+#T_LOW: float = 2  # [eV] debug
 T_HIGH: float = 2500  # [eV]
-T_MULT: float = 1.001  # default = 1.005
-#T_MULT: float = 1.05  # default = 1.01
+T_MULT: float = 1.001  # default = 1.001
+#T_MULT: float = 1.1  # debug
 
-LOW_SP_DENS: float = 1e-11 # default = 1e-10
+LOW_SP_DENS: float = 1e-7 # default = 1e-10
 
 #config_name: str = '2023.07.04_DIVERTOR_G10' # not used for version 3+
 # change only these lines!
@@ -301,6 +302,13 @@ for T in temp:
     print(T, integral * 1)
 fuck
 '''
+
+#test = TS_spectrum(theta_deg = 130, model = 'Naito', lambda0 = 1064.5*1e-9)
+#for wl in range(700, 1064):
+#    print(wl, (wl/1064.5)-1, test.scat_power_dens(temp=100, wl=wl*1e-9), test.scat_power_dens(temp=500, wl=wl*1e-9), test.scat_power_dens(temp=1000, wl=wl*1e-9), test.scat_power_dens(temp=1500, wl=wl*1e-9))
+#fuck
+
+
 expected = ExpectedSignals(lamp_calibration=LampCalibration(spectral_name=spectral_raw_name))
 
 print('Code OK')

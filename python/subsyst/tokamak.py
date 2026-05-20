@@ -8,6 +8,7 @@ import select
 class Sync:
     def __init__(self, callback_start, callback_countdown):
         self.ip = "192.168.10.41"
+        #self.ip = "192.168.10.60"
         self.port = 8888
 
         self.sock = None

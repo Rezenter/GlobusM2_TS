@@ -3,16 +3,20 @@ import json
 import struct
 import math
 
-filename: str = '2025.05.14'
-config_filename: str = '2025.06.02_corrSlow'
+#filename: str = '2025.05.14'
+#config_filename: str = '2025.06.02_corrSlow'
+
+folder_name: str = '2026.04.01'
+config_filename: str = '2026.04.01_CTSn'
 
 #path_conf: Path = Path('\\\\172.16.12.130\\d\\data\\db\\config\\%s.json' % config_filename)
 #path_in: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
 #path_out: Path = Path('\\\\172.16.12.130\\d\\data\\db\\calibration\\spectral\\%s.json' % filename)
 
 path_conf: Path = Path('d:\\data\\db\\config_cpp\\%s.json' % config_filename)
-path_in: Path = Path('d:\\data\\db\\calibration\\spectral\\%s\\slow\\' % filename)
-path_out: Path = Path('d:\\data\\db\\calibration\\spectral\\%s.json' % filename)
+path_in: Path = Path('d:\\data\\db\\calibration\\spectral\\%s\\slow\\' % folder_name)
+path_out: Path = Path('d:\\data\\db\\calibration\\spectral\\%s.json' % folder_name)
+
 chMap = [0, 2, 4, 6, 10, 8, 14, 12, 1, 3, 5, 7, 11, 9, 15, 13]
 
 
@@ -34,6 +38,7 @@ def read_raw(config):
         else:
             data.append([[] for ch in range(16)])
             for dir in path_in.joinpath('%s\\' % poly['fiber']).glob('*'):
+                print('   ', dir)
                 p: Path = path_in.joinpath('%s\\%s.slow' % (dir, slow_board['ip']))
                 #if p.is_file() and p.stat().st_size > 10:
                 if p.is_file():
@@ -48,8 +53,9 @@ def read_raw(config):
                     #print(len(data[-1][ch_ind]))
                     #break #debug
                 else:
-                    print(p, p.is_file(), p.stat().st_size)
-                    print('bad luck')
+                    pass
+                    #print(p, p.is_file())
+                    #print('bad luck')
     return data
 
 
@@ -131,7 +137,7 @@ result = {
     'type': 'spectral calibration results ready for expected signals calculation',
     'version': 3,
     'config': config_filename,
-    'raw_data': filename,
+    'raw_data': folder_name,
     'polar': True,
     'poly': []
 }
@@ -141,6 +147,7 @@ for poly in config['poly']:
     if poly['fiber'] not in measurements:
         print('no measurement found')
         continue
+
 
     data = read_raw(config)
 
@@ -157,9 +164,13 @@ for poly in config['poly']:
         'fiber': poly['fiber'],
         'min': [],
         'max': [],
-        'amp': []
+        'amp': [],
+        'count': [],
+        'FWHM_left': [],
+        'FWHM_right': []
     }
 
+    '''
     with open('debug/serial_%d_raw.csv' % poly['serial'], 'w') as file:
         for i in range(len(data[0][0])):
             line: str = ''
@@ -168,8 +179,10 @@ for poly in config['poly']:
                 #line += '%d, ' % (data[ch['slow_adc']][ch['slow_adc_ch']][i])
                 line += '%d, ' % (data[ch['slow']['adc']][ch['slow']['ch']][i])
             file.write(line[:-2] + '\n')
-    debug_data = []
+    '''
+    #debug_data = []
     for ch_ind in range(len(poly['channels'])):
+        print('   ch', ch_ind+1)
         ch = poly['channels'][ch_ind]
 
         #histogram_raw = count_elements(data[ch['slow_adc']][ch['slow_adc_ch']])
@@ -188,6 +201,8 @@ for poly in config['poly']:
         #res_poly['min'].append(ml_i)
         '''
         res_poly['min'].append(left['max_ind'])
+        res_poly['FWHM_left'].append(left['FWHM'])
+        res_poly['FWHM_right'].append(right['FWHM'])
 
         '''
         mr_val = 0
@@ -199,7 +214,7 @@ for poly in config['poly']:
         #res_poly['max'].append(mr_i)
         '''
         res_poly['max'].append(right['max_ind'] + math.floor(len(histogram_raw) / 2))
-
+        res_poly['count'].append(sum(histogram_raw))
         #res_poly['amp'].append((res_poly['max'][-1] - res_poly['min'][-1]) / ch['slow_gain'])
         res_poly['amp'].append(res_poly['max'][-1] - res_poly['min'][-1])
 

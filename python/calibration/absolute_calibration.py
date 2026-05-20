@@ -97,8 +97,12 @@ calibr_path = 'calibration/abs/'
 ophir_path = 'calibration/energy/'
 PROCESSED_PATH = 'processed/'
 
-abs_filename = '2026.01.15_mask'
-
+#abs_filename = '2026.01.15_mask2'
+#abs_filename = '2026.03.31_mask_1.6_300'
+#abs_filename = '2026.03.31_mask_3_300'
+#abs_filename = '2026.03.31_mask_3_330'
+#abs_filename = '2026.03.31_mask_1.6_330'
+abs_filename = '2026.04.01'
 
 nl_correction: float = 1.22
 
@@ -107,6 +111,7 @@ nl_correction: float = 1.22
 use_first_shots: int = -1 # or -1
 #use_first_shots: int = 500 # or -1
 #TS_cross: float = 6.65e10-29
+ignore_first_shots: int = 10
 
 with open('%s%s%s%s' % (aux.DB_PATH, calibr_path, abs_filename, aux.JSON), 'r') as file:
     abs_calibration = aux.json.load(file)
@@ -130,7 +135,8 @@ def process_point(point, stray=None):
         'laser_energy': abs_calibration['laser_energy'],
         'laser_shots': [],
         'ophir': [],
-        'use_first_shots': use_first_shots
+        'use_first_shots': use_first_shots,
+        'ignore_firs_shots': ignore_first_shots
     }
     if 'polar' in abs_calibration:
         result['polarizator'] = abs_calibration['polar']
@@ -167,8 +173,9 @@ def process_point(point, stray=None):
                             continue
                         if use_first_shots > 0 and count >= use_first_shots:
                             break
-                        ophir.append(float(line.split()[1]))
                         count += 1
+                        if ignore_first_shots < count:
+                            ophir.append(float(line.split()[1]))
             else:
                 path: Path = Path('%splasma/ophir/%05d.msgpk' % (aux.DB_PATH, shotn))
                 if abs_calibration['version'] >= 2:
@@ -179,8 +186,11 @@ def process_point(point, stray=None):
                 else:
                     with open(path, 'rb') as file:
                         data = msgpack.unpackb(file.read())
+                        count = 0
                         for event in data:
-                            ophir.append(event[1])
+                            count += 1
+                            if ignore_first_shots < count:
+                                ophir.append(event[1])
 
         with rawToSignals.Integrator(db_path=aux.DB_PATH, shotn=shotn, is_plasma=False, config_name=abs_calibration['config']) as integrator:
             if len(poly) == 0:
@@ -205,7 +215,7 @@ def process_point(point, stray=None):
 
             if len(integrator.processed) == 101:
                 print('\n\nWARNING!!! assuming first event is blank\n\n')
-                integrator.processed = integrator.processed[1:]
+                integrator.processed = integrator.processed[1+ignore_first_shots:]
             for ind, event in enumerate(integrator.processed):
                 if event['error'] is not None:
                     print('%d event skipped!' % shotn)
@@ -312,7 +322,9 @@ calibrated = {
     'A': {},
     'nl_correction': nl_correction,
     'J_from_ophir': result[0]['J_from_ophir'],
-    'transmission_to_ophir': 1/result[0]['J_from_ophir']
+    'transmission_to_ophir': 1/result[0]['J_from_ophir'],
+    'use_first_shots': use_first_shots,
+    'ignore_firs_shots': ignore_first_shots
 }
 for serial in result[0]['poly']:
     calibrated['A'][serial] = result[0]['poly'][serial][0]['A']

@@ -4,8 +4,8 @@ from pathlib import Path
 import time
 import os
 
-fiber = '3_fixed'
-repeat = 20
+fiber = '9'
+repeat = 40
 
 class SlowADC:
     PORT = 3425
@@ -16,6 +16,8 @@ class SlowADC:
               '192.168.10.51',
               '192.168.10.52',
               '192.168.10.53']
+
+    ADC_IP = ['192.168.10.53']
 
     fingerprint = 'ecdsa-sha2-nistp256 256 SHA256:dwbpGGyAksQiqqLe0QwW4CTuT9HRlZgkm2NCKdWKwYA'
 
@@ -52,9 +54,8 @@ class SlowADC:
     def disarm(self):
         success: int = 0
         for ip_ind in range(len(self.ADC_IP)):
-            if self.__status(ip_ind) != b'\x4b':
-                print(self.ADC_IP[ip_ind], 'not ready!')
-                #continue
+            while self.__status(ip_ind) != b'\x4b':
+                time.sleep(0.3)
             success += 1
             self.get_data(ip_ind)
         if success == len(self.ADC_IP):
@@ -105,13 +106,14 @@ class SlowADC:
 
 os.mkdir('slow\\%s' % fiber)
 adc = SlowADC('slow\\%s' % fiber)
-time.sleep(2)
+time.sleep(1)
 
 for shotn in range(repeat):
+    print(shotn+1, repeat)
     adc.soft_arm(shotn=shotn)
-    time.sleep(2)
+    time.sleep(1)
     adc.soft_trig()
-    time.sleep(2)
+    time.sleep(1)
     adc.disarm()
 
-print('final')
+print('OK')

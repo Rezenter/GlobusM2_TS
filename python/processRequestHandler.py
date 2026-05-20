@@ -1456,7 +1456,7 @@ class Handler:
             merge.append('%s%s_2.SHT' % (Tukhmeneva_path, shot))
             merge.append('%s%s_3.SHT' % (Tukhmeneva_path, shot))
             merge.append('%s%s.SHT' % (diamagnetic_path, shot))
-            merge.append('%sPS%s.SHT' % (nl_path, shot))
+            #merge.append('%sPS%s.SHT' % (nl_path, shot))
             # eqdsk
 
             final = []

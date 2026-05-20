@@ -45,7 +45,7 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, 'Shotn was not specified!')
                 return
             shotn = parsedBody['shotn']
-            path = Path('D:/data/db/plasma/result/%s/TS_%s.sht' % (shotn, shotn))
+            path = Path('D:/data/db_old/plasma/result/%s/TS_%s.sht' % (shotn, shotn))
             if not path.is_file():
                 self.send_error(404, 'File Not Found: %s ' % path)
                 return
